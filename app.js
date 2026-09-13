@@ -1,233 +1,33 @@
-const EQ = ['Instant Pot','Air fryer attachment','Oven','Tovala smart oven','Standalone griddle','Cast iron pans','KitchenAid mixer','Food processor'];
-const DEV = new URLSearchParams(location.search).get('dev') === 'true';
-
-const D = {
-  days:['Monday','Thursday','Friday'],
-  useUp:'Frozen turkey, Moroccan couscous',
-  notes:'Light week. Quick meals. One vegetarian meal.',
-  size:5,
-  eq:[...EQ],
-  meals:[],
-  checked:{},
-  planId:null,
-  syncError:null
-};
-
-const TEST_WEEK=[
-  {id:'test-turkey-bowls',day:'Monday',title:'Ginger-Sesame Turkey Bowls',emoji:'🥢',description:'Savory turkey, crisp vegetables, edamame, and rice.',servings:5,total_minutes:25,difficulty:'Easy',tags:['Test meal','Kid friendly'],kid_note:'Serve sauce on the side.',ingredients:[{name:'ground turkey',quantity:1.5,unit:'lb',category:'Meat & Seafood'},{name:'shredded cabbage',quantity:1,unit:'bag',category:'Produce'},{name:'edamame',quantity:1,unit:'bag',category:'Frozen'},{name:'jasmine rice',quantity:2,unit:'packs',category:'Frozen'},{name:'garlic',quantity:3,unit:'cloves',category:'Produce'},{name:'fresh ginger',quantity:1,unit:'piece',category:'Produce'},{name:'soy sauce',quantity:2,unit:'tbsp',category:'Pantry'}],steps:['Cook or heat the rice.','Brown the turkey.','Add garlic, ginger, soy sauce, cabbage, and edamame.','Serve over rice.']},
-  {id:'test-moroccan-chicken',day:'Thursday',title:'Moroccan Chicken & Couscous',emoji:'🍋',description:'Spiced chicken, roasted vegetables, couscous, and lemon yogurt.',servings:5,total_minutes:35,difficulty:'Easy',tags:['Test meal'],ingredients:[{name:'chicken thighs',quantity:1.75,unit:'lb',category:'Meat & Seafood'},{name:'zucchini',quantity:2,unit:'whole',category:'Produce'},{name:'bell peppers',quantity:2,unit:'whole',category:'Produce'},{name:'red onion',quantity:1,unit:'whole',category:'Produce'},{name:'Moroccan couscous',quantity:1,unit:'box',category:'Pantry'},{name:'Greek yogurt',quantity:1,unit:'cup',category:'Dairy & Eggs'},{name:'lemons',quantity:2,unit:'whole',category:'Produce'}],steps:['Roast chicken and vegetables.','Prepare couscous.','Mix yogurt with lemon and serve.']},
-  {id:'test-tacos',day:'Friday',title:'Sweet Potato Black Bean Tacos',emoji:'🌮',description:'Crispy sweet potatoes, black beans, avocado-lime slaw, and cheese.',servings:5,total_minutes:30,difficulty:'Easy',tags:['Vegetarian','Test meal'],ingredients:[{name:'sweet potatoes',quantity:2,unit:'whole',category:'Produce'},{name:'black beans',quantity:2,unit:'cans',category:'Pantry'},{name:'tortillas',quantity:12,unit:'small',category:'Bakery'},{name:'avocados',quantity:2,unit:'whole',category:'Produce'},{name:'limes',quantity:2,unit:'whole',category:'Produce'},{name:'shredded cheese',quantity:1,unit:'bag',category:'Dairy & Eggs'}],steps:['Roast or air fry sweet potatoes.','Warm black beans.','Assemble tacos.']}
-];
-
-const GROCERY_TEST=[
-  {name:'apples',quantity:4,unit:'whole',category:'Produce'},
-  {name:'bananas',quantity:6,unit:'whole',category:'Produce'},
-  {name:'broccoli',quantity:2,unit:'heads',category:'Produce'},
-  {name:'carrots',quantity:1,unit:'bag',category:'Produce'},
-  {name:'lemons',quantity:3,unit:'whole',category:'Produce'},
-  {name:'garlic',quantity:1,unit:'head',category:'Produce'},
-  {name:'chicken breasts',quantity:2,unit:'lb',category:'Meat & Seafood'},
-  {name:'Greek yogurt',quantity:1,unit:'tub',category:'Dairy & Eggs'},
-  {name:'eggs',quantity:1,unit:'dozen',category:'Dairy & Eggs'},
-  {name:'tortillas',quantity:1,unit:'pack',category:'Bakery'},
-  {name:'black beans',quantity:2,unit:'cans',category:'Pantry'},
-  {name:'rice',quantity:1,unit:'bag',category:'Pantry'},
-  {name:'olive oil',quantity:1,unit:'bottle',category:'Pantry'},
-  {name:'frozen peas',quantity:1,unit:'bag',category:'Frozen'}
-];
-
-let s;
-try{s={...D,...JSON.parse(localStorage.getItem('mealz')||'{}')}}catch{s={...D}}
-
+const EQ=['Instant Pot','Air fryer attachment','Oven','Tovala smart oven','Standalone griddle','Cast iron pans','KitchenAid mixer','Food processor'];
+const DEV=new URLSearchParams(location.search).get('dev')==='true';
+const D={days:['Monday','Thursday','Friday'],useUp:'Frozen turkey, Moroccan couscous',notes:'Light week. Quick meals. One vegetarian meal.',size:5,eq:[...EQ],meals:[],checked:{},planId:null,syncError:null,error:null};
+const TEST_WEEK=[{id:'test-turkey-bowls',day:'Monday',title:'Ginger-Sesame Turkey Bowls',emoji:'🥢',description:'Savory turkey, crisp vegetables, edamame, and rice.',servings:5,total_minutes:25,difficulty:'Easy',tags:['Test meal','Kid friendly'],kid_note:'Serve sauce on the side.',ingredients:[{name:'ground turkey',quantity:1.5,unit:'lb',category:'Meat & Seafood'},{name:'shredded cabbage',quantity:1,unit:'bag',category:'Produce'},{name:'edamame',quantity:1,unit:'bag',category:'Frozen'},{name:'jasmine rice',quantity:2,unit:'packs',category:'Frozen'},{name:'garlic',quantity:3,unit:'cloves',category:'Produce'},{name:'fresh ginger',quantity:1,unit:'piece',category:'Produce'},{name:'soy sauce',quantity:2,unit:'tbsp',category:'Pantry'}],steps:['Cook or heat the rice.','Brown the turkey.','Add garlic, ginger, soy sauce, cabbage, and edamame.','Serve over rice.']},{id:'test-moroccan-chicken',day:'Thursday',title:'Moroccan Chicken & Couscous',emoji:'🍋',description:'Spiced chicken, roasted vegetables, couscous, and lemon yogurt.',servings:5,total_minutes:35,difficulty:'Easy',tags:['Test meal'],ingredients:[{name:'chicken thighs',quantity:1.75,unit:'lb',category:'Meat & Seafood'},{name:'zucchini',quantity:2,unit:'whole',category:'Produce'},{name:'bell peppers',quantity:2,unit:'whole',category:'Produce'},{name:'red onion',quantity:1,unit:'whole',category:'Produce'},{name:'Moroccan couscous',quantity:1,unit:'box',category:'Pantry'},{name:'Greek yogurt',quantity:1,unit:'cup',category:'Dairy & Eggs'},{name:'lemons',quantity:2,unit:'whole',category:'Produce'}],steps:['Roast chicken and vegetables.','Prepare couscous.','Mix yogurt with lemon and serve.']},{id:'test-tacos',day:'Friday',title:'Sweet Potato Black Bean Tacos',emoji:'🌮',description:'Crispy sweet potatoes, black beans, avocado-lime slaw, and cheese.',servings:5,total_minutes:30,difficulty:'Easy',tags:['Vegetarian','Test meal'],ingredients:[{name:'sweet potatoes',quantity:2,unit:'whole',category:'Produce'},{name:'black beans',quantity:2,unit:'cans',category:'Pantry'},{name:'tortillas',quantity:12,unit:'small',category:'Bakery'},{name:'avocados',quantity:2,unit:'whole',category:'Produce'},{name:'limes',quantity:2,unit:'whole',category:'Produce'},{name:'shredded cheese',quantity:1,unit:'bag',category:'Dairy & Eggs'}],steps:['Roast or air fry sweet potatoes.','Warm black beans.','Assemble tacos.']}];
+const GROCERY_TEST=[{name:'apples',quantity:4,unit:'whole',category:'Produce'},{name:'bananas',quantity:6,unit:'whole',category:'Produce'},{name:'broccoli',quantity:2,unit:'heads',category:'Produce'},{name:'carrots',quantity:1,unit:'bag',category:'Produce'},{name:'lemons',quantity:3,unit:'whole',category:'Produce'},{name:'garlic',quantity:1,unit:'head',category:'Produce'},{name:'chicken breasts',quantity:2,unit:'lb',category:'Meat & Seafood'},{name:'Greek yogurt',quantity:1,unit:'tub',category:'Dairy & Eggs'},{name:'eggs',quantity:1,unit:'dozen',category:'Dairy & Eggs'},{name:'tortillas',quantity:1,unit:'pack',category:'Bakery'},{name:'black beans',quantity:2,unit:'cans',category:'Pantry'},{name:'rice',quantity:1,unit:'bag',category:'Pantry'},{name:'olive oil',quantity:1,unit:'bottle',category:'Pantry'},{name:'frozen peas',quantity:1,unit:'bag',category:'Frozen'}];
+let s;try{s={...D,...JSON.parse(localStorage.getItem('mealz')||'{}')}}catch{s={...D}}
 const save=()=>localStorage.setItem('mealz',JSON.stringify(s));
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=i=>`${i.quantity??''} ${i.unit||''} ${i.name}`.replace(/\s+/g,' ').trim();
 const groceryKey=i=>`${i.category||'Other'}::${String(i.name).toLowerCase()}::${i.unit||''}`;
-
-function currentWeekStart(){
-  const d=new Date();
-  const day=d.getDay();
-  const diff=day===0?-6:1-day;
-  d.setDate(d.getDate()+diff);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-function cloudNote(){
-  if(DEV)return '<p class=small>Developer test mode is active. Test data stays on this device only.</p>';
-  if(s.syncError)return `<div class="status error">Cloud sync issue: ${esc(s.syncError)}</div>`;
-  if(s.planId)return '<p class=small>☁ Saved to Mealz cloud</p>';
-  return '';
-}
-
-function view(v){
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
-  v==='plan'?plan():v==='meals'?meals():groceries();
-}
-
-function draft(){
-  if(document.querySelector('#useUp'))s.useUp=useUp.value;
-  if(document.querySelector('#notes'))s.notes=notes.value;
-  save();
-}
-
-function devTools(){
-  return DEV?`<div class="section card"><h2>Developer Tools</h2><p class=small>Visible only when Mealz is opened with <b>?dev=true</b>.</p><button id=loadWeek class=secondary style="width:100%;margin-bottom:8px">Load Sample Week</button><button id=loadGroceries class=secondary style="width:100%;margin-bottom:8px">Load Grocery Test List</button><button id=resetData class=secondary style="width:100%">Reset App Data</button></div>`:'';
-}
-
-function loadTestWeek(){
-  s.meals=structuredClone(TEST_WEEK);
-  s.checked={};
-  s.error=null;
-  s.planId=null;
-  s.syncError=null;
-  save();
-  view('meals');
-}
-
-function loadGroceryTest(){
-  s.meals=[{id:'grocery-ux-test',day:'Test',title:'Grocery UX Test',emoji:'🛒',description:'Temporary test data for grocery-list interactions.',servings:s.size,total_minutes:0,difficulty:'Test',tags:['Developer'],ingredients:structuredClone(GROCERY_TEST),steps:[]}];
-  s.checked={};
-  s.error=null;
-  s.planId=null;
-  s.syncError=null;
-  save();
-  view('groceries');
-}
-
-function resetTestData(){
-  localStorage.removeItem('mealz');
-  s=structuredClone(D);
-  plan();
-}
-
-function plan(){
-  app.innerHTML=`<h1>Plan This Week</h1><p class=subtle>Tell Mealz what this week looks like.</p>${s.error?`<div class="status error">${esc(s.error)}</div>`:''}${cloudNote()}<div class=section><label class=label>Which days are you cooking?</label><div class=day-grid>${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d=>`<button class="day-btn ${s.days.includes(d)?'selected':''}" data-d="${d}">${d.slice(0,3)}</button>`).join('')}</div></div><div class=section><label class=label>Any ingredients to use up?</label><input id=useUp value="${esc(s.useUp)}"></div><div class=section><label class=label>Anything else?</label><textarea id=notes>${esc(s.notes)}</textarea></div><div class="section card household-card"><h2>Household & Kitchen</h2><label class=label>People eating this week</label><div class=counter><button id=minus>−</button><div class=counter-value>${s.size}</div><button id=plus>+</button></div><div class=section><label class=label>Equipment available this week</label><div class=equipment-grid>${EQ.map(e=>`<button class="equipment-btn ${s.eq.includes(e)?'selected':''}" data-e="${e}">${e}</button>`).join('')}</div><p class=small>Mealz will avoid equipment you turn off.</p></div></div><button id=go class=primary>Plan My Week ✨</button>${devTools()}`;
-  document.querySelectorAll('.day-btn').forEach(b=>b.onclick=()=>{draft();const d=b.dataset.d;s.days=s.days.includes(d)?s.days.filter(x=>x!==d):[...s.days,d];save();plan()});
-  document.querySelectorAll('.equipment-btn').forEach(b=>b.onclick=()=>{draft();const e=b.dataset.e;s.eq=s.eq.includes(e)?s.eq.filter(x=>x!==e):[...s.eq,e];save();plan()});
-  minus.onclick=()=>{draft();s.size=Math.max(1,s.size-1);save();plan()};
-  plus.onclick=()=>{draft();s.size=Math.min(20,s.size+1);save();plan()};
-  go.onclick=generate;
-  if(DEV){loadWeek.onclick=loadTestWeek;loadGroceries.onclick=loadGroceryTest;resetData.onclick=resetTestData}
-}
-
-async function syncPlan(){
-  const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({weekStart:currentWeekStart(),householdSize:s.size,days:s.days,equipment:s.eq,useUp:s.useUp,notes:s.notes,meals:s.meals})});
-  const d=await r.json();
-  if(!r.ok)throw new Error(d.error||'Could not save this week.');
-  s.planId=d.planId;
-  s.syncError=null;
-  save();
-}
-
-async function generate(){
-  draft();
-  s.error=null;
-  s.syncError=null;
-  if(!s.days.length){s.error='Choose at least one cooking day.';return plan()}
-  go.disabled=true;
-  go.textContent='Planning your week…';
-  try{
-    const r=await fetch('/api/generate-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:s.days,householdSize:s.size,equipment:s.eq,useUp:s.useUp,notes:s.notes})});
-    const d=await r.json();
-    if(!r.ok)throw Error(d.error||'Planning failed');
-    s.meals=d.meals;
-    s.checked={};
-    s.planId=null;
-    save();
-    if(!DEV){try{await syncPlan()}catch(e){s.syncError=e.message;save()}}
-    view('meals');
-  }catch(e){s.error=e.message;save();plan()}
-}
-
-function meals(){
-  if(!s.meals.length){app.innerHTML='<h1>Your Meal Plan</h1><div class=status>No generated plan yet.</div>';return}
-  app.innerHTML=`<h1>Your Meal Plan</h1><p class=subtle>${s.meals.length} meals · ${s.size} people</p>${cloudNote()}${s.meals.map(m=>`<div class="card meal-card" data-id="${esc(m.id)}"><div class=meal-day>${esc(m.day).toUpperCase()}</div><div class=meal-title>${esc(m.emoji||'🍽️')} ${esc(m.title)}</div><p>${esc(m.description)}</p><span class=pill>${m.total_minutes||30} min</span>${(m.tags||[]).map(t=>`<span class=pill>${esc(t)}</span>`).join('')}</div>`).join('')}`;
-  document.querySelectorAll('.meal-card').forEach(c=>c.onclick=()=>recipe(c.dataset.id));
-}
-
-function recipe(id){
-  const m=s.meals.find(x=>x.id===id);
-  app.innerHTML=`<button class=secondary id=back>← Back</button><h1>${esc(m.emoji||'🍽️')} ${esc(m.title)}</h1><p>${esc(m.description)}</p><span class=pill>${m.servings||s.size} servings</span><span class=pill>${m.total_minutes||30} min</span><div class=section><h2>Ingredients</h2><ul class=recipe-list>${(m.ingredients||[]).map(i=>`<li><input type=checkbox><span>${esc(fmt(i))}</span></li>`).join('')}</ul></div><div class=section><h2>Instructions</h2><ol>${(m.steps||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>${m.kid_note?`<div class=status><b>Kid option:</b> ${esc(m.kid_note)}</div>`:''}`;
-  back.onclick=meals;
-}
-
-function groceryData(){
-  const map=new Map();
-  for(const m of s.meals)for(const i of(m.ingredients||[])){
-    if(i.optional)continue;
-    const category=i.category||'Other';
-    const key=groceryKey({...i,category});
-    const e=map.get(key);
-    if(e&&typeof i.quantity==='number'&&typeof e.quantity==='number')e.quantity+=i.quantity;
-    else if(!e)map.set(key,{key,...i,category});
-  }
-  return [...map.values()];
-}
-
-async function syncGrocery(item,checked){
-  if(DEV||!s.planId)return;
-  try{
-    const r=await fetch('/api/plan',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({planId:s.planId,name:item.name,unit:item.unit||null,category:item.category||'Other',checked})});
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'Could not save grocery progress.');
-    s.syncError=null;
-    save();
-  }catch(e){
-    s.syncError=e.message;
-    save();
-  }
-}
-
-function groceries(animateKey){
-  const before={};
-  if(animateKey&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-    document.querySelectorAll('.grocery-item[data-key]').forEach(el=>before[el.dataset.key]=el.getBoundingClientRect().top);
-  }
-  if(!s.meals.length){app.innerHTML='<h1>Grocery List</h1><div class=status>Generate a plan first.</div>';return}
-  const a=groceryData();
-  const cats=[...new Set(a.map(i=>i.category))];
-  app.innerHTML=`<h1>Grocery List</h1><p class=subtle>Trader Joe's first · Wegmans backup</p>${cloudNote()}<p class=small>Checked items move to the bottom of their section.</p>${cats.map(c=>{const z=a.filter(i=>i.category===c).sort((x,y)=>(s.checked[x.key]?1:0)-(s.checked[y.key]?1:0)||x.name.localeCompare(y.name));return `<section class=category><h3>${esc(c)}</h3>${z.map(i=>`<label class="grocery-item ${s.checked[i.key]?'checked':''}" data-key="${encodeURIComponent(i.key)}"><input type=checkbox data-k="${encodeURIComponent(i.key)}" ${s.checked[i.key]?'checked':''}><span>${esc(fmt(i))}</span></label>`).join('')}</section>`}).join('')}`;
-  if(animateKey&&Object.keys(before).length)requestAnimationFrame(()=>{
-    document.querySelectorAll('.grocery-item[data-key]').forEach(el=>{
-      const old=before[el.dataset.key];
-      if(old==null)return;
-      const delta=old-el.getBoundingClientRect().top;
-      if(Math.abs(delta)>1)el.animate([{transform:`translateY(${delta}px)`},{transform:'translateY(0)'}],{duration:340,easing:'cubic-bezier(.2,.8,.2,1)'});
-    });
-    const moved=document.querySelector(`.grocery-item[data-key="${CSS.escape(encodeURIComponent(animateKey))}"]`);
-    if(moved)moved.animate([{opacity:.55},{opacity:1}],{duration:340,easing:'ease-out'});
-  });
-  document.querySelectorAll('.grocery-item input').forEach(b=>b.onchange=()=>{
-    const k=decodeURIComponent(b.dataset.k);
-    const item=a.find(i=>i.key===k);
-    s.checked[k]=b.checked;
-    save();
-    groceries(k);
-    if(item)syncGrocery(item,b.checked);
-  });
-}
-
-async function loadCloudWeek(){
-  if(DEV)return false;
-  try{
-    const r=await fetch(`/api/plan?week_start=${encodeURIComponent(currentWeekStart())}`);
-    const d=await r.json();
-    if(!r.ok)throw new Error(d.error||'Could not load this week.');
-    if(!d.plan)return false;
-    s={...s,days:d.plan.cooking_days||s.days,useUp:d.plan.use_up||'',notes:d.plan.notes||'',size:d.plan.household_size||5,eq:d.plan.equipment||[],meals:d.meals||[],planId:d.plan.id,checked:{},syncError:null};
-    for(const i of d.groceryItems||[])s.checked[groceryKey(i)]=!!i.checked;
-    save();
-    return true;
-  }catch(e){
-    s.syncError=e.message;
-    save();
-    return false;
-  }
-}
-
+function currentWeekStart(){const d=new Date(),day=d.getDay(),diff=day===0?-6:1-day;d.setDate(d.getDate()+diff);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function cloudNote(){if(DEV)return '<p class=small>Developer test mode is active. Test data stays on this device only.</p>';if(s.syncError)return `<div class="status error">Cloud sync issue: ${esc(s.syncError)}</div>`;if(s.planId)return '<p class=small>☁ Saved to Mealz cloud</p>';return ''}
+function view(v){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));v==='plan'?plan():v==='meals'?meals():groceries()}
+function draft(){if(document.querySelector('#useUp'))s.useUp=useUp.value;if(document.querySelector('#notes'))s.notes=notes.value;save()}
+function devTools(){return DEV?`<div class="section card"><h2>Developer Tools</h2><p class=small>Visible only when Mealz is opened with <b>?dev=true</b>.</p><button id=loadWeek class=secondary style="width:100%;margin-bottom:8px">Load Sample Week</button><button id=loadGroceries class=secondary style="width:100%;margin-bottom:8px">Load Grocery Test List</button><button id=resetData class=secondary style="width:100%">Reset App Data</button></div>`:''}
+function loadTestWeek(){s.meals=structuredClone(TEST_WEEK);s.checked={};s.error=null;s.planId=null;s.syncError=null;save();view('meals')}
+function loadGroceryTest(){s.meals=[{id:'grocery-ux-test',day:'Test',title:'Grocery UX Test',emoji:'🛒',description:'Temporary test data for grocery-list interactions.',servings:s.size,total_minutes:0,difficulty:'Test',tags:['Developer'],ingredients:structuredClone(GROCERY_TEST),steps:[]}];s.checked={};s.error=null;s.planId=null;s.syncError=null;save();view('groceries')}
+function resetTestData(){localStorage.removeItem('mealz');s=structuredClone(D);plan()}
+function plan(){app.innerHTML=`<h1>Plan This Week</h1><p class=subtle>Tell Mealz what this week looks like.</p>${s.error?`<div class="status error">${esc(s.error)}</div>`:''}${cloudNote()}<div class=section><label class=label>Which days are you cooking?</label><div class=day-grid>${['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].map(d=>`<button class="day-btn ${s.days.includes(d)?'selected':''}" data-d="${d}">${d.slice(0,3)}</button>`).join('')}</div></div><div class=section><label class=label>Any ingredients to use up?</label><input id=useUp value="${esc(s.useUp)}"></div><div class=section><label class=label>Anything else?</label><textarea id=notes>${esc(s.notes)}</textarea></div><div class="section card household-card"><h2>Household & Kitchen</h2><label class=label>People eating this week</label><div class=counter><button id=minus>−</button><div class=counter-value>${s.size}</div><button id=plus>+</button></div><div class=section><label class=label>Equipment available this week</label><div class=equipment-grid>${EQ.map(e=>`<button class="equipment-btn ${s.eq.includes(e)?'selected':''}" data-e="${e}">${e}</button>`).join('')}</div><p class=small>Mealz will avoid equipment you turn off.</p></div></div><button id=go class=primary>Plan My Week ✨</button>${devTools()}`;document.querySelectorAll('.day-btn').forEach(b=>b.onclick=()=>{draft();const d=b.dataset.d;s.days=s.days.includes(d)?s.days.filter(x=>x!==d):[...s.days,d];save();plan()});document.querySelectorAll('.equipment-btn').forEach(b=>b.onclick=()=>{draft();const e=b.dataset.e;s.eq=s.eq.includes(e)?s.eq.filter(x=>x!==e):[...s.eq,e];save();plan()});minus.onclick=()=>{draft();s.size=Math.max(1,s.size-1);save();plan()};plus.onclick=()=>{draft();s.size=Math.min(20,s.size+1);save();plan()};go.onclick=generate;if(DEV){loadWeek.onclick=loadTestWeek;loadGroceries.onclick=loadGroceryTest;resetData.onclick=resetTestData}}
+async function syncPlan(){const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({weekStart:currentWeekStart(),householdSize:s.size,days:s.days,equipment:s.eq,useUp:s.useUp,notes:s.notes,meals:s.meals})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not save this week.');s.planId=d.planId;s.syncError=null;save()}
+async function generate(){draft();s.error=null;s.syncError=null;if(!s.days.length){s.error='Choose at least one cooking day.';return plan()}go.disabled=true;go.textContent='Planning your week…';try{const r=await fetch('/api/generate-plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:s.days,householdSize:s.size,equipment:s.eq,useUp:s.useUp,notes:s.notes})});const d=await r.json();if(!r.ok)throw Error(d.error||'Planning failed');s.meals=d.meals;s.checked={};s.planId=null;save();if(!DEV){try{await syncPlan()}catch(e){s.syncError=e.message;save()}}view('meals')}catch(e){s.error=e.message;save();plan()}}
+function mealCard(m){return `<div class="card meal-card" data-id="${esc(m.id)}"><div class=meal-day>${esc(m.day).toUpperCase()}</div><div class=meal-title>${esc(m.emoji||'🍽️')} ${esc(m.title)}</div><p>${esc(m.description)}</p><div><span class=pill>${m.total_minutes||30} min</span>${(m.tags||[]).map(t=>`<span class=pill>${esc(t)}</span>`).join('')}</div><div class=meal-actions><button class="secondary view-recipe" data-id="${esc(m.id)}">View Recipe</button><button class="secondary swap-meal" data-id="${esc(m.id)}">Swap Meal</button></div></div>`}
+function meals(){if(!s.meals.length){app.innerHTML='<h1>Your Meal Plan</h1><div class=status>No generated plan yet.</div>';return}app.innerHTML=`<h1>Your Meal Plan</h1><p class=subtle>${s.meals.length} meals · ${s.size} people</p>${cloudNote()}${s.meals.map(mealCard).join('')}`;document.querySelectorAll('.view-recipe').forEach(b=>b.onclick=e=>{e.stopPropagation();recipe(b.dataset.id)});document.querySelectorAll('.swap-meal').forEach(b=>b.onclick=e=>{e.stopPropagation();swapMeal(b.dataset.id)})}
+function recipe(id){const m=s.meals.find(x=>x.id===id);app.innerHTML=`<button class=secondary id=back>← Back</button><h1>${esc(m.emoji||'🍽️')} ${esc(m.title)}</h1><p>${esc(m.description)}</p><span class=pill>${m.servings||s.size} servings</span><span class=pill>${m.total_minutes||30} min</span><div class=section><h2>Ingredients</h2><ul class=recipe-list>${(m.ingredients||[]).map(i=>`<li><input type=checkbox><span>${esc(fmt(i))}</span></li>`).join('')}</ul></div><div class=section><h2>Instructions</h2><ol>${(m.steps||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>${m.kid_note?`<div class=status><b>Kid option:</b> ${esc(m.kid_note)}</div>`:''}`;back.onclick=meals}
+async function swapMeal(id){const original=s.meals.find(m=>m.id===id);if(!original)return;app.innerHTML=`<button class=secondary id=cancelSwap>← Back</button><h1>Swap ${esc(original.day)}</h1><p class=subtle>Finding two alternatives for ${esc(original.title)}…</p><div class="status swap-loading">✨ Stirring the idea pot…</div>`;cancelSwap.onclick=meals;try{const r=await fetch('/api/swap-meal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meal:original,otherMeals:s.meals.filter(m=>m.id!==id).map(m=>({title:m.title,day:m.day})),householdSize:s.size,equipment:s.eq,useUp:s.useUp,notes:s.notes})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not find alternatives.');showSwapChoices(original,d.alternatives||[])}catch(e){app.innerHTML=`<button class=secondary id=backSwapError>← Back</button><h1>Swap ${esc(original.day)}</h1><div class="status error">${esc(e.message)}</div><button class=primary id=retrySwap>Try Again</button>`;backSwapError.onclick=meals;retrySwap.onclick=()=>swapMeal(id)}}
+function showSwapChoices(original,alts){app.innerHTML=`<button class=secondary id=cancelChoices>← Keep Current Meal</button><h1>Pick a replacement</h1><p class=subtle>Here are two different directions for ${esc(original.day)}.</p>${alts.map((m,i)=>`<div class="card swap-choice"><div class=meal-day>OPTION ${i+1}</div><div class=meal-title>${esc(m.emoji||'🍽️')} ${esc(m.title)}</div><p>${esc(m.description)}</p><span class=pill>${m.total_minutes||30} min</span>${(m.tags||[]).map(t=>`<span class=pill>${esc(t)}</span>`).join('')}<button class="primary choose-swap" data-i="${i}">Choose This Meal</button></div>`).join('')}`;cancelChoices.onclick=meals;document.querySelectorAll('.choose-swap').forEach(b=>b.onclick=()=>applySwap(original.id,alts[Number(b.dataset.i)]))}
+async function applySwap(originalId,replacement){const old=s.meals.find(m=>m.id===originalId);if(!old||!replacement)return;replacement={...replacement,day:old.day};s.meals=s.meals.map(m=>m.id===originalId?replacement:m);s.syncError=null;save();app.innerHTML='<h1>Updating your week…</h1><div class=status>🛒 Rebuilding groceries and saving the swap…</div>';if(!DEV){try{await syncPlan()}catch(e){s.syncError=e.message;save()}}meals()}
+function groceryData(){const map=new Map();for(const m of s.meals)for(const i of(m.ingredients||[])){if(i.optional)continue;const category=i.category||'Other',key=groceryKey({...i,category}),e=map.get(key);if(e&&typeof i.quantity==='number'&&typeof e.quantity==='number')e.quantity+=i.quantity;else if(!e)map.set(key,{key,...i,category})}return [...map.values()]}
+async function syncGrocery(item,checked){if(DEV||!s.planId)return;try{const r=await fetch('/api/plan',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({planId:s.planId,name:item.name,unit:item.unit||null,category:item.category||'Other',checked})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not save grocery progress.');s.syncError=null;save()}catch(e){s.syncError=e.message;save()}}
+function groceries(animateKey){const before={};if(animateKey&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches)document.querySelectorAll('.grocery-item[data-key]').forEach(el=>before[el.dataset.key]=el.getBoundingClientRect().top);if(!s.meals.length){app.innerHTML='<h1>Grocery List</h1><div class=status>Generate a plan first.</div>';return}const a=groceryData(),cats=[...new Set(a.map(i=>i.category))];app.innerHTML=`<h1>Grocery List</h1><p class=subtle>Trader Joe's first · Wegmans backup</p>${cloudNote()}<p class=small>Checked items move to the bottom of their section.</p>${cats.map(c=>{const z=a.filter(i=>i.category===c).sort((x,y)=>(s.checked[x.key]?1:0)-(s.checked[y.key]?1:0)||x.name.localeCompare(y.name));return `<section class=category><h3>${esc(c)}</h3>${z.map(i=>`<label class="grocery-item ${s.checked[i.key]?'checked':''}" data-key="${encodeURIComponent(i.key)}"><input type=checkbox data-k="${encodeURIComponent(i.key)}" ${s.checked[i.key]?'checked':''}><span>${esc(fmt(i))}</span></label>`).join('')}</section>`}).join('')}`;if(animateKey&&Object.keys(before).length)requestAnimationFrame(()=>{document.querySelectorAll('.grocery-item[data-key]').forEach(el=>{const old=before[el.dataset.key];if(old==null)return;const delta=old-el.getBoundingClientRect().top;if(Math.abs(delta)>1)el.animate([{transform:`translateY(${delta}px)`},{transform:'translateY(0)'}],{duration:340,easing:'cubic-bezier(.2,.8,.2,1)'})});const moved=document.querySelector(`.grocery-item[data-key="${CSS.escape(encodeURIComponent(animateKey))}"]`);if(moved)moved.animate([{opacity:.55},{opacity:1}],{duration:340,easing:'ease-out'})});document.querySelectorAll('.grocery-item input').forEach(b=>b.onchange=()=>{const k=decodeURIComponent(b.dataset.k),item=a.find(i=>i.key===k);s.checked[k]=b.checked;save();groceries(k);if(item)syncGrocery(item,b.checked)})}
+async function loadCloudWeek(){if(DEV)return false;try{const r=await fetch(`/api/plan?week_start=${encodeURIComponent(currentWeekStart())}`),d=await r.json();if(!r.ok)throw new Error(d.error||'Could not load this week.');if(!d.plan)return false;s={...s,days:d.plan.cooking_days||s.days,useUp:d.plan.use_up||'',notes:d.plan.notes||'',size:d.plan.household_size||5,eq:d.plan.equipment||[],meals:d.meals||[],planId:d.plan.id,checked:{},syncError:null};for(const i of d.groceryItems||[])s.checked[groceryKey(i)]=!!i.checked;save();return true}catch(e){s.syncError=e.message;save();return false}}
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>view(b.dataset.view));
-
-(async function boot(){
-  await loadCloudWeek();
-  plan();
-})();
+(async function boot(){await loadCloudWeek();plan()})();
