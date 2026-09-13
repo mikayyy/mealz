@@ -1,30 +1,24 @@
-# Mealz v0.1 Prototype
+# Mealz v0.2
 
-This is a simple mobile-first prototype for the Mealz meal-planning app.
+## New in v0.2
+- Editable weekly household size
+- Toggle kitchen equipment on/off
+- AI-generated meals and recipes
+- Grocery list derived from recipe ingredients
+- Checked grocery items move to the bottom of their category
+- Browser persistence for settings, plan, and checked items
+- Secure Vercel API function for OpenAI
 
-## What works
-- Select cooking days
-- Enter ingredients to use up
-- Enter weekly notes
-- View a sample meal plan
-- Open recipes
-- Check grocery items off
-- Navigate between Plan, Meals, and Groceries
+## Equipment seeded
+Instant Pot, air fryer attachment, oven, Tovala smart oven, standalone griddle, cast iron pans, KitchenAid mixer, food processor.
 
-## What is intentionally fake in v0.1
-- Meals are sample data, not AI-generated
-- No database or login
-- No persistent storage after page refresh
-- Swap-a-meal and cooking mode are placeholders
+## Configure AI in Vercel
+Go to Settings → Environment Variables and add `OPENAI_API_KEY` with your OpenAI API key, then redeploy. Optional: set `OPENAI_MODEL` to `gpt-5.6-luna`.
 
-## How to run
-Simplest option:
-1. Unzip the folder.
-2. Open `index.html` in a browser.
+Never place an API key in browser code or GitHub.
 
-For a better local experience, run a simple static server from the folder:
-- Python: `python -m http.server 8000`
-Then visit `http://localhost:8000`.
-
-## Next milestone
-v0.2 should connect the planning form to the OpenAI API and return structured meal-plan data.
+## Current limitations
+- No login/Supabase yet
+- Settings persist only in the current browser/device
+- No meal swap yet
+- No live retailer inventory or prices
