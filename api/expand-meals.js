@@ -1,8 +1,71 @@
-function outputText(r){if(r.output_text)return r.output_text;return (r.output||[]).flatMap(x=>x.content||[]).map(c=>c.text||'').join('\n')}
-function parseJson(t){const s=String(t||'').trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'');try{return JSON.parse(s)}catch{const a=s.indexOf('{'),b=s.lastIndexOf('}');if(a>=0&&b>a)return JSON.parse(s.slice(a,b+1));throw new Error('invalid-json')}}
-async function callOpenAI(prompt){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),45000);try{const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:controller.signal,headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-5.6-luna',input:prompt})});const raw=await r.json().catch(()=>null);if(!r.ok)throw new Error(raw?.error?.message||`OpenAI request failed (${r.status}).`);return parseJson(outputText(raw||{}))}catch(e){if(e?.name==='AbortError')throw new Error('recipe-timeout');throw e}finally{clearTimeout(timer)}}
-function friendlyError(e){const m=String(e?.message||e||'');if(m==='invalid-json'||/unexpected format/i.test(m))return 'Mealz received an incomplete recipe response. Please try again.';if(m==='recipe-timeout'||/gateway timeout|timed out/i.test(m))return 'Recipe generation took too long. Please try again.';if(/string did not match the expected pattern/i.test(m))return 'The recipe request hit a temporary connection error. Please try again.';return m||'Mealz could not build the selected recipes.'}
-function dietaryInstruction(tags){if(!Array.isArray(tags)||!tags.length)return 'No special dietary style is selected.';return `Household dietary preferences: ${tags.join(', ')}. Enforce restrictive tags in the finished recipe. Vegetarian means no meat or seafood. Vegan means no animal products. Pescatarian allows seafood but no poultry or other meat. Gluten-Free, Dairy-Free and Nut-Free must exclude those ingredients. Keto and Low Carb should keep carbohydrate load appropriately low. Whole30 should remain Whole30-compatible. Low Sodium and Low Added Sugar should minimize those components. High Protein should emphasize protein. Mediterranean and Plant-Forward are style preferences unless paired with a stricter tag.`}
-function equipmentInstruction(equipment){return Array.isArray(equipment)&&equipment.length?`Special equipment available: ${equipment.join(', ')}. Use only selected special appliances/tools when a recipe depends on them.`:'No special equipment is selected. Use ordinary broadly available kitchen methods and do not require an air fryer, pressure cooker, slow cooker, grill, sous vide, or other special appliance.'}
-async function buildOne({day,idea,householdSize,adults,children,dietTags,equipment,useUp,notes}){const dietary=dietaryInstruction(dietTags);const equipmentText=equipmentInstruction(equipment);const kid=Number(children||0)>0?`${children} child${Number(children)===1?'':'ren'} are eating; include a practical kid adaptation when helpful.`:'No children are listed.';const prompt=`You are the recipe-building engine for Mealz. Expand this already-selected dinner concept into one complete practical recipe. Do not change the core identity of the selected meal. Assigned day: ${day}. Selected meal: ${idea.title}. Description: ${idea.description||''}. Household size: ${householdSize||5} (${adults||0} adults, ${children||0} children). ${kid} ${equipmentText} Ingredients to use when sensible: ${useUp||'none'}. Notes: ${notes||'none'}. ${dietary} Primary store is Trader Joe's; Wegmans is backup. Never use beef or pork. Avoid mushrooms when practical. Scale to exactly ${householdSize||5} servings. Use only grocery categories Produce, Meat & Seafood, Dairy & Eggs, Frozen, Bakery, Pantry, Other. Quantity must be a JSON number or null. Keep instructions concise but complete. Return ONLY valid JSON shaped exactly like {"meal":{"id":"unique-slug","day":"${day}","title":"Meal title","emoji":"🍽️","description":"short description","servings":${householdSize||5},"total_minutes":30,"difficulty":"Easy","tags":["Kid friendly"],"kid_note":"optional adaptation","ingredients":[{"name":"lime","quantity":2,"unit":"whole","category":"Produce","preferred_store":"Trader Joe's","optional":false}],"steps":["Step one","Step two"]}}.`;let data;try{data=await callOpenAI(prompt)}catch(first){if(first?.message!=='invalid-json')throw first;data=await callOpenAI(prompt+'\nYour prior response was malformed. Return raw JSON only with no markdown or commentary.')}const m=data?.meal;if(!m||typeof m!=='object')throw new Error('unexpected format');return {...m,id:m.id||idea.id||`meal-${day.toLowerCase()}`,day,title:m.title||idea.title||'Dinner',emoji:m.emoji||idea.emoji||'🍽️',description:m.description||idea.description||'',servings:Number(m.servings||householdSize||5),total_minutes:Number(m.total_minutes||idea.total_minutes||30),ingredients:Array.isArray(m.ingredients)?m.ingredients:[],steps:Array.isArray(m.steps)?m.steps:[],tags:Array.isArray(m.tags)?m.tags:[]}}
-export default async function handler(req,res){if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});if(!process.env.OPENAI_API_KEY)return res.status(500).json({error:'Mealz AI is not configured.'});try{const {days,selectedIdeas,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};if(!Array.isArray(days)||!days.length)return res.status(400).json({error:'No cooking days were supplied.'});if(!Array.isArray(selectedIdeas)||selectedIdeas.length!==days.length)return res.status(400).json({error:`Choose exactly ${days.length} meals first.`});const jobs=days.map((day,i)=>buildOne({day,idea:selectedIdeas[i]||{},householdSize,adults,children,dietTags,equipment,useUp,notes}));const meals=await Promise.all(jobs);return res.status(200).json({meals})}catch(e){console.error('Mealz recipe expansion error',e);return res.status(502).json({error:friendlyError(e)})}}
+import {callOpenAIJson} from './_lib/openai.js';
+import {recipeSchema} from './_lib/schemas.js';
+import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
+import {startTelemetry} from './_lib/telemetry.js';
+
+function friendlyError(error){
+  const message=String(error?.message||error||'');
+  if(message==='openai-timeout')return 'Recipe generation took too long. Please try again.';
+  if(message==='openai-output-limit')return 'Mealz ran out of room while building a recipe. Please try again.';
+  if(message==='structured-output-invalid'||message==='openai-empty-response'||message==='openai-incomplete')return 'Mealz received an incomplete recipe response. Please try again.';
+  if(/string did not match the expected pattern/i.test(message))return 'The recipe request hit a temporary connection error. Please try again.';
+  return message||'Mealz could not build the selected recipes.';
+}
+
+async function buildOne({day,idea,householdSize,adults,children,dietTags,equipment,useUp,notes,telemetry,retry=false}){
+  const dietary=dietaryInstruction(dietTags);
+  const equipmentText=equipmentInstruction(equipment);
+  const kid=kidInstruction(children);
+  const prompt=`You are the recipe-building engine for Mealz. Expand this already-selected dinner concept into one complete practical weeknight recipe without changing its core identity. Assigned day: ${day}. Selected meal: ${idea.title}. Description: ${idea.description||''}. Household size: ${householdSize||5} (${adults||0} adults, ${children||0} children). ${kid} ${equipmentText} Ingredients to use when sensible: ${useUp||'none'}. Notes: ${notes||'none'}. ${dietary} Primary store is Trader Joe's; Wegmans is backup. Never use beef or pork. Avoid mushrooms when practical. Scale to exactly ${householdSize||5} servings. Use only these grocery categories: Produce, Meat & Seafood, Dairy & Eggs, Frozen, Bakery, Pantry, Other. Ingredient quantity must be a number or null. Keep ingredients practical and instructions concise but complete. The day must be ${day}.${retry?' This is a retry after a failed generation, so prioritize a complete, concise recipe.':''}`;
+  const data=await callOpenAIJson({
+    prompt,
+    schema:recipeSchema,
+    schemaName:'mealz_recipe',
+    schemaDescription:'One complete Mealz dinner recipe.',
+    timeoutMs:45000,
+    reasoningEffort:'low',
+    maxOutputTokens:3500,
+    telemetry
+  });
+  const m=data?.meal;
+  return {...m,id:m.id||idea.id||`meal-${day.toLowerCase()}`,day,title:m.title||idea.title||'Dinner',emoji:m.emoji||idea.emoji||'🍽️',description:m.description||idea.description||'',servings:Number(m.servings||householdSize||5),total_minutes:Number(m.total_minutes||idea.total_minutes||30),ingredients:Array.isArray(m.ingredients)?m.ingredients:[],steps:Array.isArray(m.steps)?m.steps:[],tags:Array.isArray(m.tags)?m.tags:[]};
+}
+
+export default async function handler(req,res){
+  const telemetry=startTelemetry('expand-meals');
+  if(req.method!=='POST'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
+  if(!process.env.OPENAI_API_KEY){telemetry.finish(500,{reason:'openai_not_configured'});return res.status(500).json({error:'Mealz AI is not configured.'})}
+  try{
+    const {days,selectedIdeas,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};
+    if(!Array.isArray(days)||!days.length){telemetry.finish(400,{reason:'missing_days'});return res.status(400).json({error:'No cooking days were supplied.'})}
+    if(!Array.isArray(selectedIdeas)||selectedIdeas.length!==days.length){telemetry.finish(400,{reason:'selection_mismatch'});return res.status(400).json({error:`Choose exactly ${days.length} meals first.`})}
+    const params=days.map((day,i)=>({day,idea:selectedIdeas[i]||{},householdSize,adults,children,dietTags,equipment,useUp,notes,telemetry}));
+    const firstPass=await Promise.allSettled(params.map(p=>buildOne(p)));
+    const meals=new Array(days.length);
+    const failed=[];
+    firstPass.forEach((result,i)=>{
+      if(result.status==='fulfilled')meals[i]=result.value;
+      else failed.push(i);
+    });
+    if(failed.length){
+      telemetry.event('recipe_retry',{failed_count:failed.length,failed_days:failed.map(i=>days[i])});
+      const retries=await Promise.allSettled(failed.map(i=>buildOne({...params[i],retry:true})));
+      const stillFailed=[];
+      retries.forEach((result,j)=>{
+        const originalIndex=failed[j];
+        if(result.status==='fulfilled')meals[originalIndex]=result.value;
+        else stillFailed.push({index:originalIndex,error:result.reason});
+      });
+      if(stillFailed.length){
+        const first=stillFailed[0];
+        telemetry.event('recipe_retry_failed',{failed_count:stillFailed.length,failed_days:stillFailed.map(x=>days[x.index])});
+        throw first.error;
+      }
+    }
+    telemetry.finish(200,{meal_count:meals.length,retried_count:failed.length});
+    return res.status(200).json({meals});
+  }catch(e){
+    telemetry.fail(e);
+    return res.status(502).json({error:friendlyError(e)});
+  }
+}
