@@ -1,0 +1,11 @@
+// Mealz v0.6: Friday-night pre-generation for next week's six lightweight ideas.
+let readyIdeas=null,readyIdeasChecked=false,readyIdeasLoading=false;
+function planningWeekStart(){const d=new Date(),day=d.getDay();let diff=1-day;if(day===0)diff=1;if(day===5)diff=3;if(day===6)diff=2;d.setDate(d.getDate()+diff);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+const v05Plan=plan;
+plan=function(){v05Plan();decorateReadyIdeas();if(!DEV&&!readyIdeasChecked&&!readyIdeasLoading)loadReadyIdeas()}
+function decorateReadyIdeas(){if(!readyIdeas?.ideas?.length||!document.querySelector('#go'))return;const go=document.querySelector('#go');go.textContent='See 6 Ready Ideas ✨';if(!document.querySelector('#readyIdeasNote'))go.insertAdjacentHTML('beforebegin','<div id="readyIdeasNote" class="status ready-ideas">🍲 <b>Next week is ready.</b><br><span class="small">Mealz prepared six dinner ideas ahead of time. You can still adjust the plan first.</span></div>')}
+async function loadReadyIdeas(){readyIdeasLoading=true;try{const weekStart=planningWeekStart();const r=await fetch(`/api/pregenerated-ideas?week_start=${encodeURIComponent(weekStart)}`),d=await r.json();if(r.ok&&Array.isArray(d.ideas)&&d.ideas.length===6)readyIdeas=d}catch(e){console.warn('Prepared ideas unavailable',e)}finally{readyIdeasChecked=true;readyIdeasLoading=false;decorateReadyIdeas()}}
+const v05Generate=generate;
+generate=async function(){draft();s.error=null;s.syncError=null;if(!s.days.length){s.error='Choose at least one cooking day.';return plan()}if(s.days.length>6){s.error='For now, choose up to 6 cooking days so you have more ideas than meals to pick.';return plan()}if(readyIdeas?.ideas?.length===6){s.ideas=readyIdeas.ideas;s.selectedIdeas=[];s.error=null;save();return ideaPicker()}return v05Generate()}
+async function syncPlan(){const r=await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({weekStart:planningWeekStart(),householdSize:s.size,days:s.days,equipment:s.eq,useUp:s.useUp,notes:s.notes,meals:s.meals})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not save this week.');s.planId=d.planId;s.syncError=null;save()}
+setTimeout(()=>{if(!DEV&&!readyIdeasChecked&&!readyIdeasLoading)loadReadyIdeas()},250);
