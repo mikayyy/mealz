@@ -3,12 +3,19 @@ let weekScreenMode='dashboard';
 let selectedWeekStart=null;
 let weeksOverview=null;
 let weeksOverviewLoading=false;
+let activeSwapEpoch=null;
+let navigationEpoch=0;
 const weekCache=new Map();
 const basePlanEditor=plan;
 const baseSyncPlan=syncPlan;
 const baseMealsView=meals;
 const baseGroceriesView=groceries;
 const baseRecipeView=recipe;
+const baseProfileView=profile;
+const baseIdeaPicker=ideaPicker;
+const baseBuildSelectedWeek=buildSelectedWeek;
+const baseSwapMeal=swapMeal;
+const baseShowSwapChoices=showSwapChoices;
 const weekLogic=globalThis.MealzLogic;
 
 function currentWeekStart(){return weekLogic.currentWeekStart()}
@@ -29,23 +36,41 @@ function profileCard(){
 async function loadWeeksOverview(force=false){if(DEV){weeksOverview={current:null,next:null,past:[]};return weeksOverview}if(weeksOverview&&!force)return weeksOverview;if(weeksOverviewLoading)return weeksOverview;weeksOverviewLoading=true;try{weeksOverview=await apiJson(`/api/weeks?current_start=${encodeURIComponent(currentWeekStart())}&next_start=${encodeURIComponent(nextWeekStart())}`);return weeksOverview}catch(e){s.syncError=e.message;save();weeksOverview={current:null,next:null,past:[]};return weeksOverview}finally{weeksOverviewLoading=false}}
 function applyWeekData(start,d){if(!d?.plan)return false;selectedWeekStart=start;s.viewWeekStart=start;s.meals=sortMealsByDay(d.meals||[]);s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of d.groceryItems||[])s.checked[groceryKey(i)]=!!i.checked;save();return true}
 function cacheCurrentState(start){if(!start||!s.planId)return;weekCache.set(start,{plan:{id:s.planId,cooking_days:s.days||[],use_up:s.useUp||'',notes:s.notes||''},meals:sortMealsByDay(s.meals||[]),groceryItems:groceryData().map(i=>({...i,checked:!!s.checked[i.key]}))})}
-async function hydrateWeek(start,{force=false}={}){if(!start)return false;if(!force&&weekCache.has(start))return applyWeekData(start,weekCache.get(start));if(!force&&s.viewWeekStart===start&&s.planId&&(s.meals||[]).length){cacheCurrentState(start);return true}try{const d=await apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`);if(!d.plan)return false;weekCache.set(start,d);return applyWeekData(start,d)}catch(e){s.syncError=e.message;save();return false}}
-function backToWeeks(){weekScreenMode='dashboard';selectedWeekStart=null;dashboard()}
+async function hydrateWeek(start,{force=false}={}){
+  if(!start)return false;
+  // The selected week is navigation state, even when the data is already hydrated.
+  // Previously this was only set on a network/cache hydration path, which could leave
+  // Meals/Groceries without a route back to the dashboard for the already-loaded week.
+  selectedWeekStart=start;
+  if(!force&&weekCache.has(start))return applyWeekData(start,weekCache.get(start));
+  if(!force&&s.viewWeekStart===start&&s.planId&&(s.meals||[]).length){cacheCurrentState(start);return true}
+  try{const d=await apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`);if(!d.plan)return false;weekCache.set(start,d);return applyWeekData(start,d)}catch(e){s.syncError=e.message;save();return false}
+}
+function cancelTransientNavigation(){activeSwapEpoch=null;navigationEpoch++}
+function backToWeeks(){cancelTransientNavigation();weekScreenMode='dashboard';selectedWeekStart=null;dashboard()}
 function addWeekContext(){
-  if(!selectedWeekStart)return;
+  if(!selectedWeekStart||app.querySelector('.week-context'))return;
   const h1=app.querySelector('h1');if(!h1)return;
   const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← Weeks</button><div><b>${esc(weekKind(selectedWeekStart))}</b><span>${esc(weekLabel(selectedWeekStart))}</span></div>`;
   h1.before(context);context.querySelector('.week-back').onclick=backToWeeks;
 }
 function addEditorBack(){
-  const h1=app.querySelector('h1');if(!h1||app.querySelector('.week-context'))return;
+  if(app.querySelector('.week-context'))return;
+  const h1=app.querySelector('h1');if(!h1)return;
   const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← Weeks</button><div><b>Next Week</b><span>${esc(weekLabel(nextWeekStart()))}</span></div>`;
   h1.before(context);context.querySelector('.week-back').onclick=backToWeeks;
 }
-async function startNextWeekPlanning(prefill=false){weekScreenMode='editor';selectedWeekStart=nextWeekStart();s.viewWeekStart=selectedWeekStart;s.error=null;if(prefill){const ok=await hydrateWeek(selectedWeekStart);if(ok)weeklyDraft={days:sortDays(s.days||[]),useUp:s.useUp||'',notes:s.notes||''};else weeklyDraft={days:[],useUp:'',notes:''}}else{weeklyDraft={days:[],useUp:'',notes:''}}basePlanEditor();addEditorBack()}
-async function openWeekMeals(start){const ok=await hydrateWeek(start);if(ok){weekScreenMode='dashboard';view('meals')}else{weeksOverview=null;dashboard()}}
-async function openWeekGroceries(start){const ok=await hydrateWeek(start);if(ok){weekScreenMode='dashboard';view('groceries')}else{weeksOverview=null;dashboard()}}
-function wireWeekActions(){document.querySelectorAll('[data-week-action]').forEach(b=>b.onclick=async()=>{const action=b.dataset.weekAction,start=b.dataset.week;if(action==='plan-next')return startNextWeekPlanning(false);if(action==='replan-next')return startNextWeekPlanning(true);if(action==='view-meals')return openWeekMeals(start);if(action==='view-groceries')return openWeekGroceries(start);if(action==='edit-profile'){weekScreenMode='dashboard';return profile()}})}
+function addProfileBack(){
+  if(app.querySelector('.week-context'))return;
+  const h1=app.querySelector('h1');if(!h1)return;
+  const fromEditor=weekScreenMode==='editor';
+  const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← ${fromEditor?'Plan':'Weeks'}</button><div><b>Profile</b><span>${fromEditor?'Return to next week planning':'Meal preferences and settings'}</span></div>`;
+  h1.before(context);context.querySelector('.week-back').onclick=()=>{cancelTransientNavigation();plan()};
+}
+async function startNextWeekPlanning(prefill=false){cancelTransientNavigation();weekScreenMode='editor';selectedWeekStart=nextWeekStart();s.viewWeekStart=selectedWeekStart;s.error=null;if(prefill){const ok=await hydrateWeek(selectedWeekStart);if(ok)weeklyDraft={days:sortDays(s.days||[]),useUp:s.useUp||'',notes:s.notes||''};else weeklyDraft={days:[],useUp:'',notes:''}}else{weeklyDraft={days:[],useUp:'',notes:''}}basePlanEditor();addEditorBack()}
+async function openWeekMeals(start){cancelTransientNavigation();const ok=await hydrateWeek(start);if(ok){weekScreenMode='dashboard';view('meals')}else{weeksOverview=null;dashboard()}}
+async function openWeekGroceries(start){cancelTransientNavigation();const ok=await hydrateWeek(start);if(ok){weekScreenMode='dashboard';view('groceries')}else{weeksOverview=null;dashboard()}}
+function wireWeekActions(){document.querySelectorAll('[data-week-action]').forEach(b=>b.onclick=async()=>{const action=b.dataset.weekAction,start=b.dataset.week;if(action==='plan-next')return startNextWeekPlanning(false);if(action==='replan-next')return startNextWeekPlanning(true);if(action==='view-meals')return openWeekMeals(start);if(action==='view-groceries')return openWeekGroceries(start);if(action==='edit-profile'){cancelTransientNavigation();weekScreenMode='dashboard';return profile()}})}
 async function dashboard(){weekScreenMode='dashboard';selectedWeekStart=null;if(weeksOverview){renderDashboard(weeksOverview);return}app.innerHTML='<h1>Your Weeks</h1><p class=subtle>Mealz weeks run Monday through Sunday.</p><div class="status">Loading your meal plans…</div>';const o=await loadWeeksOverview();renderDashboard(o)}
 function renderDashboard(o){
   const next=o?.next,current=o?.current,past=o?.past||[];
@@ -57,7 +82,34 @@ function renderDashboard(o){
 
 planningWeekStart=function(){return selectedWeekStart||nextWeekStart()};
 plan=function(){if(weekScreenMode==='editor'){basePlanEditor();addEditorBack();return}return dashboard()};
-meals=function(){baseMealsView();addWeekContext()};
-groceries=function(){baseGroceriesView();addWeekContext()};
+profile=function(){baseProfileView();addProfileBack()};
+ideaPicker=function(){baseIdeaPicker();addWeekContext()};
+meals=function(){activeSwapEpoch=null;baseMealsView();addWeekContext()};
+groceries=function(){activeSwapEpoch=null;baseGroceriesView();addWeekContext()};
 recipe=function(id){baseRecipeView(id);if(selectedWeekStart){const back=app.querySelector('#back');if(back)back.textContent='← Meals';addWeekContext()}};
+buildSelectedWeek=async function(){const result=await baseBuildSelectedWeek();addWeekContext();return result};
+swapMeal=async function(id){
+  const epoch=++navigationEpoch;
+  activeSwapEpoch=epoch;
+  const pending=baseSwapMeal(id);
+  // The loading state already has a Back control. The week context provides a direct
+  // dashboard escape, and showSwapChoices is guarded so a canceled request cannot
+  // unexpectedly pull the user forward again when the response arrives.
+  addWeekContext();
+  const result=await pending;
+  if(activeSwapEpoch===epoch)addWeekContext();
+  return result;
+};
+showSwapChoices=function(original,alts){if(activeSwapEpoch==null)return;baseShowSwapChoices(original,alts);addWeekContext()};
 syncPlan=async function(){const week=planningWeekStart();const result=await baseSyncPlan();weeksOverview=null;weekCache.delete(week);cacheCurrentState(week);return result};
+
+// The wordmark is a persistent escape hatch back to the week dashboard on every screen.
+const brandHome=document.querySelector('.brand');
+if(brandHome){
+  brandHome.setAttribute('role','button');
+  brandHome.setAttribute('tabindex','0');
+  brandHome.setAttribute('aria-label','Go to weeks dashboard');
+  brandHome.setAttribute('title','Go to weeks dashboard');
+  brandHome.onclick=backToWeeks;
+  brandHome.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();backToWeeks()}};
+}
