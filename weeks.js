@@ -6,20 +6,12 @@ let weeksOverviewLoading=false;
 const weekCache=new Map();
 const basePlanEditor=plan;
 const baseSyncPlan=syncPlan;
+const weekLogic=globalThis.MealzLogic;
 
-function mondayStart(date=new Date()){
-  const d=new Date(date.getFullYear(),date.getMonth(),date.getDate());
-  const day=d.getDay();
-  const diff=day===0?-6:1-day;
-  d.setDate(d.getDate()+diff);
-  return d;
-}
-function addDays(date,n){const d=new Date(date);d.setDate(d.getDate()+n);return d}
-function isoLocal(date){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`}
-function currentWeekStart(){return isoLocal(mondayStart())}
-function nextWeekStart(){return isoLocal(addDays(mondayStart(),7))}
+function currentWeekStart(){return weekLogic.currentWeekStart()}
+function nextWeekStart(){return weekLogic.nextWeekStart()}
 function parseLocalDate(iso){const [y,m,d]=String(iso).split('-').map(Number);return new Date(y,m-1,d)}
-function weekLabel(start){const a=parseLocalDate(start),b=addDays(a,6);const sameMonth=a.getMonth()===b.getMonth();const monthA=a.toLocaleDateString(undefined,{month:'short'});const monthB=b.toLocaleDateString(undefined,{month:'short'});return sameMonth?`${monthA} ${a.getDate()}–${b.getDate()}`:`${monthA} ${a.getDate()} – ${monthB} ${b.getDate()}`}
+function weekLabel(start){const a=parseLocalDate(start),b=weekLogic.addDays(a,6);const sameMonth=a.getMonth()===b.getMonth();const monthA=a.toLocaleDateString(undefined,{month:'short'});const monthB=b.toLocaleDateString(undefined,{month:'short'});return sameMonth?`${monthA} ${a.getDate()}–${b.getDate()}`:`${monthA} ${a.getDate()} – ${monthB} ${b.getDate()}`}
 function mealPreview(w){if(!w?.meals?.length)return 'No meals planned yet.';return w.meals.slice(0,3).map(m=>`${m.emoji||'🍽️'} ${esc(m.title)}`).join(' · ')+(w.meals.length>3?` · +${w.meals.length-3} more`:'')}
 function weekCard(title,w,{primaryLabel,primaryAction,secondaryLabel,secondaryAction,emptyText}={}){
   const start=w?.weekStart;
