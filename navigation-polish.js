@@ -5,14 +5,20 @@
   }
   function crumbText(label,current=false){const s=document.createElement('span');s.className=current?'breadcrumb-current':'breadcrumb-label';s.textContent=label;return s}
   function sep(){const s=document.createElement('span');s.className='breadcrumb-sep';s.textContent='›';s.setAttribute('aria-hidden','true');return s}
-  function installCrumbs(parts,{removeBack=false}={}){
+  function installCrumbs(parts,{removeBack=false,switchTo=null}={}){
     app.querySelector('.week-context')?.remove();
     if(removeBack)app.querySelector('#back')?.remove();
+    app.querySelector('.breadcrumb-row')?.remove();
     app.querySelector('.breadcrumb-nav')?.remove();
     const h1=app.querySelector('h1');if(!h1)return;
+    const row=document.createElement('div');row.className='breadcrumb-row';
     const nav=document.createElement('nav');nav.className='breadcrumb-nav';nav.setAttribute('aria-label','Breadcrumb');
     parts.forEach((part,i)=>{if(i)nav.appendChild(sep());nav.appendChild(part.action?crumbButton(part.label,part.action):crumbText(part.label,i===parts.length-1))});
-    h1.before(nav);
+    row.appendChild(nav);
+    if(switchTo){
+      const button=document.createElement('button');button.type='button';button.className='secondary week-view-switch';button.textContent=switchTo.label;button.setAttribute('aria-label',switchTo.ariaLabel||`Switch to ${switchTo.label}`);button.onclick=switchTo.action;row.appendChild(button);
+    }
+    h1.before(row);
   }
   function weekParts(section){
     if(!selectedWeekStart)return [{label:'Weeks',action:backToWeeks},{label:section}];
@@ -34,10 +40,18 @@
   ideaPicker=function(){const result=baseIdeas();installCrumbs(weekParts('Meal Ideas'));return result};
 
   const baseMeals=meals;
-  meals=function(){const result=baseMeals();installCrumbs(weekParts('Meals'));return result};
+  meals=function(){
+    const result=baseMeals();
+    installCrumbs(weekParts('Meals'),{switchTo:{label:'Groceries',ariaLabel:`Open groceries for ${selectedWeekStart?weekKind(selectedWeekStart):'this week'}`,action:()=>groceries()}});
+    return result;
+  };
 
   const baseGroceries=groceries;
-  groceries=function(animateKey){const result=baseGroceries(animateKey);installCrumbs(weekParts('Groceries'));return result};
+  groceries=function(animateKey){
+    const result=baseGroceries(animateKey);
+    installCrumbs(weekParts('Groceries'),{switchTo:{label:'Meals',ariaLabel:`Open meals for ${selectedWeekStart?weekKind(selectedWeekStart):'this week'}`,action:()=>meals()}});
+    return result;
+  };
 
   const baseRecipe=recipe;
   recipe=function(id){const result=baseRecipe(id);installCrumbs([...weekParts('Meals'),{label:'Recipe'}],{removeBack:true});return result};
