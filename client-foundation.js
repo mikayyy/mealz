@@ -1,4 +1,4 @@
-// Mealz v0.11.3 foundation helpers: session draft preservation, conflict warnings, and scroll reset.
+// Mealz foundation helpers: session draft preservation, conflict warnings, scroll reset, and profile labels.
 (()=>{
   const logic=globalThis.MealzLogic;
   const appRoot=document.querySelector('#app');
@@ -8,7 +8,7 @@
     if(!conflicts.length)return '';
     const unique=[...new Set(conflicts.flatMap(c=>c.matches))];
     const prefs=[...new Set(conflicts.map(c=>c.preference))];
-    return `<div class="constraint-warning" id="constraintWarning"><div class="constraint-icon">⚠️</div><div><b>These ingredients may conflict with your household settings.</b><p>${esc(unique.join(', '))} ${unique.length===1?'does':'do'} not fit ${esc(prefs.join(' + '))}. Mealz will follow your household preference, so it may leave ${unique.length===1?'that ingredient':'those ingredients'} out.</p><button class="constraint-edit" id="constraintEditHousehold" type="button">Edit Household</button></div></div>`;
+    return `<div class="constraint-warning" id="constraintWarning"><div class="constraint-icon">⚠️</div><div><b>These ingredients may conflict with your profile settings.</b><p>${esc(unique.join(', '))} ${unique.length===1?'does':'do'} not fit ${esc(prefs.join(' + '))}. Mealz will follow your profile preference, so it may leave ${unique.length===1?'that ingredient':'those ingredients'} out.</p><button class="constraint-edit" id="constraintEditHousehold" type="button">Edit Profile</button></div></div>`;
   }
 
   function renderUseUpConflict(){
@@ -22,6 +22,19 @@
     section.insertAdjacentHTML('beforeend',conflictMarkup(conflicts));
     const edit=document.querySelector('#constraintEditHousehold');
     if(edit)edit.onclick=()=>{captureWeeklyDraft();profile()};
+  }
+
+  function applyProfileLabels(){
+    const heading=appRoot.querySelector('h1');
+    if(heading?.textContent?.trim()==='Household')heading.textContent='Profile';
+    const summaryHeading=appRoot.querySelector('.household-summary h2');
+    if(summaryHeading?.textContent?.trim()==='Household')summaryHeading.textContent='Profile';
+    const saveButton=appRoot.querySelector('#profileDone');
+    if(saveButton&&/save household/i.test(saveButton.textContent||''))saveButton.textContent='Save Profile';
+    const profileIntro=heading?.nextElementSibling;
+    if(heading?.textContent==='Profile'&&profileIntro?.classList?.contains('subtle')){
+      profileIntro.textContent='Set the preferences Mealz should remember from week to week.';
+    }
   }
 
   document.addEventListener('focusout',event=>{
@@ -43,8 +56,10 @@
   };
 
   new MutationObserver(()=>{
+    applyProfileLabels();
     if(document.querySelector('#useUp'))renderUseUpConflict();
     resetScrollIfScreenChanged();
   }).observe(appRoot,{childList:true,subtree:true});
+  applyProfileLabels();
   resetScrollIfScreenChanged();
 })();
