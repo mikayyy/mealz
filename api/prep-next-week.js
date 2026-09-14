@@ -2,10 +2,9 @@ import {callOpenAIJson} from './_lib/openai.js';
 import {ideasSchema} from './_lib/schemas.js';
 import {sb,enc,supabaseConfigured} from './_lib/supabase.js';
 import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
+import {readProfile} from './_lib/profile-store.js';
 import {startTelemetry} from './_lib/telemetry.js';
 
-const PROFILE_DATE='1970-01-01';
-function parseMeta(notes){try{return notes?JSON.parse(notes):{}}catch{return {}}}
 function nextMonday(){const d=new Date();const day=d.getUTCDay();let add=(8-day)%7;if(add===0)add=7;d.setUTCDate(d.getUTCDate()+add);return d.toISOString().slice(0,10)}
 function ideaCountForDays(n){return n>=5?Math.min(9,n+2):6}
 
@@ -19,17 +18,20 @@ export default async function handler(req,res){
     const weekStart=nextMonday();
     const recentPlans=await sb('weekly_plans?select=*&status=eq.active&order=week_start.desc,created_at.desc&limit=1');
     const p=recentPlans?.[0]||{};
-    const profileRows=await sb(`weekly_plans?select=*&status=eq.profile&week_start=eq.${PROFILE_DATE}&order=created_at.desc&limit=1`);
-    const profile=profileRows?.[0]||null,meta=parseMeta(profile?.notes);
-    const householdSize=Number(profile?.household_size||p.household_size||5);
-    const adults=Number(meta.adults||0),children=Number(meta.children||0);
-    const dietTags=Array.isArray(meta.dietTags)?meta.dietTags:[];
+    const profileResult=await readProfile();
+    const profile=profileResult.profile;
+    const householdSize=Number(profile?.householdSize||p.household_size||5);
+    const adults=Number(profile?.adults||0),children=Number(profile?.children||0);
+    const dietTags=Array.isArray(profile?.dietTags)?profile.dietTags:[];
     const days=Array.isArray(p.cooking_days)&&p.cooking_days.length?p.cooking_days:['Monday','Thursday','Friday'];
     const ideaCount=ideaCountForDays(days.length);
     const existing=await sb(`weekly_plans?select=id&week_start=eq.${enc(weekStart)}&status=eq.ideas&limit=1`);
     if(existing?.length){
       const rows=await sb(`meals?select=id&weekly_plan_id=eq.${enc(existing[0].id)}`);
-      if(rows?.length>=ideaCount){telemetry.finish(200,{prepared:false,reason:'already_ready',count:rows.length});return res.status(200).json({ok:true,weekStart,prepared:false,reason:'already-ready',count:rows.length})}
+      if(rows?.length>=ideaCount){
+        telemetry.finish(200,{prepared:false,reason:'already_ready',count:rows.length,profile_source:profileResult.source});
+        return res.status(200).json({ok:true,weekStart,prepared:false,reason:'already-ready',count:rows.length});
+      }
     }
     const equipment=profile&&Array.isArray(profile.equipment)?profile.equipment:(Array.isArray(p.equipment)?p.equipment:[]);
     const recentMeals=await sb('meals?select=title,tags,day&day=neq.Idea&order=created_at.desc&limit=30');
@@ -58,7 +60,7 @@ export default async function handler(req,res){
     const plan=plans[0];
     const rows=ideas.map((x,i)=>({weekly_plan_id:plan.id,meal_key:x.id||`idea-${i+1}`,day:'Idea',title:x.title||'Dinner idea',description:x.description||null,emoji:x.emoji||'🍽️',servings:householdSize,total_minutes:Number(x.total_minutes||30),difficulty:null,tags:[`Protein:${x.protein||''}`,...(Array.isArray(x.tags)?x.tags.slice(0,3):[])],kid_note:null,sort_order:i}));
     await sb('meals',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify(rows)});
-    telemetry.finish(200,{prepared:true,count:ideaCount,week_start:weekStart,profile_applied:!!profile});
+    telemetry.finish(200,{prepared:true,count:ideaCount,week_start:weekStart,profile_applied:!!profile,profile_source:profileResult.source});
     return res.status(200).json({ok:true,weekStart,prepared:true,count:ideaCount,profileApplied:!!profile});
   }catch(e){
     telemetry.fail(e);
