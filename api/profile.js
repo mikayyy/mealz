@@ -1,6 +1,5 @@
 const H=()=>({'apikey':process.env.SUPABASE_SECRET_KEY,'Content-Type':'application/json'});
 const PROFILE_DATE='1970-01-01';
-const enc=x=>encodeURIComponent(String(x));
 async function sb(path,options={}){const r=await fetch(`${process.env.SUPABASE_URL}/rest/v1/${path}`,{...options,headers:{...H(),...(options.headers||{})}});const t=await r.text();let d=null;if(t){try{d=JSON.parse(t)}catch{d=t}}if(!r.ok)throw new Error(typeof d==='object'?(d.message||d.hint||JSON.stringify(d)):d||`Supabase error ${r.status}`);return d}
 function configured(){return process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY}
 function parseMeta(notes){try{return notes?JSON.parse(notes):{}}catch{return {}}}
@@ -17,6 +16,7 @@ export default async function handler(req,res){
       const body=req.body||{};const adults=Math.max(0,Number(body.adults||0)),children=Math.max(0,Number(body.children||0));const householdSize=Math.max(1,adults+children||Number(body.householdSize||5));const dietTags=Array.isArray(body.dietTags)?body.dietTags:[];const equipment=Array.isArray(body.equipment)?body.equipment:[];const meta={adults,children,dietTags,stores:Array.isArray(body.stores)?body.stores:['Trader Joe\'s','Wegmans']};
       await sb(`weekly_plans?status=eq.profile&week_start=eq.${PROFILE_DATE}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
       const rows=await sb('weekly_plans',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{week_start:PROFILE_DATE,household_size:householdSize,cooking_days:[],equipment,use_up:null,notes:JSON.stringify(meta),status:'profile'}])});
+      await sb('weekly_plans?status=eq.ideas',{method:'DELETE',headers:{Prefer:'return=minimal'}});
       return res.status(200).json({ok:true,profileId:rows?.[0]?.id||null,profile:{...meta,householdSize,equipment}})
     }
     return res.status(405).json({error:'Method not allowed'});
