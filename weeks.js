@@ -38,3 +38,7 @@ syncPlan=async function(){const result=await baseSyncPlan();weeksOverview=null;r
 
 const planNav=document.querySelector('.nav-btn[data-view="plan"]');
 if(planNav)planNav.addEventListener('click',()=>{weekScreenMode='dashboard'},true);
+const mealsNav=document.querySelector('.nav-btn[data-view="meals"]');
+if(mealsNav)mealsNav.addEventListener('click',event=>{event.stopImmediatePropagation();openWeekMeals(currentWeekStart())},true);
+const groceriesNav=document.querySelector('.nav-btn[data-view="groceries"]');
+if(groceriesNav)groceriesNav.addEventListener('click',event=>{event.stopImmediatePropagation();openWeekGroceries(currentWeekStart())},true);
