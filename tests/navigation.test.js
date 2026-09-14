@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
 const weeks=readFileSync(new URL('../weeks.js',import.meta.url),'utf8');
+const navigationPolish=readFileSync(new URL('../navigation-polish.js',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 
 test('week navigation sets context before using already-hydrated data',()=>{
@@ -17,6 +18,13 @@ test('all durable sub-screens have a route back toward Weeks',()=>{
   assert.match(weeks,/meals=function\(\)\{activeSwapEpoch=null;baseMealsView\(\);addWeekContext\(\)\}/);
   assert.match(weeks,/groceries=function\(\)\{activeSwapEpoch=null;baseGroceriesView\(\);addWeekContext\(\)\}/);
   assert.match(weeks,/recipe=function\(id\).*addWeekContext\(\)/);
+});
+
+test('meals and groceries expose reciprocal week-preserving switches',()=>{
+  assert.match(navigationPolish,/label:'Groceries'.*action:\(\)=>groceries\(\)/s);
+  assert.match(navigationPolish,/label:'Meals'.*action:\(\)=>meals\(\)/s);
+  assert.match(navigationPolish,/weekParts\('Meals'\)/);
+  assert.match(navigationPolish,/weekParts\('Groceries'\)/);
 });
 
 test('cancelled swap requests cannot navigate forward again later',()=>{
