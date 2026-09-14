@@ -1,4 +1,5 @@
 // Mealz v0.8.1: always hydrate the newest active plan after boot.
+// v0.9+: household size/equipment belong to the persistent profile, not an old saved week.
 async function loadNewestActivePlan(){
   if(DEV)return;
   try{
@@ -7,7 +8,7 @@ async function loadNewestActivePlan(){
     if(!r.ok||!d?.plan)return;
     const latestId=d.plan.id;
     if(s.planId===latestId&&Array.isArray(s.meals)&&s.meals.length)return;
-    s={...s,size:d.plan.household_size||s.size,eq:d.plan.equipment||s.eq,meals:d.meals||[],planId:latestId,checked:{},syncError:null};
+    s={...s,meals:d.meals||[],planId:latestId,checked:{},syncError:null};
     for(const i of d.groceryItems||[])s.checked[groceryKey(i)]=!!i.checked;
     save();
     const active=document.querySelector('.nav-btn.active')?.dataset.view||'plan';
