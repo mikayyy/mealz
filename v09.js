@@ -1,4 +1,4 @@
-// Mealz v0.9.1: persistent household profile, richer dietary preferences, standardized equipment.
+// Mealz v0.9.2: cloud-backed household profile, dietary preferences, standardized equipment.
 const DIET_GROUPS={
   'Dietary style':['Vegetarian','Vegan','Pescatarian','Mediterranean','Plant-Forward'],
   'Nutrition goals':['Keto','Low Carb','High Protein','Whole30','Low Sodium','Low Added Sugar'],
@@ -14,6 +14,8 @@ if(!Array.isArray(s.dietTags))s.dietTags=[];
 if(!s.equipmentV091Migrated){s.eq=[...new Set((s.eq||[]).map(x=>EQUIPMENT_MIGRATION[x]||x).filter(x=>PROFILE_EQUIPMENT.includes(x)))];s.equipmentV091Migrated=true;save()}
 function householdTotal(){return Math.max(1,(Number(s.adults)||0)+(Number(s.children)||0))}
 function saveProfile(){s.size=householdTotal();save()}
+async function persistCloudProfile(){if(DEV)return {ok:true};const r=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({adults:s.adults,children:s.children,householdSize:householdTotal(),dietTags:s.dietTags||[],equipment:s.eq||[]})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not save household profile.');return d}
+async function loadCloudProfile(){if(DEV)return;try{const r=await fetch('/api/profile'),d=await r.json();if(!r.ok)throw new Error(d.error||'Could not load household profile.');if(d.profile){s.adults=Math.max(0,Number(d.profile.adults||0));s.children=Math.max(0,Number(d.profile.children||0));s.dietTags=Array.isArray(d.profile.dietTags)?d.profile.dietTags:[];s.eq=Array.isArray(d.profile.equipment)?d.profile.equipment.filter(x=>PROFILE_EQUIPMENT.includes(x)):[];s.size=householdTotal();save();if(document.querySelector('.nav-btn.active')?.dataset.view==='plan')plan()}else{await persistCloudProfile()}}catch(e){console.warn('Household profile cloud sync unavailable',e)}}
 function toggleDietTag(tag){
   if(tag==='No Dietary Restrictions'){s.dietTags=s.dietTags.includes(tag)?[]:['No Dietary Restrictions']}
   else{s.dietTags=(s.dietTags||[]).filter(x=>x!=='No Dietary Restrictions');s.dietTags=s.dietTags.includes(tag)?s.dietTags.filter(x=>x!==tag):[...s.dietTags,tag]}
@@ -24,7 +26,7 @@ function profile(){
   adultMinus.onclick=()=>{s.adults=Math.max(0,s.adults-1);saveProfile();profile()};adultPlus.onclick=()=>{s.adults=Math.min(20,s.adults+1);saveProfile();profile()};childMinus.onclick=()=>{s.children=Math.max(0,s.children-1);saveProfile();profile()};childPlus.onclick=()=>{s.children=Math.min(20,s.children+1);saveProfile();profile()};
   document.querySelectorAll('.preference-btn').forEach(b=>b.onclick=()=>toggleDietTag(b.dataset.tag));
   document.querySelectorAll('.equipment-btn').forEach(b=>b.onclick=()=>{const e=b.dataset.e;s.eq=s.eq.includes(e)?s.eq.filter(x=>x!==e):[...s.eq,e];saveProfile();profile()});
-  profileDone.onclick=()=>view('plan');
+  profileDone.onclick=async()=>{profileDone.disabled=true;profileDone.textContent='Saving…';try{await persistCloudProfile();s.syncError=null}catch(e){s.syncError=e.message}save();view('plan')};
 }
 const v09BasePlan=plan;
 plan=function(){v09BasePlan();const card=document.querySelector('.household-card');if(card)card.outerHTML=`<div class="section card household-summary"><div><h2>Household</h2><p>${s.adults} adult${s.adults===1?'':'s'} · ${s.children} child${s.children===1?'':'ren'} · ${s.dietTags.length?s.dietTags.join(' · '):'No dietary style selected'}</p></div><button class=secondary id=openProfile>Edit</button></div>`;const p=document.querySelector('#openProfile');if(p)p.onclick=profile}
@@ -49,3 +51,5 @@ buildSelectedWeek=async function(){
 }
 
 swapMeal=async function(id){const original=s.meals.find(m=>m.id===id);if(!original)return;app.innerHTML=`<button class=secondary id=cancelSwap>← Back</button><h1>Swap ${esc(original.day)}</h1><p class=subtle>Finding two alternatives for ${esc(original.title)}…</p><div class="status swap-loading">✨ Stirring the idea pot…</div>`;cancelSwap.onclick=meals;try{const r=await fetch('/api/swap-meal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meal:original,otherMeals:s.meals.filter(m=>m.id!==id).map(m=>({title:m.title,day:m.day})),...profilePayload(),useUp:s.useUp,notes:s.notes})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not find alternatives.');showSwapChoices(original,d.alternatives||[])}catch(e){app.innerHTML=`<button class=secondary id=backSwapError>← Back</button><h1>Swap ${esc(original.day)}</h1><div class="status error">${esc(e.message)}</div><button class=primary id=retrySwap>Try Again</button>`;backSwapError.onclick=meals;retrySwap.onclick=()=>swapMeal(id)}}
+
+setTimeout(loadCloudProfile,500);
