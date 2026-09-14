@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const weeks=readFileSync(new URL('../weeks.js',import.meta.url),'utf8');
 const navigationPolish=readFileSync(new URL('../navigation-polish.js',import.meta.url),'utf8');
+const polish=readFileSync(new URL('../polish.css',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 
 test('week navigation sets context before using already-hydrated data',()=>{
@@ -25,6 +26,23 @@ test('meals and groceries expose reciprocal week-preserving switches',()=>{
   assert.match(navigationPolish,/label:'Meals'.*action:\(\)=>meals\(\)/s);
   assert.match(navigationPolish,/weekParts\('Meals'\)/);
   assert.match(navigationPolish,/weekParts\('Groceries'\)/);
+});
+
+test('recipe screen has both an explicit back control and an interactive Meals breadcrumb',()=>{
+  assert.match(navigationPolish,/backTo:\{label:'Back to meals',action:\(\)=>meals\(\)\}/);
+  assert.match(navigationPolish,/weekParts\('Meals',\{sectionAction:\(\)=>meals\(\)\}\)/);
+});
+
+test('non-page breadcrumb context is visually distinct from links and current page',()=>{
+  assert.match(navigationPolish,/kind:'context'/);
+  assert.match(polish,/\.breadcrumb-context\{/);
+  assert.match(polish,/\.breadcrumb-current\{/);
+  assert.match(polish,/\.breadcrumb-link\{/);
+});
+
+test('meal ideas preserve Plan as an interactive parent in the hierarchy',()=>{
+  assert.match(navigationPolish,/planningParts\('Meal Ideas'\)/);
+  assert.match(navigationPolish,/\{label:'Plan',action:current==='Plan'\?null:plan\}/);
 });
 
 test('cancelled swap requests cannot navigate forward again later',()=>{
