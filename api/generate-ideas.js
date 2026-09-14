@@ -1,7 +1,50 @@
-function outputText(r){if(r.output_text)return r.output_text;return (r.output||[]).flatMap(x=>x.content||[]).map(c=>c.text||'').join('\n')}
-function parseJson(t){const s=String(t||'').trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'');try{return JSON.parse(s)}catch{const a=s.indexOf('{'),b=s.lastIndexOf('}');if(a>=0&&b>a)return JSON.parse(s.slice(a,b+1));throw new Error('invalid json')}}
-async function callOpenAI(prompt){const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-5.6-luna',input:prompt})});const raw=await r.json();if(!r.ok)throw new Error(raw?.error?.message||'OpenAI could not generate meal ideas.');return parseJson(outputText(raw))}
-async function preferenceContext(){if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SECRET_KEY)return {recent:[],favorites:[]};try{const r=await fetch(`${process.env.SUPABASE_URL}/rest/v1/meals?select=title,tags,day&day=neq.Idea&order=created_at.desc&limit=30`,{headers:{apikey:process.env.SUPABASE_SECRET_KEY}});if(!r.ok)return {recent:[],favorites:[]};const rows=await r.json(),recent=[],favorites=[];for(const x of rows||[]){if(x.title&&!recent.includes(x.title))recent.push(x.title);if(x.title&&Array.isArray(x.tags)&&x.tags.includes('Make again')&&!favorites.includes(x.title))favorites.push(x.title)}return {recent:recent.slice(0,18),favorites:favorites.slice(0,12)}}catch{return {recent:[],favorites:[]}}}
-function dietaryInstruction(tags){if(!Array.isArray(tags)||!tags.length)return 'No special dietary style is selected.';return `Persistent household dietary preferences: ${tags.join(', ')}. Treat these as real constraints or strong defaults as appropriate. Vegetarian means no meat or seafood. Vegan means no animal products. Pescatarian allows seafood but no poultry or other meat. Gluten-Free, Dairy-Free and Nut-Free must exclude those ingredients. Keto and Low Carb should keep carbohydrate load appropriately low. Whole30 should follow Whole30-compatible ingredients. Low Sodium and Low Added Sugar should minimize those components. High Protein should emphasize protein. Mediterranean and Plant-Forward are style preferences rather than absolute exclusions unless combined with another restrictive tag.`}
-function equipmentInstruction(equipment){return Array.isArray(equipment)&&equipment.length?`Special equipment available: ${equipment.join(', ')}. You may design meals around only those special appliances/tools when useful.`:'No special equipment is selected. Prefer ordinary broadly available kitchen methods and do not make an air fryer, pressure cooker, slow cooker, grill, sous vide, or other special appliance essential to the meal.'}
-export default async function handler(req,res){if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});if(!process.env.OPENAI_API_KEY)return res.status(500).json({error:'Mealz AI is not configured.'});try{const {days,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};if(!Array.isArray(days)||!days.length)return res.status(400).json({error:'Choose at least one cooking day.'});const requested=Number(req.body?.ideaCount||6),ideaCount=Math.max(6,Math.min(9,Number.isFinite(requested)?Math.round(requested):6));const pref=await preferenceContext();const dietary=dietaryInstruction(dietTags);const equipmentText=equipmentInstruction(equipment);const kidContext=Number(children||0)>0?`${children} child${Number(children)===1?'':'ren'} are eating, so keep meals adaptable for children without making the adult version bland.`:'No children are listed in the household.';const prompt=`You are the meal-idea engine for Mealz. Generate exactly ${ideaCount} distinct, practical dinner ideas from which a household will choose ${days.length}. Do NOT generate recipes, ingredient quantities, grocery lists, or instructions yet. Household size: ${householdSize||5} (${adults||0} adults, ${children||0} children). ${kidContext} Cooking days: ${days.join(', ')}. Ingredients to use when sensible: ${useUp||'none'}. ${equipmentText} Notes: ${notes||'none'}. ${dietary} Primary store is Trader Joe's; Wegmans is backup. Unless dietary preferences above require otherwise, prefer chicken, turkey, fish, shrimp, tofu, beans, lentils and eggs. Never use beef or pork. Avoid mushrooms when practical. Make options varied across proteins, cuisines, and cooking methods. Favor ideas with some useful ingredient overlap across the set without making them repetitive. Recent meals the household has already planned: ${pref.recent.join(', ')||'none yet'}. Avoid direct repeats from that recent list unless the current notes explicitly ask for one. Meals explicitly marked MAKE AGAIN: ${pref.favorites.join(', ')||'none yet'}. Treat favorites as strong taste signals: borrow their cuisines, flavors, formats, or cooking styles and occasionally offer a fresh variation, but do not simply repeat favorite titles every week. Return ONLY valid JSON exactly shaped like {"ideas":[{"id":"unique-slug","title":"Meal title","emoji":"🍽️","description":"one concise sentence","total_minutes":30,"protein":"Turkey","tags":["Kid friendly","Skillet"]}]}. Exactly ${ideaCount} ideas.`;let data;try{data=await callOpenAI(prompt)}catch(first){try{data=await callOpenAI(prompt+'\nImportant: Your prior response could not be parsed. Return raw JSON only with no markdown or commentary.')}catch{throw first}}if(!Array.isArray(data.ideas))throw new Error('Meal ideas came back in an unexpected format. Please try again.');const ideas=data.ideas.slice(0,ideaCount).map((x,i)=>({id:x.id||`idea-${Date.now()}-${i}`,title:x.title||'Dinner idea',emoji:x.emoji||'🍽️',description:x.description||'',total_minutes:Number(x.total_minutes||30),protein:x.protein||'',tags:Array.isArray(x.tags)?x.tags.slice(0,3):[]}));if(ideas.length<ideaCount)throw new Error(`Mealz did not receive all ${ideaCount} ideas. Please try again.`);return res.status(200).json({ideas,ideaCount})}catch(e){console.error('Mealz idea generation error',e);return res.status(502).json({error:e.message||'Mealz could not generate meal ideas.'})}}
+import {callOpenAIJson} from './_lib/openai.js';
+import {sb,supabaseConfigured} from './_lib/supabase.js';
+import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
+import {startTelemetry} from './_lib/telemetry.js';
+
+async function preferenceContext(){
+  if(!supabaseConfigured())return {recent:[],favorites:[]};
+  try{
+    const rows=await sb('meals?select=title,tags,day&day=neq.Idea&order=created_at.desc&limit=30');
+    const recent=[],favorites=[];
+    for(const x of rows||[]){
+      if(x.title&&!recent.includes(x.title))recent.push(x.title);
+      if(x.title&&Array.isArray(x.tags)&&x.tags.includes('Make again')&&!favorites.includes(x.title))favorites.push(x.title);
+    }
+    return {recent:recent.slice(0,18),favorites:favorites.slice(0,12)};
+  }catch{return {recent:[],favorites:[]}}
+}
+
+export default async function handler(req,res){
+  const telemetry=startTelemetry('generate-ideas');
+  if(req.method!=='POST'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
+  if(!process.env.OPENAI_API_KEY){telemetry.finish(500,{reason:'openai_not_configured'});return res.status(500).json({error:'Mealz AI is not configured.'})}
+  try{
+    const {days,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};
+    if(!Array.isArray(days)||!days.length){telemetry.finish(400,{reason:'missing_days'});return res.status(400).json({error:'Choose at least one cooking day.'})}
+    const requested=Number(req.body?.ideaCount||6),ideaCount=Math.max(6,Math.min(9,Number.isFinite(requested)?Math.round(requested):6));
+    const pref=await preferenceContext();
+    const dietary=dietaryInstruction(dietTags);
+    const equipmentText=equipmentInstruction(equipment);
+    const kidContext=kidInstruction(children);
+    const prompt=`You are the meal-idea engine for Mealz. Generate exactly ${ideaCount} distinct, practical dinner ideas from which a household will choose ${days.length}. Do NOT generate recipes, ingredient quantities, grocery lists, or instructions yet. Household size: ${householdSize||5} (${adults||0} adults, ${children||0} children). ${kidContext} Cooking days: ${days.join(', ')}. Ingredients to use when sensible: ${useUp||'none'}. ${equipmentText} Notes: ${notes||'none'}. ${dietary} Primary store is Trader Joe's; Wegmans is backup. Unless dietary preferences above require otherwise, prefer chicken, turkey, fish, shrimp, tofu, beans, lentils and eggs. Never use beef or pork. Avoid mushrooms when practical. Make options varied across proteins, cuisines, and cooking methods. Favor ideas with some useful ingredient overlap across the set without making them repetitive. Recent meals the household has already planned: ${pref.recent.join(', ')||'none yet'}. Avoid direct repeats from that recent list unless the current notes explicitly ask for one. Meals explicitly marked MAKE AGAIN: ${pref.favorites.join(', ')||'none yet'}. Treat favorites as strong taste signals: borrow their cuisines, flavors, formats, or cooking styles and occasionally offer a fresh variation, but do not simply repeat favorite titles every week. Return ONLY valid JSON exactly shaped like {"ideas":[{"id":"unique-slug","title":"Meal title","emoji":"🍽️","description":"one concise sentence","total_minutes":30,"protein":"Turkey","tags":["Kid friendly","Skillet"]}]}. Exactly ${ideaCount} ideas.`;
+    let data,retries=0;
+    try{data=await callOpenAIJson({prompt,timeoutMs:45000,telemetry})}
+    catch(first){
+      if(first?.message!=='invalid-json')throw first;
+      retries=1;
+      telemetry.event('retry',{reason:'invalid_json'});
+      data=await callOpenAIJson({prompt:prompt+'\nImportant: Your prior response could not be parsed. Return raw JSON only with no markdown or commentary.',timeoutMs:45000,telemetry});
+    }
+    if(!Array.isArray(data.ideas))throw new Error('Meal ideas came back in an unexpected format. Please try again.');
+    const ideas=data.ideas.slice(0,ideaCount).map((x,i)=>({id:x.id||`idea-${Date.now()}-${i}`,title:x.title||'Dinner idea',emoji:x.emoji||'🍽️',description:x.description||'',total_minutes:Number(x.total_minutes||30),protein:x.protein||'',tags:Array.isArray(x.tags)?x.tags.slice(0,3):[]}));
+    if(ideas.length<ideaCount)throw new Error(`Mealz did not receive all ${ideaCount} ideas. Please try again.`);
+    telemetry.finish(200,{idea_count:ideas.length,retries});
+    return res.status(200).json({ideas,ideaCount});
+  }catch(e){
+    telemetry.fail(e);
+    const message=e?.message==='openai-timeout'?'Meal idea generation took too long. Please try again.':e.message||'Mealz could not generate meal ideas.';
+    return res.status(502).json({error:message});
+  }
+}
