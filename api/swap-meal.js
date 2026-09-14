@@ -1,6 +1,43 @@
-function outputText(r){if(r.output_text)return r.output_text;return (r.output||[]).flatMap(x=>x.content||[]).map(c=>c.text||'').join('\n')}
-function parseJson(t){const s=String(t||'').trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'');try{return JSON.parse(s)}catch{const a=s.indexOf('{'),b=s.lastIndexOf('}');if(a>=0&&b>a)return JSON.parse(s.slice(a,b+1));throw new Error('invalid-json')}}
-async function callOpenAI(prompt){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),45000);try{const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:controller.signal,headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-5.6-luna',input:prompt})});const raw=await r.json().catch(()=>null);if(!r.ok)throw new Error(raw?.error?.message||'OpenAI could not find alternatives.');return parseJson(outputText(raw||{}))}catch(e){if(e?.name==='AbortError')throw new Error('Swap generation took too long. Please try again.');throw e}finally{clearTimeout(timer)}}
-function dietaryInstruction(tags){if(!Array.isArray(tags)||!tags.length)return 'No special dietary style is selected.';return `Household dietary preferences: ${tags.join(', ')}. Enforce restrictive tags. Vegetarian means no meat or seafood. Vegan means no animal products. Pescatarian allows seafood but no poultry or other meat. Gluten-Free, Dairy-Free and Nut-Free must exclude those ingredients. Keto and Low Carb should keep carbohydrates appropriately low. Whole30 should remain Whole30-compatible. Low Sodium and Low Added Sugar should minimize those components. High Protein should emphasize protein. Mediterranean and Plant-Forward are style preferences unless paired with a stricter tag.`}
-function equipmentInstruction(equipment){return Array.isArray(equipment)&&equipment.length?`Special equipment available: ${equipment.join(', ')}. Use only selected special appliances/tools when a recipe depends on them.`:'No special equipment is selected. Use ordinary broadly available kitchen methods and do not require an air fryer, pressure cooker, slow cooker, grill, sous vide, or other special appliance.'}
-export default async function handler(req,res){if(req.method!=='POST')return res.status(405).json({error:'Method not allowed'});if(!process.env.OPENAI_API_KEY)return res.status(500).json({error:'Mealz AI is not configured yet.'});try{const {meal,otherMeals,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};if(!meal?.day)return res.status(400).json({error:'Meal information is missing.'});const existing=(otherMeals||[]).map(m=>m.title).filter(Boolean).join(', ')||'none';const dietary=dietaryInstruction(dietTags);const equipmentText=equipmentInstruction(equipment);const kid=Number(children||0)>0?`${children} child${Number(children)===1?'':'ren'} are eating, so keep the meal adaptable for children.`:'No children are listed.';const prompt=`You are the meal-planning engine for Mealz. The user wants to replace one dinner and see exactly TWO distinct alternatives before choosing. Dinner being replaced: ${meal.title||'current dinner'} on ${meal.day}. Other dinners already in this week's plan: ${existing}. Household size: ${householdSize||5} (${adults||0} adults, ${children||0} children). ${kid} Ingredients to use when sensible: ${useUp||'none'}. ${equipmentText} Weekly notes: ${notes||'none'}. ${dietary} Primary store is Trader Joe's; Wegmans is backup. Create exactly two practical weeknight dinner alternatives for the SAME DAY. They must be meaningfully different from the current dinner, different from each other, and avoid duplicating the other meals in the week. Unless dietary preferences require otherwise, prefer chicken, turkey, fish, shrimp, tofu, beans, lentils and eggs. Never use beef or pork. Avoid mushrooms when practical. Scale each recipe to exactly ${householdSize||5} servings. Use only grocery categories Produce, Meat & Seafood, Dairy & Eggs, Frozen, Bakery, Pantry, Other. Quantity must be a JSON number or null. Return ONLY valid JSON in this shape: {"alternatives":[{"id":"unique-slug","day":"${meal.day}","title":"Meal title","emoji":"🍽️","description":"short description","servings":${householdSize||5},"total_minutes":30,"difficulty":"Easy","tags":["Kid friendly"],"kid_note":"optional adaptation","ingredients":[{"name":"lime","quantity":2,"unit":"whole","category":"Produce","optional":false}],"steps":["Step one","Step two"]}]}`;let p;try{p=await callOpenAI(prompt)}catch(first){if(first?.message!=='invalid-json')throw first;p=await callOpenAI(prompt+'\nYour prior response was malformed. Return raw JSON only with no markdown or commentary.')}if(!Array.isArray(p.alternatives)||p.alternatives.length<2)return res.status(502).json({error:'Mealz did not receive two alternatives. Please try again.'});p.alternatives=p.alternatives.slice(0,2).map((m,i)=>({...m,id:m.id||`swap-${Date.now()}-${i+1}`,day:meal.day,servings:Number(m.servings||householdSize||5),ingredients:Array.isArray(m.ingredients)?m.ingredients:[],steps:Array.isArray(m.steps)?m.steps:[],tags:Array.isArray(m.tags)?m.tags:[]}));return res.status(200).json(p)}catch(e){console.error('Mealz swap error',e);const message=e?.message==='invalid-json'?'The alternatives came back in an unexpected format. Please try again.':e?.message||'Mealz hit an unexpected error while finding alternatives.';return res.status(502).json({error:message})}}
+import {callOpenAIJson} from './_lib/openai.js';
+import {swapSchema} from './_lib/schemas.js';
+import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
+import {startTelemetry} from './_lib/telemetry.js';
+
+function friendlyError(error){
+  const message=String(error?.message||error||'');
+  if(message==='openai-timeout')return 'Swap generation took too long. Please try again.';
+  if(message==='openai-output-limit')return 'Mealz ran out of room while finding alternatives. Please try again.';
+  if(message==='structured-output-invalid'||message==='openai-empty-response'||message==='openai-incomplete')return 'The alternatives came back incomplete. Please try again.';
+  return message||'Mealz hit an unexpected error while finding alternatives.';
+}
+
+export default async function handler(req,res){
+  const telemetry=startTelemetry('swap-meal');
+  if(req.method!=='POST'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
+  if(!process.env.OPENAI_API_KEY){telemetry.finish(500,{reason:'openai_not_configured'});return res.status(500).json({error:'Mealz AI is not configured yet.'})}
+  try{
+    const {meal,otherMeals,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};
+    if(!meal?.day){telemetry.finish(400,{reason:'missing_meal'});return res.status(400).json({error:'Meal information is missing.'})}
+    const existing=(otherMeals||[]).map(m=>m.title).filter(Boolean).join(', ')||'none';
+    const dietary=dietaryInstruction(dietTags);
+    const equipmentText=equipmentInstruction(equipment);
+    const kid=kidInstruction(children);
+    const prompt=`You are the meal-planning engine for Mealz. Replace one dinner with exactly two distinct alternatives for the same day. Current dinner: ${meal.title||'current dinner'} on ${meal.day}. Other dinners already in this week's plan: ${existing}. Household size: ${householdSize||5} (${adults||0} adults, ${children||0} children). ${kid} Ingredients to use when sensible: ${useUp||'none'}. ${equipmentText} Weekly notes: ${notes||'none'}. ${dietary} Primary store is Trader Joe's; Wegmans is backup. The alternatives must be meaningfully different from the current dinner, different from each other, and avoid duplicating the other meals. Unless dietary preferences require otherwise, prefer chicken, turkey, fish, shrimp, tofu, beans, lentils and eggs. Never use beef or pork. Avoid mushrooms when practical. Scale each recipe to exactly ${householdSize||5} servings. Use only these grocery categories: Produce, Meat & Seafood, Dairy & Eggs, Frozen, Bakery, Pantry, Other. Ingredient quantity must be a number or null. Keep recipes practical for a weeknight. Both alternatives must use day ${meal.day}.`;
+    const data=await callOpenAIJson({
+      prompt,
+      schema:swapSchema,
+      schemaName:'mealz_swap_alternatives',
+      schemaDescription:'Exactly two complete alternative dinner recipes.',
+      timeoutMs:45000,
+      reasoningEffort:'low',
+      maxOutputTokens:5000,
+      telemetry
+    });
+    const alternatives=data.alternatives.map((m,i)=>({...m,id:m.id||`swap-${Date.now()}-${i+1}`,day:meal.day,servings:Number(m.servings||householdSize||5),ingredients:Array.isArray(m.ingredients)?m.ingredients:[],steps:Array.isArray(m.steps)?m.steps:[],tags:Array.isArray(m.tags)?m.tags:[]}));
+    telemetry.finish(200,{alternative_count:alternatives.length});
+    return res.status(200).json({alternatives});
+  }catch(e){
+    telemetry.fail(e);
+    return res.status(502).json({error:friendlyError(e)});
+  }
+}
