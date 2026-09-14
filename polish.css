@@ -1,0 +1,7 @@
+.breadcrumb-nav{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0 0 18px;padding:2px 0 14px;border-bottom:1px solid var(--l);font-size:14px;color:var(--m)}
+.breadcrumb-link{border:0;background:transparent;padding:4px 2px;color:var(--g);font-weight:750;cursor:pointer}
+.breadcrumb-link:hover,.breadcrumb-link:focus-visible{text-decoration:underline;text-underline-offset:3px}
+.breadcrumb-label{color:var(--m);font-weight:650}
+.breadcrumb-current{color:var(--i);font-weight:800}
+.breadcrumb-sep{color:#9aaba4;font-size:16px;line-height:1}
+@media(max-width:380px){.breadcrumb-nav{font-size:13px;gap:4px}}
