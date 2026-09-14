@@ -8,7 +8,7 @@ function preparedIdeasAvailable(count){return Array.isArray(readyIdeas?.ideas)&&
 plan=function(){
   const count=ideaCountForDays(weeklyDraft.days.length);
   const prepared=preparedIdeasAvailable(count);
-  app.innerHTML=`<h1>Plan This Week</h1><p class=subtle>Choose what this week looks like. Weekly details start fresh each time you open Mealz.</p>${s.error?`<div class="status error">${esc(s.error)}</div>`:''}${cloudNote()}${prepared?`<div class="status ready-ideas">🍲 <b>${count} ideas are ready.</b><br><span class="small">Mealz prepared options ahead of time. Adjust this week first if you need to.</span></div>`:''}<div class=section><label class=label>Which days are you cooking?</label><div class=day-grid>${DAY_ORDER.map(d=>`<button class="day-btn ${weeklyDraft.days.includes(d)?'selected':''}" data-d="${d}">${d.slice(0,3)}</button>`).join('')}</div></div><div class=section><label class=label>Any ingredients to use up?</label><input id=useUp value="${esc(weeklyDraft.useUp)}" placeholder="Optional"></div><div class=section><label class=label>Anything else?</label><textarea id=notes placeholder="Optional">${esc(weeklyDraft.notes)}</textarea></div><div class="section card household-card"><h2>Household & Kitchen</h2><label class=label>People eating this week</label><div class=counter><button id=minus>−</button><div class=counter-value>${s.size}</div><button id=plus>+</button></div><div class=section><label class=label>Equipment available this week</label><div class=equipment-grid>${EQ.map(e=>`<button class="equipment-btn ${s.eq.includes(e)?'selected':''}" data-e="${e}">${e}</button>`).join('')}</div><p class=small>These household settings persist between weeks.</p></div></div><button id=go class=primary>${prepared?`See ${count} Ready Ideas ✨`:`Find ${count} Meal Ideas ✨`}</button>${devTools()}`;
+  app.innerHTML=`<h1>Plan This Week</h1><p class=subtle>Choose what this week looks like. Weekly details start fresh each time you open Mealz.</p>${s.error?`<div class="status error">${esc(s.error)}</div>`:''}${cloudNote()}${prepared?`<div class="status ready-ideas">🍲 <b>${count} ideas are ready.</b><br><span class="small">Mealz prepared options ahead of time. Adjust this week first if you need to.</span></div>`:''}<div class=section><label class=label>Which days are you cooking?</label><div class=day-grid>${DAY_ORDER.map(d=>`<button class="day-btn ${weeklyDraft.days.includes(d)?'selected':''}" data-d="${d}">${d.slice(0,3)}</button>`).join('')}</div></div><div class=section><label class=label>Any ingredients to use up?</label><input id=useUp value="${esc(weeklyDraft.useUp)}" placeholder="Optional"></div><div class=section><label class=label>Anything else?</label><textarea id=notes placeholder="Optional">${esc(weeklyDraft.notes)}</textarea></div><button id=go class=primary>${prepared?`See ${count} Ready Ideas ✨`:`Find ${count} Meal Ideas ✨`}</button><div class="section card household-card"><h2>Household & Kitchen</h2><label class=label>People eating this week</label><div class=counter><button id=minus>−</button><div class=counter-value>${s.size}</div><button id=plus>+</button></div><div class=section><label class=label>Equipment available this week</label><div class=equipment-grid>${EQ.map(e=>`<button class="equipment-btn ${s.eq.includes(e)?'selected':''}" data-e="${e}">${e}</button>`).join('')}</div><p class=small>These household settings persist between weeks.</p></div></div>${devTools()}`;
   document.querySelectorAll('.day-btn').forEach(b=>b.onclick=()=>{captureWeeklyDraft();const d=b.dataset.d;weeklyDraft.days=weeklyDraft.days.includes(d)?weeklyDraft.days.filter(x=>x!==d):sortDays([...weeklyDraft.days,d]);s.error=null;plan()});
   document.querySelectorAll('.equipment-btn').forEach(b=>b.onclick=()=>{captureWeeklyDraft();const e=b.dataset.e;s.eq=s.eq.includes(e)?s.eq.filter(x=>x!==e):[...s.eq,e];save();plan()});
   minus.onclick=()=>{captureWeeklyDraft();s.size=Math.max(1,s.size-1);save();plan()};
@@ -28,6 +28,14 @@ generate=async function(){
     const d=await r.json();if(!r.ok)throw new Error(d.error||'Could not generate ideas.');
     s.ideas=(d.ideas||[]).slice(0,count);s.selectedIdeas=[];s.error=null;save();ideaPicker();
   }catch(e){s.error=friendlyClientError?friendlyClientError(e.message):e.message;save();plan()}
+}
+
+function toggleIdea(id){
+  const i=s.selectedIdeas.indexOf(id),limit=weeklyDraft.days.length;
+  if(i>=0)s.selectedIdeas.splice(i,1);
+  else if(s.selectedIdeas.length<limit)s.selectedIdeas.push(id);
+  else return;
+  save();ideaPicker();
 }
 
 ideaPicker=function(){
