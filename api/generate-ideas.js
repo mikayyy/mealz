@@ -1,4 +1,5 @@
 import {callOpenAIJson} from './_lib/openai.js';
+import {ideasSchema} from './_lib/schemas.js';
 import {sb,supabaseConfigured} from './_lib/supabase.js';
 import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
 import {startTelemetry} from './_lib/telemetry.js';
@@ -28,23 +29,23 @@ export default async function handler(req,res){
     const dietary=dietaryInstruction(dietTags);
     const equipmentText=equipmentInstruction(equipment);
     const kidContext=kidInstruction(children);
-    const prompt=`You are the meal-idea engine for Mealz. Generate exactly ${ideaCount} distinct, practical dinner ideas from which a household will choose ${days.length}. Do NOT generate recipes, ingredient quantities, grocery lists, or instructions yet. Household size: ${householdSize||5} (${adults||0} adults, ${children||0} children). ${kidContext} Cooking days: ${days.join(', ')}. Ingredients to use when sensible: ${useUp||'none'}. ${equipmentText} Notes: ${notes||'none'}. ${dietary} Primary store is Trader Joe's; Wegmans is backup. Unless dietary preferences above require otherwise, prefer chicken, turkey, fish, shrimp, tofu, beans, lentils and eggs. Never use beef or pork. Avoid mushrooms when practical. Make options varied across proteins, cuisines, and cooking methods. Favor ideas with some useful ingredient overlap across the set without making them repetitive. Recent meals the household has already planned: ${pref.recent.join(', ')||'none yet'}. Avoid direct repeats from that recent list unless the current notes explicitly ask for one. Meals explicitly marked MAKE AGAIN: ${pref.favorites.join(', ')||'none yet'}. Treat favorites as strong taste signals: borrow their cuisines, flavors, formats, or cooking styles and occasionally offer a fresh variation, but do not simply repeat favorite titles every week. Return ONLY valid JSON exactly shaped like {"ideas":[{"id":"unique-slug","title":"Meal title","emoji":"🍽️","description":"one concise sentence","total_minutes":30,"protein":"Turkey","tags":["Kid friendly","Skillet"]}]}. Exactly ${ideaCount} ideas.`;
-    let data,retries=0;
-    try{data=await callOpenAIJson({prompt,timeoutMs:45000,telemetry})}
-    catch(first){
-      if(first?.message!=='invalid-json')throw first;
-      retries=1;
-      telemetry.event('retry',{reason:'invalid_json'});
-      data=await callOpenAIJson({prompt:prompt+'\nImportant: Your prior response could not be parsed. Return raw JSON only with no markdown or commentary.',timeoutMs:45000,telemetry});
-    }
-    if(!Array.isArray(data.ideas))throw new Error('Meal ideas came back in an unexpected format. Please try again.');
-    const ideas=data.ideas.slice(0,ideaCount).map((x,i)=>({id:x.id||`idea-${Date.now()}-${i}`,title:x.title||'Dinner idea',emoji:x.emoji||'🍽️',description:x.description||'',total_minutes:Number(x.total_minutes||30),protein:x.protein||'',tags:Array.isArray(x.tags)?x.tags.slice(0,3):[]}));
-    if(ideas.length<ideaCount)throw new Error(`Mealz did not receive all ${ideaCount} ideas. Please try again.`);
-    telemetry.finish(200,{idea_count:ideas.length,retries});
+    const prompt=`You are the meal-idea engine for Mealz. Generate exactly ${ideaCount} distinct, practical dinner ideas from which a household will choose ${days.length}. These are lightweight ideas only, not full recipes. Household size: ${householdSize||5} (${adults||0} adults, ${children||0} children). ${kidContext} Cooking days: ${days.join(', ')}. Ingredients to use when sensible: ${useUp||'none'}. ${equipmentText} Notes: ${notes||'none'}. ${dietary} Primary store is Trader Joe's; Wegmans is backup. Unless dietary preferences above require otherwise, prefer chicken, turkey, fish, shrimp, tofu, beans, lentils and eggs. Never use beef or pork. Avoid mushrooms when practical. Make options varied across proteins, cuisines, and cooking methods. Favor useful ingredient overlap across the set without making meals repetitive. Recent meals already planned: ${pref.recent.join(', ')||'none yet'}. Avoid direct repeats unless the notes explicitly request one. Meals marked MAKE AGAIN: ${pref.favorites.join(', ')||'none yet'}. Treat favorites as taste signals by borrowing cuisines, flavors, formats, or cooking styles without simply repeating titles. Keep descriptions concise and tags useful.`;
+    const data=await callOpenAIJson({
+      prompt,
+      schema:ideasSchema(ideaCount),
+      schemaName:'mealz_meal_ideas',
+      schemaDescription:`Exactly ${ideaCount} lightweight dinner ideas.`,
+      timeoutMs:45000,
+      reasoningEffort:'low',
+      maxOutputTokens:2500,
+      telemetry
+    });
+    const ideas=data.ideas.map((x,i)=>({id:x.id||`idea-${Date.now()}-${i}`,title:x.title||'Dinner idea',emoji:x.emoji||'🍽️',description:x.description||'',total_minutes:Number(x.total_minutes||30),protein:x.protein||'',tags:Array.isArray(x.tags)?x.tags.slice(0,3):[]}));
+    telemetry.finish(200,{idea_count:ideas.length,retries:0});
     return res.status(200).json({ideas,ideaCount});
   }catch(e){
     telemetry.fail(e);
-    const message=e?.message==='openai-timeout'?'Meal idea generation took too long. Please try again.':e.message||'Mealz could not generate meal ideas.';
+    const message=e?.message==='openai-timeout'?'Meal idea generation took too long. Please try again.':e?.message==='openai-output-limit'?'Mealz ran out of room while creating ideas. Please try again.':e.message||'Mealz could not generate meal ideas.';
     return res.status(502).json({error:message});
   }
 }
