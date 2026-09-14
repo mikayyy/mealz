@@ -23,7 +23,12 @@
   plan=function(){const result=basePlan();if(weekScreenMode==='editor')installCrumbs(weekParts('Plan'));return result};
 
   const baseProfile=profile;
-  profile=function(){const result=baseProfile();installCrumbs([{label:'Weeks',action:()=>{weekScreenMode='dashboard';backToWeeks()}},{label:'Profile'}]);return result};
+  profile=function(){
+    const fromEditor=weekScreenMode==='editor';
+    const result=baseProfile();
+    installCrumbs(fromEditor?[{label:'Weeks',action:backToWeeks},{label:'Next Week'},{label:'Plan',action:plan},{label:'Profile'}]:[{label:'Weeks',action:backToWeeks},{label:'Profile'}]);
+    return result;
+  };
 
   const baseIdeas=ideaPicker;
   ideaPicker=function(){const result=baseIdeas();installCrumbs(weekParts('Meal Ideas'));return result};
