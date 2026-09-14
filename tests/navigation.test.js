@@ -28,9 +28,10 @@ test('meals and groceries expose reciprocal week-preserving switches',()=>{
   assert.match(navigationPolish,/weekParts\('Groceries'\)/);
 });
 
-test('recipe screen has both an explicit back control and an interactive Meals breadcrumb',()=>{
-  assert.match(navigationPolish,/backTo:\{label:'Back to meals',action:\(\)=>meals\(\)\}/);
+test('recipe screen relies on interactive hierarchy instead of a redundant back button',()=>{
+  assert.match(navigationPolish,/app\.querySelector\('#back'\)\?\.remove\(\)/);
   assert.match(navigationPolish,/weekParts\('Meals',\{sectionAction:\(\)=>meals\(\)\}\)/);
+  assert.doesNotMatch(navigationPolish,/Back to meals/);
 });
 
 test('non-page breadcrumb context is visually distinct from links and current page',()=>{
@@ -50,11 +51,9 @@ test('cancelled swap requests cannot navigate forward again later',()=>{
   assert.match(weeks,/showSwapChoices=function\(original,alts\)\{if\(activeSwapEpoch==null\)return;/);
 });
 
-test('the Mealz wordmark is a persistent dashboard escape hatch',()=>{
+test('the wordmark remains a persistent dashboard escape hatch',()=>{
   assert.match(weeks,/aria-label','Go to weeks dashboard'/);
   assert.match(weeks,/brandHome\.onclick=backToWeeks/);
 });
 
-test('legacy bottom navigation stays removed',()=>{
-  assert.doesNotMatch(index,/class="bottom-nav"/);
-});
+test('legacy bottom navigation stays removed',()=>{assert.doesNotMatch(index,/class="bottom-nav"/)});
