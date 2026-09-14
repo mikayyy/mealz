@@ -1,4 +1,18 @@
-const H=()=>({'apikey':process.env.SUPABASE_SECRET_KEY,'Content-Type':'application/json'});
-const enc=x=>encodeURIComponent(String(x));
-async function sb(path){const r=await fetch(`${process.env.SUPABASE_URL}/rest/v1/${path}`,{headers:H()});const t=await r.text();let d=null;if(t){try{d=JSON.parse(t)}catch{d=t}}if(!r.ok)throw new Error(typeof d==='object'?(d.message||d.hint||JSON.stringify(d)):d||`Supabase error ${r.status}`);return d}
-export default async function handler(req,res){if(req.method!=='GET')return res.status(405).json({error:'Method not allowed'});if(!process.env.SUPABASE_URL||!process.env.SUPABASE_SECRET_KEY)return res.status(500).json({error:'Supabase is not configured.'});try{const weekStart=req.query?.week_start;if(!weekStart)return res.status(400).json({error:'week_start is required'});const plans=await sb(`weekly_plans?select=*&week_start=eq.${enc(weekStart)}&status=eq.ideas&order=created_at.desc&limit=1`);if(!plans?.length)return res.status(200).json({weekStart,ideas:[]});const rows=await sb(`meals?select=*&weekly_plan_id=eq.${enc(plans[0].id)}&order=sort_order.asc`);const ideas=(rows||[]).map(x=>{const tags=Array.isArray(x.tags)?x.tags:[];const proteinTag=tags.find(t=>String(t).startsWith('Protein:'));return {id:x.meal_key||x.id,title:x.title,emoji:x.emoji||'🍽️',description:x.description||'',total_minutes:x.total_minutes||30,protein:proteinTag?proteinTag.slice(8):'',tags:tags.filter(t=>!String(t).startsWith('Protein:'))}});return res.status(200).json({weekStart,ideas,ideaCount:ideas.length,defaults:{days:plans[0].cooking_days||[],householdSize:plans[0].household_size||5,equipment:plans[0].equipment||[]}})}catch(e){console.error('Mealz cached ideas error',e);return res.status(500).json({error:e.message||'Could not load prepared ideas.'})}}
+import {sb,enc,supabaseConfigured} from './_lib/supabase.js';
+import {startTelemetry} from './_lib/telemetry.js';
+
+export default async function handler(req,res){
+  const telemetry=startTelemetry('pregenerated-ideas');
+  if(req.method!=='GET'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
+  if(!supabaseConfigured()){telemetry.finish(500,{reason:'supabase_not_configured'});return res.status(500).json({error:'Supabase is not configured.'})}
+  try{
+    const weekStart=req.query?.week_start;
+    if(!weekStart){telemetry.finish(400,{reason:'missing_week_identity'});return res.status(400).json({error:'week_start is required'})}
+    const plans=await sb(`weekly_plans?select=*&week_start=eq.${enc(weekStart)}&status=eq.ideas&order=created_at.desc&limit=1`);
+    if(!plans?.length){telemetry.finish(200,{week_start:weekStart,idea_count:0});return res.status(200).json({weekStart,ideas:[]})}
+    const rows=await sb(`meals?select=*&weekly_plan_id=eq.${enc(plans[0].id)}&order=sort_order.asc`);
+    const ideas=(rows||[]).map(x=>{const tags=Array.isArray(x.tags)?x.tags:[];const proteinTag=tags.find(t=>String(t).startsWith('Protein:'));return {id:x.meal_key||x.id,title:x.title,emoji:x.emoji||'🍽️',description:x.description||'',total_minutes:x.total_minutes||30,protein:proteinTag?proteinTag.slice(8):'',tags:tags.filter(t=>!String(t).startsWith('Protein:'))}});
+    telemetry.finish(200,{week_start:weekStart,idea_count:ideas.length});
+    return res.status(200).json({weekStart,ideas,ideaCount:ideas.length,defaults:{days:plans[0].cooking_days||[],householdSize:plans[0].household_size||5,equipment:plans[0].equipment||[]}});
+  }catch(e){telemetry.fail(e);return res.status(500).json({error:e.message||'Could not load prepared ideas.'})}
+}
