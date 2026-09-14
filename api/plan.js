@@ -1,7 +1,6 @@
-const baseHeaders=()=>({'apikey':process.env.SUPABASE_SECRET_KEY,'Content-Type':'application/json'});
-function configured(){return process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY}
-async function sb(path,options={}){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),12000);try{const r=await fetch(`${process.env.SUPABASE_URL}/rest/v1/${path}`,{...options,signal:controller.signal,headers:{...baseHeaders(),...(options.headers||{})}});const text=await r.text();let data=null;if(text){try{data=JSON.parse(text)}catch{data=text}}if(!r.ok)throw new Error(typeof data==='object'?(data.message||data.hint||JSON.stringify(data)):data||`Supabase request failed (${r.status})`);return data}catch(e){if(e?.name==='AbortError')throw new Error('Cloud database request timed out.');throw e}finally{clearTimeout(timer)}}
-const enc=x=>encodeURIComponent(String(x));
+import {sb,enc,supabaseConfigured} from './_lib/supabase.js';
+import {startTelemetry} from './_lib/telemetry.js';
+
 const groceryKey=i=>`${i.category||'Other'}::${String(i.name).toLowerCase()}::${i.unit||''}`;
 function groceryData(meals){const map=new Map;for(const m of meals||[])for(const i of m.ingredients||[]){if(i.optional)continue;const category=i.category||'Other',unit=i.unit||'',key=`${category}::${String(i.name).toLowerCase()}::${unit}`,e=map.get(key);if(e&&typeof i.quantity==='number'&&typeof e.quantity==='number')e.quantity+=i.quantity;else if(!e)map.set(key,{name:i.name,quantity:typeof i.quantity==='number'?i.quantity:null,unit:i.unit||null,category})}return [...map.values()]}
 async function readPlan(weekStart){let q='weekly_plans?select=*&status=eq.active&order=week_start.desc,created_at.desc&limit=1';if(weekStart)q=`weekly_plans?select=*&status=eq.active&week_start=eq.${enc(weekStart)}&order=created_at.desc&limit=1`;const plans=await sb(q);if(!plans?.length)return null;const plan=plans[0],meals=await sb(`meals?select=*&weekly_plan_id=eq.${enc(plan.id)}&order=sort_order.asc`);const ids=meals.map(m=>m.id);let ingredients=[],steps=[];if(ids.length){const list=`(${ids.join(',')})`;[ingredients,steps]=await Promise.all([sb(`ingredients?select=*&meal_id=in.${enc(list)}`),sb(`recipe_steps?select=*&meal_id=in.${enc(list)}&order=step_number.asc`)])}const groceryItems=await sb(`grocery_items?select=*&weekly_plan_id=eq.${enc(plan.id)}&order=category.asc,name.asc`);const hydrated=meals.map(m=>({...m,id:m.meal_key||m.id,ingredients:ingredients.filter(i=>i.meal_id===m.id).map(i=>({name:i.name,quantity:i.quantity==null?null:Number(i.quantity),unit:i.unit,category:i.category,optional:i.optional})),steps:steps.filter(x=>x.meal_id===m.id).sort((a,b)=>a.step_number-b.step_number).map(x=>x.instruction)}));return {plan,meals:hydrated,groceryItems}}
@@ -26,4 +25,24 @@ async function savePlan(body){const {weekStart,householdSize,days,equipment,useU
   return {planId:plan.id,groceryItems};
 }
 async function updateGrocery(body){const {planId,name,unit,category,checked}=body;if(!planId||!name)throw new Error('Missing grocery item information.');const parts=[`weekly_plan_id=eq.${enc(planId)}`,`name=eq.${enc(name)}`,`category=eq.${enc(category||'Other')}`,unit?`unit=eq.${enc(unit)}`:'unit=is.null'];await sb(`grocery_items?${parts.join('&')}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({checked:!!checked})});return {ok:true}}
-export default async function handler(req,res){if(!configured())return res.status(500).json({error:'Supabase is not configured. Add SUPABASE_URL and SUPABASE_SECRET_KEY in Vercel, then redeploy.'});try{if(req.method==='GET'){const data=await readPlan(req.query?.week_start);return res.status(200).json(data||{plan:null,meals:[],groceryItems:[]})}if(req.method==='POST')return res.status(200).json(await savePlan(req.body||{}));if(req.method==='PATCH')return res.status(200).json(await updateGrocery(req.body||{}));return res.status(405).json({error:'Method not allowed'})}catch(e){console.error('Mealz Supabase error',e);return res.status(500).json({error:e.message||'Mealz could not sync with Supabase.'})}}
+
+export default async function handler(req,res){
+  const telemetry=startTelemetry('plan',{method:req.method});
+  if(!supabaseConfigured()){telemetry.finish(500,{reason:'supabase_not_configured'});return res.status(500).json({error:'Supabase is not configured. Add SUPABASE_URL and SUPABASE_SECRET_KEY in Vercel, then redeploy.'})}
+  try{
+    if(req.method==='GET'){
+      const weekStart=req.query?.week_start||null;
+      if(!weekStart)telemetry.event('implicit_week_lookup',{note:'legacy compatibility fallback'});
+      const data=await readPlan(weekStart);
+      telemetry.finish(200,{week_start:weekStart||data?.plan?.week_start||null,explicit_week:!!weekStart});
+      return res.status(200).json(data||{plan:null,meals:[],groceryItems:[]});
+    }
+    if(req.method==='POST'){
+      const result=await savePlan(req.body||{});telemetry.finish(200,{week_start:req.body?.weekStart||null,meal_count:req.body?.meals?.length||0});return res.status(200).json(result)
+    }
+    if(req.method==='PATCH'){
+      const result=await updateGrocery(req.body||{});telemetry.finish(200,{operation:'grocery_checked'});return res.status(200).json(result)
+    }
+    telemetry.finish(405);return res.status(405).json({error:'Method not allowed'});
+  }catch(e){telemetry.fail(e);return res.status(500).json({error:e.message||'Mealz could not sync with Supabase.'})}
+}
