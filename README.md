@@ -14,6 +14,7 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 - Added RLS policies across Profiles, weekly plans, meals, ingredients, recipe steps, and grocery items.
 - Changed normal signed-in data requests to use the user's Supabase session token, so RLS is enforced instead of relying only on the server secret.
 - Kept a temporary compatibility path before the migration is applied; the app automatically switches to user-scoped RLS access after the ownership schema is detected.
+- Made Friday idea preparation ownership-aware so prepared ideas are written and read within the correct account.
 - Added ownership/RLS regression tests.
 
 ### v0.15.4
@@ -175,4 +176,4 @@ Never place secret API keys in browser code or commit them to GitHub.
 
 ## Current architecture note
 
-Authentication and user-scoped data access are implemented as of v0.16.0. The ownership/RLS migration at `migrations/2026-09-15_user_ownership_rls.sql` must be applied in Supabase before the app switches from its temporary compatibility path to RLS-backed per-user isolation. Rate limiting and fully account-aware scheduled idea preparation remain the next security/operations step.
+Authentication and user-scoped data access are implemented as of v0.16.0. The ownership/RLS migration at `migrations/2026-09-15_user_ownership_rls.sql` must be applied in Supabase before the app switches from its temporary compatibility path to RLS-backed per-user isolation. Rate limiting and removal of remaining legacy compatibility behavior are the next security/operations steps.
