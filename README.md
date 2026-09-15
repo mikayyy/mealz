@@ -8,6 +8,11 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.15.3
+- Added pointer cursors for enabled buttons and a not-allowed cursor for disabled buttons.
+- Fixed a stale breadcrumb race where a late swap response could repaint `Weeks › Meals › Swap` after the user had already returned to the Weeks dashboard.
+- Added regression coverage for both interaction-state fixes.
+
 ### v0.15.2
 - Fixed a dashboard interaction bug where week/profile buttons could lose their click handlers after authenticated startup rerenders.
 - Replaced per-render button binding with one delegated handler on the stable app root.
