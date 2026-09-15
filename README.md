@@ -8,6 +8,11 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.15.2
+- Fixed a dashboard interaction bug where week/profile buttons could lose their click handlers after authenticated startup rerenders.
+- Replaced per-render button binding with one delegated handler on the stable app root.
+- Added regression coverage to ensure week actions remain wired across rerenders.
+
 ### v0.15.1
 - Fixed an authentication bootstrap deadlock that could leave API-backed navigation appearing unresponsive.
 - Added a bounded timeout for auth configuration loading.
