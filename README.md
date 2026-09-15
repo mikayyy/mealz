@@ -8,6 +8,12 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.15.1
+- Fixed an authentication bootstrap deadlock that could leave API-backed navigation appearing unresponsive.
+- Added a bounded timeout for auth configuration loading.
+- Changed unauthenticated API requests to fail immediately with a clear auth response instead of waiting indefinitely for a future session.
+- Added regression tests for the auth startup and no-session paths.
+
 ### v0.15.0
 - Added the first authentication foundation using Supabase magic-link sign-in.
 - Added authenticated API request handling and server-side user verification for protected and AI-powered endpoints.
