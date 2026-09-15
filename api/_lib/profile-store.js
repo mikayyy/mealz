@@ -44,53 +44,57 @@ function legacyProfileFromRow(row){
     stores:meta.stores
   });
 }
-async function readLegacyProfile(){
-  const rows=await sb(`weekly_plans?select=*&status=eq.profile&week_start=eq.${LEGACY_PROFILE_DATE}&order=created_at.desc&limit=1`);
+async function readLegacyProfile(db=sb){
+  const rows=await db(`weekly_plans?select=*&status=eq.profile&week_start=eq.${LEGACY_PROFILE_DATE}&order=created_at.desc&limit=1`);
   return rows?.[0]?legacyProfileFromRow(rows[0]):null;
 }
-async function writeLegacyProfile(profile){
+async function writeLegacyProfile(profile,db=sb){
   const p=normalizeProfile(profile);
   const meta={adults:p.adults,children:p.children,dietTags:p.dietTags,stores:p.stores};
-  await sb(`weekly_plans?status=eq.profile&week_start=eq.${LEGACY_PROFILE_DATE}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
-  const rows=await sb('weekly_plans',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{week_start:LEGACY_PROFILE_DATE,household_size:p.householdSize,cooking_days:[],equipment:p.equipment,use_up:null,notes:JSON.stringify(meta),status:'profile'}])});
+  await db(`weekly_plans?status=eq.profile&week_start=eq.${LEGACY_PROFILE_DATE}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+  const rows=await db('weekly_plans',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{week_start:LEGACY_PROFILE_DATE,household_size:p.householdSize,cooking_days:[],equipment:p.equipment,use_up:null,notes:JSON.stringify(meta),status:'profile'}])});
   return {profile:p,id:rows?.[0]?.id||null,source:'legacy'};
 }
-async function writeProfilesTable(profile){
+async function writeProfilesTable(profile,{db=sb,userId=null,owned=false}={}){
   const p=normalizeProfile(profile);
   const now=new Date().toISOString();
-  const existing=await sb(`profiles?select=id&profile_key=eq.${enc(PROFILE_KEY)}&limit=1`);
+  const existing=await db(`profiles?select=id&profile_key=eq.${enc(PROFILE_KEY)}&limit=1`);
   const row={profile_key:PROFILE_KEY,adults:p.adults,children:p.children,household_size:p.householdSize,diet_tags:p.dietTags,equipment:p.equipment,stores:p.stores,updated_at:now};
+  if(owned&&userId)row.owner_user_id=userId;
   let id;
   if(existing?.length){
     id=existing[0].id;
-    await sb(`profiles?id=eq.${enc(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
+    await db(`profiles?id=eq.${enc(id)}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(row)});
   }else{
-    const rows=await sb('profiles',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([row])});
+    const rows=await db('profiles',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([row])});
     id=rows?.[0]?.id||null;
   }
-  await sb(`weekly_plans?status=eq.profile&week_start=eq.${LEGACY_PROFILE_DATE}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
+  if(!owned)await db(`weekly_plans?status=eq.profile&week_start=eq.${LEGACY_PROFILE_DATE}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
   return {profile:p,id,source:'profiles'};
 }
 
-export async function readProfile(){
+export async function readProfile(context={}){
+  const {db=sb,owned=false}=context;
   try{
-    const rows=await sb(`profiles?select=*&profile_key=eq.${enc(PROFILE_KEY)}&limit=1`);
+    const rows=await db(`profiles?select=*&profile_key=eq.${enc(PROFILE_KEY)}&limit=1`);
     if(rows?.length)return {profile:profileFromRow(rows[0]),id:rows[0].id,source:'profiles'};
-    const legacy=await readLegacyProfile();
+    if(owned)return {profile:null,id:null,source:'profiles'};
+    const legacy=await readLegacyProfile(db);
     if(!legacy)return {profile:null,id:null,source:'profiles'};
-    try{return await writeProfilesTable(legacy)}catch{return {profile:legacy,id:null,source:'legacy'}}
+    try{return await writeProfilesTable(legacy,context)}catch{return {profile:legacy,id:null,source:'legacy'}}
   }catch(error){
     if(!profilesTableUnavailable(error))throw error;
-    const legacy=await readLegacyProfile();
+    if(owned)throw error;
+    const legacy=await readLegacyProfile(db);
     return {profile:legacy,id:null,source:legacy?'legacy':'none'};
   }
 }
 
-export async function writeProfile(input){
+export async function writeProfile(input,context={}){
   const profile=normalizeProfile(input);
-  try{return await writeProfilesTable(profile)}
+  try{return await writeProfilesTable(profile,context)}
   catch(error){
-    if(!profilesTableUnavailable(error))throw error;
-    return writeLegacyProfile(profile);
+    if(context.owned||!profilesTableUnavailable(error))throw error;
+    return writeLegacyProfile(profile,context.db||sb);
   }
 }
