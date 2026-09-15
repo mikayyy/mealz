@@ -36,6 +36,43 @@ begin
   end if;
 end $$;
 
+-- If the earlier profile-table migration was never run, preserve the old synthetic
+-- profile row before RLS turns on.
+with legacy as (
+  select
+    owner_user_id,
+    household_size,
+    equipment,
+    case when notes is not null and left(trim(notes),1) = '{' then notes::jsonb else '{}'::jsonb end as meta
+  from weekly_plans
+  where status = 'profile' and week_start = date '1970-01-01'
+  order by created_at desc
+  limit 1
+)
+insert into profiles(profile_key,owner_user_id,adults,children,household_size,diet_tags,equipment,stores)
+select
+  'default',
+  owner_user_id,
+  greatest(0,coalesce((meta->>'adults')::integer,0)),
+  greatest(0,coalesce((meta->>'children')::integer,0)),
+  greatest(1,coalesce(household_size,5)),
+  coalesce(array(select jsonb_array_elements_text(meta->'dietTags')),'{}'),
+  coalesce(equipment,'{}'),
+  coalesce(array(select jsonb_array_elements_text(meta->'stores')),array['Trader Joe''s','Wegmans'])
+from legacy
+where owner_user_id is not null
+on conflict (profile_key) do update set
+  owner_user_id=excluded.owner_user_id,
+  adults=excluded.adults,
+  children=excluded.children,
+  household_size=excluded.household_size,
+  diet_tags=excluded.diet_tags,
+  equipment=excluded.equipment,
+  stores=excluded.stores,
+  updated_at=now();
+
+delete from weekly_plans where status='profile' and week_start=date '1970-01-01';
+
 -- Replace the old global profile-key uniqueness with per-user uniqueness.
 alter table profiles drop constraint if exists profiles_profile_key_key;
 create unique index if not exists profiles_owner_profile_key_idx on profiles(owner_user_id, profile_key);
