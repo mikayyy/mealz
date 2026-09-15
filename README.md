@@ -8,6 +8,12 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.15.4
+- Fixed a planning-screen MutationObserver feedback loop that could drive the browser into a “page unresponsive” state.
+- Made use-up conflict warnings idempotent so unchanged warnings are not repeatedly removed and reinserted.
+- Limited automatic conflict-warning rendering to newly mounted planning inputs, while keeping direct input/focus updates responsive.
+- Added regression coverage for observer stability.
+
 ### v0.15.3
 - Added pointer cursors for enabled buttons and a not-allowed cursor for disabled buttons.
 - Fixed a stale breadcrumb race where a late swap response could repaint `Weeks › Meals › Swap` after the user had already returned to the Weeks dashboard.
