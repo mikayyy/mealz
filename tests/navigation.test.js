@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 const weeks=readFileSync(new URL('../weeks.js',import.meta.url),'utf8');
 const navigationPolish=readFileSync(new URL('../navigation-polish.js',import.meta.url),'utf8');
 const polish=readFileSync(new URL('../polish.css',import.meta.url),'utf8');
+const styles=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 
 test('week navigation sets context before using already-hydrated data',()=>{
@@ -54,9 +55,16 @@ test('meal ideas preserve Plan as an interactive parent in the hierarchy',()=>{
   assert.match(navigationPolish,/\{label:'Plan',action:current==='Plan'\?null:plan\}/);
 });
 
-test('cancelled swap requests cannot navigate forward again later',()=>{
+test('cancelled swap requests cannot navigate forward or repaint stale breadcrumbs later',()=>{
   assert.match(weeks,/activeSwapEpoch=null/);
   assert.match(weeks,/showSwapChoices=function\(original,alts\)\{if\(activeSwapEpoch==null\)return;/);
+  assert.match(navigationPolish,/showSwapChoices=function\(original,alts\)\{[\s\S]*if\(activeSwapEpoch==null\)return;/);
+  assert.match(navigationPolish,/if\(activeSwapEpoch==null\|\|!selectedWeekStart\)return result/);
+});
+
+test('interactive buttons expose the expected pointer cursor',()=>{
+  assert.match(styles,/button:not\(:disabled\)\{cursor:pointer\}/);
+  assert.match(styles,/button:disabled\{cursor:not-allowed\}/);
 });
 
 test('the wordmark remains a persistent dashboard escape hatch',()=>{
