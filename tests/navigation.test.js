@@ -13,6 +13,14 @@ test('week navigation sets context before using already-hydrated data',()=>{
   assert.ok(hydrate.indexOf('selectedWeekStart=start')<hydrate.indexOf('s.viewWeekStart===start'));
 });
 
+test('dashboard actions use one delegated handler that survives child rerenders',()=>{
+  assert.match(weeks,/app\.addEventListener\('click'/);
+  assert.match(weeks,/closest\?\.\('\[data-week-action\]'\)/);
+  assert.match(weeks,/app\.dataset\.weekActionsWired==='true'/);
+  assert.match(weeks,/handleWeekAction\(button\)/);
+  assert.doesNotMatch(weeks,/querySelectorAll\('\[data-week-action\]'\)\.forEach\(b=>b\.onclick/);
+});
+
 test('all durable sub-screens have a route back toward Weeks',()=>{
   assert.match(weeks,/profile=function\(\)\{baseProfileView\(\);addProfileBack\(\)\}/);
   assert.match(weeks,/ideaPicker=function\(\)\{baseIdeaPicker\(\);addWeekContext\(\)\}/);
