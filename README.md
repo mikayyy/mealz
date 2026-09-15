@@ -8,6 +8,14 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.16.0
+- Added authenticated user ownership for Profile and weekly plan data.
+- Added a Supabase migration that claims existing prototype data for the sole authenticated user, then requires `owner_user_id` on Profiles and weekly plans.
+- Added RLS policies across Profiles, weekly plans, meals, ingredients, recipe steps, and grocery items.
+- Changed normal signed-in data requests to use the user's Supabase session token, so RLS is enforced instead of relying only on the server secret.
+- Kept a temporary compatibility path before the migration is applied; the app automatically switches to user-scoped RLS access after the ownership schema is detected.
+- Added ownership/RLS regression tests.
+
 ### v0.15.4
 - Fixed a planning-screen MutationObserver feedback loop that could drive the browser into a “page unresponsive” state.
 - Made use-up conflict warnings idempotent so unchanged warnings are not repeatedly removed and reinserted.
@@ -160,11 +168,11 @@ Server-side environment variables used by mealz include:
 - optional `OPENAI_MODEL` (defaults to `gpt-5.6-luna`)
 - `SUPABASE_URL`
 - `SUPABASE_SECRET_KEY`
-- optional `SUPABASE_PUBLISHABLE_KEY` to enable authentication
+- `SUPABASE_PUBLISHABLE_KEY` for browser auth and RLS-backed user data access
 - `CRON_SECRET` for scheduled idea preparation
 
 Never place secret API keys in browser code or commit them to GitHub.
 
 ## Current architecture note
 
-Authentication groundwork exists as of v0.15.0, but full per-user data ownership and RLS isolation are the next major step. Until that migration is complete, mealz should still be treated as a private prototype rather than a multi-user production app.
+Authentication and user-scoped data access are implemented as of v0.16.0. The ownership/RLS migration at `migrations/2026-09-15_user_ownership_rls.sql` must be applied in Supabase before the app switches from its temporary compatibility path to RLS-backed per-user isolation. Rate limiting and fully account-aware scheduled idea preparation remain the next security/operations step.
