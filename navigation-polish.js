@@ -24,5 +24,14 @@
   const baseGroceries=groceries;groceries=function(animateKey){const result=baseGroceries(animateKey);installCrumbs(weekParts('Groceries'),{switchTo:{label:'Meals',ariaLabel:`Open meals for ${selectedWeekStart?weekKind(selectedWeekStart):'this week'}`,action:()=>meals()}});return result};
   const baseRecipe=recipe;recipe=function(id){const result=baseRecipe(id);app.querySelector('#back')?.remove();installCrumbs([...weekParts('Meals',{sectionAction:()=>meals()}),{label:'Recipe'}]);return result};
   const baseSwap=swapMeal;swapMeal=function(id){const pending=baseSwap(id);installCrumbs([...weekParts('Meals',{sectionAction:()=>meals()}),{label:'Swap'}]);return pending};
-  const baseChoices=showSwapChoices;showSwapChoices=function(original,alts){const result=baseChoices(original,alts);installCrumbs([...weekParts('Meals',{sectionAction:()=>meals()}),{label:'Swap'}]);return result};
+  const baseChoices=showSwapChoices;showSwapChoices=function(original,alts){
+    // weeks.js cancels activeSwapEpoch when the user leaves the swap flow. Respect that
+    // cancellation here too, otherwise a late AI response can repaint stale Swap crumbs
+    // over the Weeks dashboard after the user has already navigated away.
+    if(activeSwapEpoch==null)return;
+    const result=baseChoices(original,alts);
+    if(activeSwapEpoch==null||!selectedWeekStart)return result;
+    installCrumbs([...weekParts('Meals',{sectionAction:()=>meals()}),{label:'Swap'}]);
+    return result;
+  };
 })();
