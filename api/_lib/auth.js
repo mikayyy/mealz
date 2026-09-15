@@ -13,7 +13,7 @@ export function bearerToken(req){
 
 export async function requireUser(req,{allowLegacy=true}={}){
   if(!authConfigured()){
-    if(allowLegacy)return {id:null,email:null,mode:'legacy'};
+    if(allowLegacy)return {id:null,email:null,token:null,mode:'legacy'};
     throw new AuthError('Authentication is not configured.',503);
   }
   const token=bearerToken(req);
@@ -28,7 +28,7 @@ export async function requireUser(req,{allowLegacy=true}={}){
     if(!response.ok)throw new AuthError('Your session has expired. Please sign in again.',401);
     const user=await response.json();
     if(!user?.id)throw new AuthError();
-    return {id:user.id,email:user.email||null,mode:'authenticated'};
+    return {id:user.id,email:user.email||null,token,mode:'authenticated'};
   }catch(error){
     if(error instanceof AuthError)throw error;
     if(error?.name==='AbortError')throw new AuthError('Authentication check timed out. Please try again.',503);
