@@ -37,7 +37,42 @@ begin
 end $$;
 
 -- If the earlier profile-table migration was never run, preserve the old synthetic
--- profile row before RLS turns on.
+-- profile row before RLS turns on. This uses update + conditional insert so it does
+-- not depend on the older global profile_key unique constraint existing.
+with legacy as (
+  select
+    owner_user_id,
+    household_size,
+    equipment,
+    case when notes is not null and left(trim(notes),1) = '{' then notes::jsonb else '{}'::jsonb end as meta
+  from weekly_plans
+  where status = 'profile' and week_start = date '1970-01-01'
+  order by created_at desc
+  limit 1
+), normalized as (
+  select
+    owner_user_id,
+    greatest(0,coalesce((meta->>'adults')::integer,0)) as adults,
+    greatest(0,coalesce((meta->>'children')::integer,0)) as children,
+    greatest(1,coalesce(household_size,5)) as household_size,
+    coalesce(array(select jsonb_array_elements_text(meta->'dietTags')),'{}') as diet_tags,
+    coalesce(equipment,'{}') as equipment,
+    coalesce(array(select jsonb_array_elements_text(meta->'stores')),array['Trader Joe''s','Wegmans']) as stores
+  from legacy
+  where owner_user_id is not null
+)
+update profiles p set
+  owner_user_id=n.owner_user_id,
+  adults=n.adults,
+  children=n.children,
+  household_size=n.household_size,
+  diet_tags=n.diet_tags,
+  equipment=n.equipment,
+  stores=n.stores,
+  updated_at=now()
+from normalized n
+where p.profile_key='default';
+
 with legacy as (
   select
     owner_user_id,
@@ -61,15 +96,7 @@ select
   coalesce(array(select jsonb_array_elements_text(meta->'stores')),array['Trader Joe''s','Wegmans'])
 from legacy
 where owner_user_id is not null
-on conflict (profile_key) do update set
-  owner_user_id=excluded.owner_user_id,
-  adults=excluded.adults,
-  children=excluded.children,
-  household_size=excluded.household_size,
-  diet_tags=excluded.diet_tags,
-  equipment=excluded.equipment,
-  stores=excluded.stores,
-  updated_at=now();
+  and not exists(select 1 from profiles where profile_key='default');
 
 delete from weekly_plans where status='profile' and week_start=date '1970-01-01';
 
