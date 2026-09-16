@@ -49,6 +49,7 @@ async function writeProfilesTable(profile,{db=sb,userId=null,owned=false,househo
   if(household){
     if(!householdId)throw new Error('Your account is not linked to a household yet.');
     row.household_id=householdId;
+    if(userId)row.owner_user_id=userId;
   }else if(owned&&userId){
     row.owner_user_id=userId;
   }
