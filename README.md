@@ -8,6 +8,16 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.16.1
+- Added the shared-household data model with `households` and `household_members`.
+- Added a forward migration from v0.16.0 user-owned data to household-owned data without rolling back the prior migration.
+- Changed RLS from direct user ownership to household-membership access across Profile, weeks, meals, recipes, and groceries.
+- Added a household API foundation for creating a household and joining one with a human-friendly code.
+- Household join codes are normalized and SHA-256 hashed before storage; the plain code is returned only when created.
+- Updated new Profile and weekly-plan writes to carry `household_id` once the household schema is active.
+- Made Friday idea preparation household-aware while retaining compatibility with the v0.16.0 ownership schema before migration.
+- Added household/RLS regression tests.
+
 ### v0.16.0
 - Added authenticated user ownership for Profile and weekly plan data.
 - Added a Supabase migration that claims existing prototype data for the sole authenticated user, then requires `owner_user_id` on Profiles and weekly plans.
@@ -176,4 +186,4 @@ Never place secret API keys in browser code or commit them to GitHub.
 
 ## Current architecture note
 
-Authentication and user-scoped data access are implemented as of v0.16.0. The ownership/RLS migration at `migrations/2026-09-15_user_ownership_rls.sql` must be applied in Supabase before the app switches from its temporary compatibility path to RLS-backed per-user isolation. Rate limiting and removal of remaining legacy compatibility behavior are the next security/operations steps.
+Authentication remains user-specific, while meal data is moving to shared-household ownership. v0.16.1 adds the household schema and forward migration at `migrations/2026-09-15_households.sql`. Until that migration is applied, the deployed app continues using the v0.16.0 user-ownership model. After the migration is detected, signed-in data requests automatically use household-membership RLS. The onboarding UI for Create Household / Join Household is the next release, followed by the simpler sign-in experience and then rate limiting/security cleanup.
