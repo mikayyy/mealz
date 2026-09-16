@@ -36,7 +36,7 @@ async function prepareOne({householdId=null,ownerId=null,profile=null,profileSou
   const ideas=data.ideas;
   await sb(`weekly_plans?week_start=eq.${enc(weekStart)}&status=eq.ideas${clause}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
   const planRow={week_start:weekStart,household_size:householdSize,cooking_days:days,equipment,use_up:null,notes:null,status:'ideas'};
-  if(householdId)planRow.household_id=householdId;else if(ownerId)planRow.owner_user_id=ownerId;
+  if(householdId){planRow.household_id=householdId;if(ownerId)planRow.owner_user_id=ownerId}else if(ownerId)planRow.owner_user_id=ownerId;
   const plans=await sb('weekly_plans',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([planRow])});
   const plan=plans[0];
   const rows=ideas.map((x,i)=>({weekly_plan_id:plan.id,meal_key:x.id||`idea-${i+1}`,day:'Idea',title:x.title||'Dinner idea',description:x.description||null,emoji:x.emoji||'🍽️',servings:householdSize,total_minutes:Number(x.total_minutes||30),difficulty:null,tags:[`Protein:${x.protein||''}`,...(Array.isArray(x.tags)?x.tags.slice(0,3):[])],kid_note:null,sort_order:i}));
@@ -53,9 +53,9 @@ export default async function handler(req,res){
   try{
     const weekStart=nextMonday();
     if(await householdSchemaReady()){
-      const rows=await sb('profiles?select=id,household_id,adults,children,household_size,diet_tags,equipment&order=created_at.asc');
+      const rows=await sb('profiles?select=id,household_id,owner_user_id,adults,children,household_size,diet_tags,equipment&order=created_at.asc');
       const results=[];
-      for(const row of rows||[]){if(!row.household_id)continue;const result=await prepareOne({householdId:row.household_id,profile:profileFromRow(row),profileSource:'profiles',weekStart,telemetry});results.push({householdId:row.household_id,...result})}
+      for(const row of rows||[]){if(!row.household_id)continue;const result=await prepareOne({householdId:row.household_id,ownerId:row.owner_user_id||null,profile:profileFromRow(row),profileSource:'profiles',weekStart,telemetry});results.push({householdId:row.household_id,...result})}
       telemetry.finish(200,{week_start:weekStart,households:results.length,prepared_households:results.filter(x=>x.prepared).length,household_scope:true});
       return res.status(200).json({ok:true,weekStart,households:results.length,prepared:results.filter(x=>x.prepared).length,results});
     }
