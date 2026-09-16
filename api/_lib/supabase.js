@@ -48,10 +48,41 @@ export async function ownershipSchemaReady(){
   return ownershipCheck.value;
 }
 
+let householdCheck={value:false,checkedAt:0};
+export async function householdSchemaReady(){
+  const now=Date.now();
+  if(now-householdCheck.checkedAt<30000)return householdCheck.value;
+  try{
+    await sb('households?select=id&limit=0');
+    await sb('household_members?select=household_id,user_id&limit=0');
+    await sb('weekly_plans?select=household_id&limit=0');
+    householdCheck={value:true,checkedAt:now};
+  }catch{
+    householdCheck={value:false,checkedAt:now};
+  }
+  return householdCheck.value;
+}
+
 export async function dataDb(auth){
+  if(auth?.id&&auth?.token&&await householdSchemaReady()){
+    const db=(path,options={})=>sbAsUser(auth.token,path,options);
+    const memberships=await db(`household_members?select=household_id,role&user_id=eq.${enc(auth.id)}&limit=1`);
+    const membership=memberships?.[0]||null;
+    return {
+      owned:true,
+      household:true,
+      householdId:membership?.household_id||null,
+      householdRole:membership?.role||null,
+      db
+    };
+  }
+
   const owned=!!(auth?.id&&auth?.token&&await ownershipSchemaReady());
   return {
     owned,
+    household:false,
+    householdId:null,
+    householdRole:null,
     db:owned?(path,options={})=>sbAsUser(auth.token,path,options):sb
   };
 }
