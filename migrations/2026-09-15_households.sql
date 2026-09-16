@@ -67,6 +67,12 @@ end $$;
 alter table profiles alter column household_id set not null;
 alter table weekly_plans alter column household_id set not null;
 
+-- Household ownership is authoritative now. Keep owner_user_id temporarily for
+-- diagnostics/rollback, but allow it to be null so new household-owned rows do not
+-- fail the NOT NULL constraint introduced by v0.16.0.
+alter table profiles alter column owner_user_id drop not null;
+alter table weekly_plans alter column owner_user_id drop not null;
+
 -- Keep owner_user_id temporarily for rollback/diagnostics, but household_id is now authoritative.
 drop index if exists profiles_owner_profile_key_idx;
 create unique index if not exists profiles_household_profile_key_idx on profiles(household_id,profile_key);
