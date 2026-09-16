@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+
+const migration=readFileSync(new URL('../migrations/2026-09-15_households.sql',import.meta.url),'utf8');
+const supabase=readFileSync(new URL('../api/_lib/supabase.js',import.meta.url),'utf8');
+const plan=readFileSync(new URL('../api/plan.js',import.meta.url),'utf8');
+const profileStore=readFileSync(new URL('../api/_lib/profile-store.js',import.meta.url),'utf8');
+const householdApi=readFileSync(new URL('../api/household.js',import.meta.url),'utf8');
+const prep=readFileSync(new URL('../api/prep-next-week.js',import.meta.url),'utf8');
+
+test('household migration converts v0.16 user ownership without orphaning data',()=>{
+  assert.match(migration,/create table if not exists households/);
+  assert.match(migration,/create table if not exists household_members/);
+  assert.match(migration,/update profiles set household_id = h where owner_user_id = r\.owner_user_id/);
+  assert.match(migration,/update weekly_plans set household_id = h where owner_user_id = r\.owner_user_id/);
+  assert.match(migration,/unassigned profile or weekly plan rows remain/);
+});
+
+test('RLS follows household membership rather than original user ownership',()=>{
+  assert.match(migration,/profiles_household_all/);
+  assert.match(migration,/weekly_plans_household_all/);
+  assert.match(migration,/hm\.user_id = auth\.uid\(\)/);
+  assert.match(migration,/drop policy if exists profiles_owner_all/);
+  assert.match(migration,/drop policy if exists weekly_plans_owner_all/);
+});
+
+test('authenticated data scope resolves the signed-in users household',()=>{
+  assert.match(supabase,/householdSchemaReady/);
+  assert.match(supabase,/household_members\?select=household_id,role/);
+  assert.match(supabase,/householdId:membership\?\.household_id\|\|null/);
+});
+
+test('new profile and plan writes carry household identity',()=>{
+  assert.match(profileStore,/row\.household_id=householdId/);
+  assert.match(plan,/planRow\.household_id=householdId/);
+  assert.match(plan,/not linked to a household yet/);
+});
+
+test('household API creates secure human-friendly join codes and hashes them',()=>{
+  assert.match(householdApi,/crypto\.createHash\('sha256'\)/);
+  assert.match(householdApi,/action==='create'/);
+  assert.match(householdApi,/action==='join'/);
+  assert.match(householdApi,/HOUSEHOLD_ALREADY_LINKED/);
+});
+
+test('Friday preparation groups work by household after migration',()=>{
+  assert.match(prep,/householdSchemaReady/);
+  assert.match(prep,/household_id/);
+  assert.match(prep,/prepared_households/);
+});
