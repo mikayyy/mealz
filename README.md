@@ -8,6 +8,16 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.16.3
+- Fixed the Profile page freeze: profile-label cleanup was unconditionally replacing the introduction text inside a subtree MutationObserver, triggering itself indefinitely even when the text already matched.
+- Only update that text when it changes, preserving label normalization, navigation, and planning warnings without a render loop.
+- Added executable regression coverage for opening/reopening Profile, repeated preference renders, startup on Profile, unrelated DOM changes, and save-progress labels.
+- No new Supabase migration or Vercel configuration is required. After deployment, fully reload mealz and test Profile, preference edits, Save Profile, and returning to Weeks.
+
+### v0.16.2
+- Removed the obsolete `owner_user_id` NOT NULL requirement for household-owned Profile and weekly-plan rows, with a compatibility migration for existing installations.
+- Temporarily continued populating `owner_user_id` on household writes for compatibility before that migration is applied.
+
 ### v0.16.1
 - Added the shared-household data model with `households` and `household_members`.
 - Added a forward migration from v0.16.0 user-owned data to household-owned data without rolling back the prior migration.
