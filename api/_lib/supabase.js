@@ -1,3 +1,4 @@
+import {AuthError} from './auth.js';
 const PUBLIC_KEY=()=>process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
 export function supabaseConfigured(){return !!(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY)}
 export const enc=value=>encodeURIComponent(String(value));
@@ -34,20 +35,6 @@ export async function sbAsUser(token,path,options={}){
   return request(path,options,{apikey:key,Authorization:`Bearer ${token}`});
 }
 
-let ownershipCheck={value:false,checkedAt:0};
-export async function ownershipSchemaReady(){
-  const now=Date.now();
-  if(now-ownershipCheck.checkedAt<30000)return ownershipCheck.value;
-  try{
-    await sb('weekly_plans?select=owner_user_id&limit=0');
-    await sb('profiles?select=owner_user_id&limit=0');
-    ownershipCheck={value:true,checkedAt:now};
-  }catch{
-    ownershipCheck={value:false,checkedAt:now};
-  }
-  return ownershipCheck.value;
-}
-
 let householdCheck={value:false,checkedAt:0};
 export async function householdSchemaReady(){
   const now=Date.now();
@@ -64,25 +51,11 @@ export async function householdSchemaReady(){
 }
 
 export async function dataDb(auth){
-  if(auth?.id&&auth?.token&&await householdSchemaReady()){
-    const db=(path,options={})=>sbAsUser(auth.token,path,options);
-    const memberships=await db(`household_members?select=household_id,role&user_id=eq.${enc(auth.id)}&limit=1`);
-    const membership=memberships?.[0]||null;
-    return {
-      owned:true,
-      household:true,
-      householdId:membership?.household_id||null,
-      householdRole:membership?.role||null,
-      db
-    };
-  }
-
-  const owned=!!(auth?.id&&auth?.token&&await ownershipSchemaReady());
-  return {
-    owned,
-    household:false,
-    householdId:null,
-    householdRole:null,
-    db:owned?(path,options={})=>sbAsUser(auth.token,path,options):sb
-  };
+  if(!auth?.id||!auth?.token)throw new AuthError();
+  const db=(path,options={})=>sbAsUser(auth.token,path,options);
+  // Never retry a failed user-scoped query with the service key.
+  const memberships=await db(`household_members?select=household_id,role&user_id=eq.${enc(auth.id)}&limit=1`);
+  const membership=memberships?.[0];
+  if(!membership)throw new AuthError('Create or join a household to continue.',403);
+  return {owned:true,household:true,householdId:membership.household_id,householdRole:membership.role,db};
 }

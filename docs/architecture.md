@@ -12,9 +12,7 @@ Mealz intentionally separates state by lifetime:
 
 ## Profile model
 
-The canonical persistent Profile belongs in the `profiles` table, keyed by `profile_key='default'` during the single-user prototype phase. The profile API is migration-safe: until the `profiles` table exists, it can still read/write the legacy `weekly_plans` profile row. Once the table exists, the API uses it and removes the old legacy row after a successful write/migration.
-
-The legacy row (`status='profile'`, `week_start='1970-01-01'`) exists only as a compatibility bridge and should not be used by new code.
+The canonical Profile belongs to a household in `profiles`, uniquely keyed by `(household_id, profile_key)` with `profile_key='default'`. Saves use an atomic upsert. Members share the Profile and meal data through membership-based RLS. The historical SQL migrations preserve prototype data; runtime APIs no longer read or write legacy Profile rows.
 
 ## Week identity
 
@@ -23,6 +21,8 @@ A Mealz week always runs Monday through Sunday. New work should pass an explicit
 ## Client structure
 
 - `app.js`: primary screens and meal/grocery workflows.
+- `auth-client.js`: password auth/recovery, persistent Supabase sessions, authenticated fetch, and account-change invalidation.
+- `account-client.js`: resolves membership before boot, Create/Join onboarding, Account settings, and household-scoped browser cache keys. Startup waits for dashboard rendering before opening first-time Profile setup.
 - `weeks.js`: week dashboard and explicit week navigation/cache.
 - `shared-logic.js`: pure deterministic logic that can run in both browser and Node tests.
 - `client-foundation.js`: small cross-screen behaviors only: weekly draft capture, dietary conflict warnings, Profile labels, and scroll reset.
@@ -36,7 +36,8 @@ Shared helpers live under `api/_lib/`:
 - `supabase.js`: REST client, encoding, timeout/error handling.
 - `openai.js`: Responses API request, Structured Outputs, token limits, usage timing.
 - `profile.js`: common Profile prompt language.
-- `profile-store.js`: canonical Profile persistence with legacy fallback during migration.
+- `profile-store.js`: canonical household Profile persistence with no legacy fallback.
+- `rate-limit.js`: atomic Postgres rate limiting across serverless instances. Missing limiter infrastructure fails closed.
 - `schemas.js`: strict AI response schemas.
 - `telemetry.js`: structured Vercel logs for latency, errors, retries, and token usage.
 
@@ -48,8 +49,8 @@ Plan replacement now follows a create-then-swap strategy. Mealz builds the new a
 
 ## Near-term technical debt
 
-- Run `migrations/2026-09-14_profiles.sql` in Supabase to complete the Profile migration and retire the compatibility fallback in practice.
-- The app has no authentication or profile isolation yet.
+- Apply `migrations/2026-09-17_account_security.sql` before v0.17.0; follow `docs/auth-setup.md` for the ordered rollout and live checks.
+- Self-service household leaving/ownership transfer remains future work.
 - Plan replacement is safer but still not a true database transaction.
 - The legacy boot hydration can still read the newest active plan without explicit `week_start`.
 - Grocery normalization is still intentionally conservative until unit conversion rules are added.

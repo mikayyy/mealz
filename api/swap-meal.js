@@ -3,6 +3,8 @@ import {swapSchema} from './_lib/schemas.js';
 import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
 import {startTelemetry} from './_lib/telemetry.js';
 import {requireUser,respondAuthError} from './_lib/auth.js';
+import {dataDb} from './_lib/supabase.js';
+import {enforceRateLimit} from './_lib/rate-limit.js';
 
 function friendlyError(error){
   const message=String(error?.message||error||'');
@@ -13,11 +15,14 @@ function friendlyError(error){
 }
 
 export default async function handler(req,res){
+  res.setHeader('Cache-Control','no-store');
   const telemetry=startTelemetry('swap-meal');
   if(req.method!=='POST'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
   if(!process.env.OPENAI_API_KEY){telemetry.finish(500,{reason:'openai_not_configured'});return res.status(500).json({error:'Mealz AI is not configured yet.'})}
   try{
     const auth=await requireUser(req);telemetry.event('auth',{mode:auth.mode});
+    const {householdId}=await dataDb(auth);
+    await enforceRateLimit(`ai:${householdId}`,20);
     const {meal,otherMeals,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};
     if(!meal?.day){telemetry.finish(400,{reason:'missing_meal'});return res.status(400).json({error:'Meal information is missing.'})}
     const existing=(otherMeals||[]).map(m=>m.title).filter(Boolean).join(', ')||'none';

@@ -1,14 +1,15 @@
 import {callOpenAIJson} from './_lib/openai.js';
 import {ideasSchema} from './_lib/schemas.js';
-import {sb,supabaseConfigured} from './_lib/supabase.js';
+import {dataDb} from './_lib/supabase.js';
+import {enforceRateLimit} from './_lib/rate-limit.js';
+import {validCookingDays} from './_lib/validation.js';
 import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
 import {startTelemetry} from './_lib/telemetry.js';
 import {requireUser,respondAuthError} from './_lib/auth.js';
 
-async function preferenceContext(){
-  if(!supabaseConfigured())return {recent:[],favorites:[]};
+export async function preferenceContext(db){
   try{
-    const rows=await sb('meals?select=title,tags,day&day=neq.Idea&order=created_at.desc&limit=30');
+    const rows=await db('meals?select=title,tags,day&day=neq.Idea&order=created_at.desc&limit=30');
     const recent=[],favorites=[];
     for(const x of rows||[]){
       if(x.title&&!recent.includes(x.title))recent.push(x.title);
@@ -19,15 +20,18 @@ async function preferenceContext(){
 }
 
 export default async function handler(req,res){
+  res.setHeader('Cache-Control','no-store');
   const telemetry=startTelemetry('generate-ideas');
   if(req.method!=='POST'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
   if(!process.env.OPENAI_API_KEY){telemetry.finish(500,{reason:'openai_not_configured'});return res.status(500).json({error:'Mealz AI is not configured.'})}
   try{
     const auth=await requireUser(req);telemetry.event('auth',{mode:auth.mode});
+    const {db,householdId}=await dataDb(auth);
+    await enforceRateLimit(`ai:${householdId}`,20);
     const {days,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};
-    if(!Array.isArray(days)||!days.length){telemetry.finish(400,{reason:'missing_days'});return res.status(400).json({error:'Choose at least one cooking day.'})}
+    if(!validCookingDays(days))return res.status(400).json({error:'Choose up to seven different cooking days.'});
     const requested=Number(req.body?.ideaCount||6),ideaCount=Math.max(6,Math.min(9,Number.isFinite(requested)?Math.round(requested):6));
-    const pref=await preferenceContext();
+    const pref=await preferenceContext(db);
     const dietary=dietaryInstruction(dietTags);
     const equipmentText=equipmentInstruction(equipment);
     const kidContext=kidInstruction(children);

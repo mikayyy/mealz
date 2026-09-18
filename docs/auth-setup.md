@@ -1,26 +1,52 @@
-# mealz authentication setup
+# mealz v0.17.0 account rollout
 
-v0.15.0 adds an opt-in Supabase Auth gate. It is deliberately dormant until a browser-safe Supabase key is configured, so existing prototype behavior is preserved during rollout.
+## Required deployment order
 
-## Enable authentication
+1. Keep the current v0.16.3 production deployment running while preparing the database. Do not create replacement accounts for existing users.
+2. In Supabase SQL Editor, run all of `migrations/2026-09-17_account_security.sql`. The v0.16 household and compatibility migrations must already be applied. The new migration preserves household/profile/meal data, adds atomic household-management RPCs and shared rate-limit counters, and narrows browser privileges for membership and invitation columns. It is safe to rerun.
+3. Confirm Email authentication is enabled in Supabase. Keep email confirmation enabled. Set Site URL to `https://mealz-pink.vercel.app`, and allow that URL plus `https://mealz-pink.vercel.app/?reset=1` in Redirect URLs. If testing a Vercel preview, add its exact URLs temporarily. Verify email delivery/SMTP for confirmation and reset messages before inviting friends.
+4. Keep `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY` (or legacy `SUPABASE_ANON_KEY`), `OPENAI_API_KEY`, and `CRON_SECRET` configured in Vercel. No additional secrets or services are needed.
+5. After migration success and CI success, merge/deploy v0.17.0. Do not deploy without the migration: AI and household writes deliberately return a temporary-unavailable error when the rate-limit RPC is missing.
+6. Reopen mealz. Existing signed-in users go straight to their household. In **Account → Set or change password**, set a password for future sign-ins. A signed-out existing user can choose **Forgot or need a password?** using their existing email. This preserves the account, household membership, and meal history.
+7. If new-user signup was previously disabled, enable it only after this deployment. Create an invitation via **Account → Create a new invitation code**. Share it privately; the invited person creates their own account, confirms their email, signs in, and chooses **Join a household**.
 
-1. In Supabase, keep Email auth enabled.
-2. In Supabase Auth URL Configuration, set the Site URL to the production mealz URL and add the production URL to Redirect URLs.
-3. In Vercel, add `SUPABASE_PUBLISHABLE_KEY` using the project's browser-safe publishable key. Legacy projects can use `SUPABASE_ANON_KEY` instead.
-4. Redeploy.
-5. Open mealz and sign in with the email magic link.
+## Product rules
 
-`SUPABASE_SECRET_KEY` remains server-only and must never be exposed to the browser.
+- One household per account. Joining loads that household's existing Profile/weeks without copying or overwriting them. Creating opens Profile setup. Interrupted setup resumes if the household has no Profile yet.
+- Both members and owners can edit meals and Profile. Only the owner can replace the invitation code. Replacing a code leaves current members connected; the old code stops accepting new members.
+- The clear invitation code is displayed only when created/replaced. Only its SHA-256 hash and a short hint are stored in the database. If lost, create a new code in Account.
+- Self-service leaving, ownership transfer, household deletion, and switching between households are not included in this release. Existing linked accounts cannot join a second household accidentally.
+- Browser preferences and drafts from the old prototype are never uploaded into a new household. Startup reloads authoritative cloud data; signing out or changing accounts clears that user's scoped browser cache.
 
-## Rollout behavior
+## Security and rate limits
 
-- Without `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY`, the app stays in legacy single-user mode.
-- Once a publishable key is present, browser API calls wait for an authenticated Supabase session and attach its bearer token.
-- Server API routes verify the token with Supabase before reading data or invoking OpenAI.
-- The scheduled `prep-next-week` endpoint continues to use `CRON_SECRET` and is not part of browser auth.
+- All normal APIs require a verified Supabase user. Missing authentication configuration, expired sessions, and database errors never enable legacy service-key reads.
+- User data access, including suggestion history/favorites, uses the publishable key plus the verified bearer token and RLS. Household setup uses server-only RPCs with a verified user ID, per-user transaction locks, and existing unique membership constraints.
+- Household mutations: 10 requests per authenticated account per 15 minutes, including invalid-code attempts. AI endpoints share 20 requests per household per 15 minutes. Recipe expansion allows at most seven distinct cooking days. Limits are stored atomically in Postgres and cannot be reset by a browser. Exhaustion returns HTTP 429 and Retry-After; limiter failure returns 503.
+- Supabase handles password storage, confirmation, reset tokens, session refresh, and authentication endpoint rate limits. Review its Auth rate limits/email provider settings for your account. mealz does not store passwords.
+- The Friday job remains protected by CRON_SECRET and runs only household-scoped preparation; missing household schema causes a safe failure.
 
-## Important limitation before v0.15.1 / Step 4B
+## Verification
 
-Authentication is now an access gate, but the database rows are still the existing shared prototype rows. Do not invite additional users yet. The next migration will add user ownership to profiles and weekly plans, scope API queries by user, and enable user-specific RLS policies before multi-user use.
+Use Node 22 and pnpm 11.19.0:
 
-For the safest interim setup, create/sign in with the owner account and then disable new-user signups in Supabase until the ownership migration is complete.
+```sh
+pnpm install --frozen-lockfile
+pnpm test
+pnpm exec playwright install chromium
+pnpm test:browser
+```
+
+Database tests use embedded Postgres with fixtures for the Supabase roles/auth schema and the actual household/account-security migrations. They test cross-household reads/writes/reparenting on six data tables, direct membership/invite privilege denial, shared household access, atomic failure, code rotation, rate exhaustion, and window reset. No live credentials are used. Browser tests execute shipped scripts with mocked auth/API boundaries and isolated storage. CI runs both suites on Linux.
+
+Production smoke checks after deployment:
+
+1. Existing account: verify Profile, This Week/Past Weeks, recipes, groceries, edit/save, refresh persistence, and password setup.
+2. New account: confirm email, create household, finish Profile, sign out/in, and confirm it reopens without repeating onboarding.
+3. Invited account: join with the code, confirm shared Profile/meals, save a harmless preference and verify it from the owner's account. A bad code should show an error while keeping the form usable.
+4. Separate household: confirm neither family's meals/Profile appear in the other. Sign out and change accounts in the same browser to check local state isolation.
+5. Request a password reset, follow the email, choose a new password, and confirm the same household opens. Verify that expired/reused reset links can recover through another reset request.
+
+The live email-delivery and live database checks require your Supabase project; mocked browser tests do not certify them. If a rollout issue appears, revert the application commit through a new deployment. The migration is additive and privilege-narrowing; do not delete household data or reverse the earlier household migrations.
+
+References: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [auth event handling](https://supabase.com/docs/reference/javascript/auth-onauthstatechange), and [password reset](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail).

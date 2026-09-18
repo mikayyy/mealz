@@ -36,7 +36,7 @@ test('RLS follows household membership rather than original user ownership',()=>
 test('authenticated data scope resolves the signed-in users household',()=>{
   assert.match(supabase,/householdSchemaReady/);
   assert.match(supabase,/household_members\?select=household_id,role/);
-  assert.match(supabase,/householdId:membership\?\.household_id\|\|null/);
+  assert.match(supabase,/householdId:membership\.household_id/);
 });
 
 test('new profile and plan writes carry household identity and tolerate pre-hotfix schema',()=>{
@@ -51,7 +51,7 @@ test('household API creates secure human-friendly join codes and hashes them',()
   assert.match(householdApi,/crypto\.createHash\('sha256'\)/);
   assert.match(householdApi,/action==='create'/);
   assert.match(householdApi,/action==='join'/);
-  assert.match(householdApi,/HOUSEHOLD_ALREADY_LINKED/);
+  assert.match(householdApi,/rpc\/mealz_manage_household/);
 });
 
 test('Friday preparation groups work by household after migration',()=>{

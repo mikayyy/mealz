@@ -5,6 +5,7 @@ import {requireUser,respondAuthError} from './_lib/auth.js';
 function summary(plan,meals){return {id:plan.id,weekStart:plan.week_start,householdSize:plan.household_size,cookingDays:plan.cooking_days||[],useUp:plan.use_up||'',notes:plan.notes||'',mealCount:meals.length,meals:meals.map(m=>({id:m.meal_key||m.id,day:m.day,title:m.title,emoji:m.emoji,total_minutes:m.total_minutes})),createdAt:plan.created_at,updatedAt:plan.updated_at}}
 
 export default async function handler(req,res){
+  res.setHeader('Cache-Control','no-store');
   const telemetry=startTelemetry('weeks');
   if(req.method!=='GET'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
   if(!supabaseConfigured()){telemetry.finish(500,{reason:'supabase_not_configured'});return res.status(500).json({error:'Supabase is not configured.'})}

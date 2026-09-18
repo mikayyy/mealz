@@ -16,7 +16,7 @@ test('verified auth exposes the bearer token only after user verification',()=>{
 test('user-scoped database requests use publishable key plus bearer token',()=>{
   assert.match(supabase,/Authorization:`Bearer \$\{token\}`/);
   assert.match(supabase,/apikey:key/);
-  assert.match(supabase,/ownershipSchemaReady/);
+  assert.doesNotMatch(supabase,/db:owned.*:sb/);
   assert.match(supabase,/dataDb/);
 });
 

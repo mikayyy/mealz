@@ -3,6 +3,7 @@ import {startTelemetry} from './_lib/telemetry.js';
 import {requireUser,respondAuthError} from './_lib/auth.js';
 
 export default async function handler(req,res){
+  res.setHeader('Cache-Control','no-store');
   const telemetry=startTelemetry('pregenerated-ideas');
   if(req.method!=='GET'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
   if(!supabaseConfigured()){telemetry.finish(500,{reason:'supabase_not_configured'});return res.status(500).json({error:'Supabase is not configured.'})}
