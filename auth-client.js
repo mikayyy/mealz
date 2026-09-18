@@ -21,17 +21,25 @@
     const node=gate();
     const title={signin:'Welcome back',signup:'Create your account',reset:'Reset your password',password:'Choose a password',error:'Unable to connect'}[mode];
     const hasPassword=['signin','signup','password'].includes(mode);
-    node.innerHTML=`<div class="auth-card"><div class="auth-wordmark">mealz</div><p class="auth-tagline">less planning. more good food.</p><h1>${title}</h1><p class="auth-copy">${mode==='signup'?'Next, create a household or join the people you cook with.':mode==='reset'?'We’ll email you a link to choose a password. Existing mealz accounts can use this too.':mode==='password'?'Use at least 8 characters.':'Your household’s meals, all in one place.'}</p>${mode==='error'?'<button id="authRetry" class="primary">Try again</button>':`<form id="mealzAuthForm">${mode!=='password'?'<label for="mealzAuthEmail">Email</label><input id="mealzAuthEmail" type="email" autocomplete="email" required maxlength="254">':''}${hasPassword?`<label for="mealzAuthPassword">Password</label><input id="mealzAuthPassword" type="password" autocomplete="${mode==='signin'?'current-password':'new-password'}" required minlength="${mode==='signin'?1:8}" maxlength="128">`:''}<button class="primary" type="submit">${{signin:'Sign in',signup:'Create account',reset:'Send reset link',password:'Save password'}[mode]}</button></form><div class="auth-links">${mode==='signin'?'<button data-mode="signup">Create an account</button><button data-mode="reset">Forgot or need a password?</button>':mode==='password'?'<button id="passwordCancel">Cancel</button>':'<button data-mode="signin">Back to sign in</button>'}</div>`}<p class="auth-message" id="mealzAuthMessage" role="status" aria-live="polite">${escape(message)}</p></div>`;
+    node.innerHTML=`<div class="auth-card"><div class="auth-wordmark">mealz</div><p class="auth-tagline">less planning. more good food.</p><h1>${title}</h1><p class="auth-copy">${mode==='signup'?'Next, create a household or join the people you cook with.':mode==='reset'?'We’ll email you a link to choose a password. Existing mealz accounts can use this too.':mode==='password'?'Use at least 8 characters.':'Your household’s meals, all in one place.'}</p>${mode==='error'?'<button id="authRetry" class="primary">Try again</button>':`<form id="mealzAuthForm">${mode!=='password'?'<label for="mealzAuthEmail">Email</label><input id="mealzAuthEmail" type="email" autocomplete="email" required maxlength="254">':''}${hasPassword?`<label for="mealzAuthPassword">Password</label><div class="password-field"><input id="mealzAuthPassword" type="password" autocomplete="${mode==='signin'?'current-password':'new-password'}" required minlength="${mode==='signin'?1:8}" maxlength="128"><button id="togglePassword" class="password-toggle" type="button" aria-controls="mealzAuthPassword" aria-label="Show password" title="Show password" data-revealed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m3 3 18 18"/></svg></button></div>`:''}<button class="primary" type="submit">${{signin:'Sign in',signup:'Create account',reset:'Send reset link',password:'Save password'}[mode]}</button></form><div class="auth-links">${mode==='signin'?'<button data-mode="signup">Create an account</button><button data-mode="reset">Forgot or need a password?</button>':mode==='password'?'<button id="passwordCancel">Cancel</button>':'<button data-mode="signin">Back to sign in</button>'}</div>`}<p class="auth-message" id="mealzAuthMessage" role="status" aria-live="polite">${escape(message)}</p></div>`;
     node.querySelector('#authRetry')?.addEventListener('click',()=>location.reload());
     node.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>renderGate(button.dataset.mode));
     node.querySelector('#passwordCancel')?.addEventListener('click',()=>{recovering=false;history.replaceState(null,'',location.pathname);location.reload()});
+    node.querySelector('#togglePassword')?.addEventListener('click',event=>{
+      const input=node.querySelector('#mealzAuthPassword');
+      const visible=input.type==='password';
+      input.type=visible?'text':'password';
+      const button=event.currentTarget,label=visible?'Hide password':'Show password';
+      button.dataset.revealed=String(visible);
+      button.setAttribute('aria-label',label);button.title=label;
+    });
     const form=node.querySelector('form');
     if(!form)return;
     form.onsubmit=async event=>{
       event.preventDefault();
-      const button=form.querySelector('button'),status=node.querySelector('#mealzAuthMessage');
+      const button=form.querySelector('button[type="submit"]'),status=node.querySelector('#mealzAuthMessage');
       const email=form.querySelector('input[type=email]')?.value.trim();
-      const password=form.querySelector('input[type=password]')?.value;
+      const password=form.querySelector('#mealzAuthPassword')?.value;
       button.disabled=true;status.textContent='Please wait…';
       try{
         const auth=state.client.auth;
