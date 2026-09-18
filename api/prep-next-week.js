@@ -1,16 +1,15 @@
 import {callOpenAIJson} from './_lib/openai.js';
 import {ideasSchema} from './_lib/schemas.js';
-import {sb,enc,supabaseConfigured,ownershipSchemaReady,householdSchemaReady} from './_lib/supabase.js';
+import {sb,enc,supabaseConfigured,householdSchemaReady} from './_lib/supabase.js';
 import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
-import {readProfile} from './_lib/profile-store.js';
 import {startTelemetry} from './_lib/telemetry.js';
 
 function nextMonday(){const d=new Date();const day=d.getUTCDay();let add=(8-day)%7;if(add===0)add=7;d.setUTCDate(d.getUTCDate()+add);return d.toISOString().slice(0,10)}
 function ideaCountForDays(n){return n>=5?Math.min(9,n+2):6}
-function scopeClause({householdId=null,ownerId=null}={}){if(householdId)return `&household_id=eq.${enc(householdId)}`;if(ownerId)return `&owner_user_id=eq.${enc(ownerId)}`;return ''}
+function scopeClause({householdId}){if(!householdId)throw new Error('Household scope is required.');return `&household_id=eq.${enc(householdId)}`}
 function profileFromRow(row){if(!row)return null;return {adults:Number(row.adults||0),children:Number(row.children||0),householdSize:Number(row.household_size||5),dietTags:Array.isArray(row.diet_tags)?row.diet_tags:[],equipment:Array.isArray(row.equipment)?row.equipment:[]}}
 
-async function prepareOne({householdId=null,ownerId=null,profile=null,profileSource='legacy',weekStart,telemetry}){
+async function prepareOne({householdId,ownerId=null,profile=null,profileSource='profiles',weekStart,telemetry}){
   const clause=scopeClause({householdId,ownerId});
   const recentPlans=await sb(`weekly_plans?select=*&status=eq.active${clause}&order=week_start.desc,created_at.desc&limit=12`);
   const p=recentPlans?.[0]||{};
@@ -59,17 +58,7 @@ export default async function handler(req,res){
       telemetry.finish(200,{week_start:weekStart,households:results.length,prepared_households:results.filter(x=>x.prepared).length,household_scope:true});
       return res.status(200).json({ok:true,weekStart,households:results.length,prepared:results.filter(x=>x.prepared).length,results});
     }
-    if(await ownershipSchemaReady()){
-      const rows=await sb('profiles?select=id,owner_user_id,adults,children,household_size,diet_tags,equipment&order=created_at.asc');
-      const results=[];
-      for(const row of rows||[]){if(!row.owner_user_id)continue;const result=await prepareOne({ownerId:row.owner_user_id,profile:profileFromRow(row),profileSource:'profiles',weekStart,telemetry});results.push({ownerUserId:row.owner_user_id,...result})}
-      telemetry.finish(200,{week_start:weekStart,accounts:results.length,prepared_accounts:results.filter(x=>x.prepared).length,ownership:true});
-      return res.status(200).json({ok:true,weekStart,accounts:results.length,prepared:results.filter(x=>x.prepared).length,results});
-    }
-    const profileResult=await readProfile();
-    const result=await prepareOne({profile:profileResult.profile,profileSource:profileResult.source,weekStart,telemetry});
-    telemetry.finish(200,{week_start:weekStart,ownership:false,prepared:!!result.prepared,count:result.count||0});
-    return res.status(200).json({ok:true,weekStart,...result});
+    return res.status(503).json({error:'Household schema is unavailable. No preparation was performed.'});
   }catch(e){
     telemetry.fail(e);
     const message=e?.message==='openai-timeout'?'Friday meal prep took too long.':e?.message==='openai-output-limit'?'Friday meal prep ran out of output space.':e.message||'Could not prepare next week.';

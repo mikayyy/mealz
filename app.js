@@ -17,12 +17,12 @@ const TEST_WEEK=[
 ];
 const GROCERY_TEST=[{name:'apples',quantity:4,unit:'whole',category:'Produce'},{name:'bananas',quantity:6,unit:'whole',category:'Produce'},{name:'broccoli',quantity:2,unit:'heads',category:'Produce'},{name:'carrots',quantity:1,unit:'bag',category:'Produce'},{name:'lemons',quantity:3,unit:'whole',category:'Produce'},{name:'garlic',quantity:1,unit:'head',category:'Produce'},{name:'chicken breasts',quantity:2,unit:'lb',category:'Meat & Seafood'},{name:'Greek yogurt',quantity:1,unit:'tub',category:'Dairy & Eggs'},{name:'eggs',quantity:1,unit:'dozen',category:'Dairy & Eggs'},{name:'tortillas',quantity:1,unit:'pack',category:'Bakery'},{name:'black beans',quantity:2,unit:'cans',category:'Pantry'},{name:'rice',quantity:1,unit:'bag',category:'Pantry'},{name:'olive oil',quantity:1,unit:'bottle',category:'Pantry'},{name:'frozen peas',quantity:1,unit:'bag',category:'Frozen'}];
 
-let s=loadLocalState();
+let storageKey=null;
+let s=structuredClone(DEFAULT_STATE);
 let weeklyDraft={days:[],useUp:'',notes:''};
 let readyIdeas=null;
 
-function loadLocalState(){try{return {...DEFAULT_STATE,...JSON.parse(localStorage.getItem('mealz')||'{}')}}catch{return {...DEFAULT_STATE}}}
-function save(){localStorage.setItem('mealz',JSON.stringify(s))}
+function save(){if(storageKey&&globalThis.MealzAuth?.session)localStorage.setItem(storageKey,JSON.stringify(s))}
 function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function fmt(i){return `${i.quantity??''} ${i.unit||''} ${i.name}`.replace(/\s+/g,' ').trim()}
 function sortDays(days){return (days||[]).slice().sort((a,b)=>DAY_ORDER.indexOf(a)-DAY_ORDER.indexOf(b))}
@@ -41,7 +41,7 @@ function cloudNote(){if(DEV)return '<p class=small>Developer test mode is active
 function view(v){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));if(v==='meals')meals();else if(v==='groceries')groceries();else plan()}
 
 async function apiJson(url,options){const r=await fetch(url,options);const text=await r.text();let d={};if(text){try{d=JSON.parse(text)}catch{d={error:text}}}if(!r.ok)throw new Error(d.error||`Request failed (${r.status}).`);return d}
-async function loadProfile(){if(DEV)return;try{const d=await apiJson('/api/profile');if(!d.profile)return;const p=d.profile;s.adults=Math.max(0,Number(p.adults||0));s.children=Math.max(0,Number(p.children||0));s.dietTags=Array.isArray(p.dietTags)?p.dietTags:[];s.eq=Array.isArray(p.equipment)?p.equipment.filter(x=>PROFILE_EQUIPMENT.includes(x)):[];s.size=householdTotal();save()}catch(e){console.warn('Household profile cloud sync unavailable',e)}}
+async function loadProfile(){if(DEV)return;try{const d=await apiJson('/api/profile');if(!d.profile)return;const p=d.profile;s.adults=Math.max(0,Number(p.adults||0));s.children=Math.max(0,Number(p.children||0));s.dietTags=Array.isArray(p.dietTags)?p.dietTags:[];s.eq=Array.isArray(p.equipment)?p.equipment.filter(x=>PROFILE_EQUIPMENT.includes(x)):[];s.size=householdTotal();save()}catch(e){throw new Error('Could not load your Profile. Please try again.')}}
 async function saveProfileCloud(){if(DEV)return;await apiJson('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profilePayload())});readyIdeas=null}
 async function loadActivePlan(){if(DEV)return;try{const d=await apiJson('/api/plan');if(!d.plan)return;s.meals=sortMealsByDay(d.meals||[]);s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of d.groceryItems||[])s.checked[groceryKey(i)]=!!i.checked;s.syncError=null;save()}catch(e){s.syncError=e.message;save()}}
 async function loadReadyIdeas(){if(DEV)return;try{const d=await apiJson(`/api/pregenerated-ideas?week_start=${encodeURIComponent(planningWeekStart())}`);readyIdeas=Array.isArray(d.ideas)&&d.ideas.length?d:null}catch(e){console.warn('Prepared ideas unavailable',e);readyIdeas=null}}
@@ -69,7 +69,15 @@ function profile(){
   document.querySelectorAll('.preference-btn').forEach(b=>b.onclick=()=>toggleDietTag(b.dataset.tag));
   document.querySelectorAll('.equipment-btn').forEach(b=>b.onclick=()=>{const e=b.dataset.e;s.eq=s.eq.includes(e)?s.eq.filter(x=>x!==e):[...s.eq,e];save();profile()});
   document.querySelector('#clearEquipment').onclick=()=>{s.eq=[];save();profile()};
-  document.querySelector('#profileDone').onclick=async()=>{const btn=document.querySelector('#profileDone');btn.disabled=true;btn.textContent='Saving…';try{await saveProfileCloud();s.syncError=null}catch(e){s.syncError=e.message}save();view('plan')};
+  document.querySelector('#profileDone').onclick=async()=>{
+    const btn=document.querySelector('#profileDone');btn.disabled=true;btn.textContent='Saving…';
+    document.querySelector('#profileSaveError')?.remove();
+    try{await saveProfileCloud();s.syncError=null;save();view('plan')}
+    catch(e){
+      s.syncError=e.message;btn.disabled=false;btn.textContent='Save Profile';
+      const message=document.createElement('p');message.id='profileSaveError';message.setAttribute('role','alert');message.textContent=e.message;btn.before(message);
+    }
+  };
 }
 
 async function generateIdeas(){
@@ -106,6 +114,6 @@ async function boot(){
   await loadActivePlan();
   await loadReadyIdeas();
   save();
-  plan();
+  await plan();
 }
-boot();
+// account-client.js starts boot only after auth and household resolution.

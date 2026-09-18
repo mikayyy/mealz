@@ -11,9 +11,8 @@ export function bearerToken(req){
   return match?.[1]?.trim()||'';
 }
 
-export async function requireUser(req,{allowLegacy=true}={}){
+export async function requireUser(req){
   if(!authConfigured()){
-    if(allowLegacy)return {id:null,email:null,token:null,mode:'legacy'};
     throw new AuthError('Authentication is not configured.',503);
   }
   const token=bearerToken(req);
@@ -38,7 +37,8 @@ export async function requireUser(req,{allowLegacy=true}={}){
 
 export function respondAuthError(res,error){
   if(!(error instanceof AuthError))return false;
-  res.status(error.status||401).json({error:error.message,code:'AUTH_REQUIRED'});
+  if(error.retryAfter)res.setHeader('Retry-After',String(error.retryAfter));
+  res.status(error.status||401).json({error:error.message,code:error.status===429?'RATE_LIMITED':error.status===403?'HOUSEHOLD_REQUIRED':'AUTH_REQUIRED'});
   return true;
 }
 

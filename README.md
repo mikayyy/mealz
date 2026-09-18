@@ -8,6 +8,17 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.17.0 — households, passwords, and account security
+- Added Create / Join Household onboarding, with Profile setup for new households and shared data loading for invited members.
+- Added Account controls for sign-out, password changes, and owner-only invitation-code replacement, including existing migrated households.
+- Replaced email-link-only sign-in with email/password signup and sign-in, confirmation messaging, password recovery, and persistent sessions. Existing accounts can set a password without creating a new account.
+- Load meal data only after authentication and household resolution; separate browser caches by account/household and clear them on account changes and sign-out.
+- Fixed a startup race that could replace first-time Profile setup with a late dashboard response. Failed Profile saves now stay on Profile with a retryable error.
+- Removed legacy server-wide data fallbacks and scoped suggestion history/favorites to household RLS.
+- Added atomic household creation/joining and shared Postgres rate limits: 10 household actions per account and 20 AI requests per household per 15 minutes. Recipe expansion is limited to seven distinct days.
+- Added Postgres RLS/transaction tests and browser regression tests to CI.
+- **Before deploying:** apply `migrations/2026-09-17_account_security.sql`. Follow `docs/auth-setup.md` for password reset redirects, email delivery, rollout, and smoke checks.
+
 ### v0.16.3
 - Fixed the Profile page freeze: profile-label cleanup was unconditionally replacing the introduction text inside a subtree MutationObserver, triggering itself indefinitely even when the text already matched.
 - Only update that text when it changes, preserving label normalization, navigation, and planning warnings without a render loop.
@@ -196,4 +207,4 @@ Never place secret API keys in browser code or commit them to GitHub.
 
 ## Current architecture note
 
-Authentication remains user-specific, while meal data is moving to shared-household ownership. v0.16.1 adds the household schema and forward migration at `migrations/2026-09-15_households.sql`. Until that migration is applied, the deployed app continues using the v0.16.0 user-ownership model. After the migration is detected, signed-in data requests automatically use household-membership RLS. The onboarding UI for Create Household / Join Household is the next release, followed by the simpler sign-in experience and then rate limiting/security cleanup.
+Authentication is user-specific and meal data belongs to households. v0.17.0 requires the household and account-security migrations and fails closed when authenticated access is unavailable. Browser data requests use the user's token and household-membership RLS. Only authenticated household management RPCs and the secret-protected Friday job use server-level database access. See `docs/auth-setup.md` for deployment prerequisites and test commands.

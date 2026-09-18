@@ -4,6 +4,7 @@ import {startTelemetry} from './_lib/telemetry.js';
 import {requireUser,respondAuthError} from './_lib/auth.js';
 
 export default async function handler(req,res){
+  res.setHeader('Cache-Control','no-store');
   const telemetry=startTelemetry('profile',{method:req.method});
   if(!supabaseConfigured()){telemetry.finish(500,{reason:'supabase_not_configured'});return res.status(500).json({error:'Supabase is not configured.'})}
   try{

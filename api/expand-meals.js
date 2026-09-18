@@ -3,6 +3,9 @@ import {recipeSchema} from './_lib/schemas.js';
 import {dietaryInstruction,equipmentInstruction,kidInstruction} from './_lib/profile.js';
 import {startTelemetry} from './_lib/telemetry.js';
 import {requireUser,respondAuthError} from './_lib/auth.js';
+import {dataDb} from './_lib/supabase.js';
+import {enforceRateLimit} from './_lib/rate-limit.js';
+import {validCookingDays} from './_lib/validation.js';
 
 function friendlyError(error){
   const message=String(error?.message||error||'');
@@ -24,13 +27,16 @@ async function buildOne({day,idea,householdSize,adults,children,dietTags,equipme
 }
 
 export default async function handler(req,res){
+  res.setHeader('Cache-Control','no-store');
   const telemetry=startTelemetry('expand-meals');
   if(req.method!=='POST'){telemetry.finish(405);return res.status(405).json({error:'Method not allowed'})}
   if(!process.env.OPENAI_API_KEY){telemetry.finish(500,{reason:'openai_not_configured'});return res.status(500).json({error:'Mealz AI is not configured.'})}
   try{
     const auth=await requireUser(req);telemetry.event('auth',{mode:auth.mode});
+    const {householdId}=await dataDb(auth);
+    await enforceRateLimit(`ai:${householdId}`,20);
     const {days,selectedIdeas,householdSize,adults,children,dietTags,equipment,useUp,notes}=req.body||{};
-    if(!Array.isArray(days)||!days.length){telemetry.finish(400,{reason:'missing_days'});return res.status(400).json({error:'No cooking days were supplied.'})}
+    if(!validCookingDays(days))return res.status(400).json({error:'Choose up to seven different cooking days.'});
     if(!Array.isArray(selectedIdeas)||selectedIdeas.length!==days.length){telemetry.finish(400,{reason:'selection_mismatch'});return res.status(400).json({error:`Choose exactly ${days.length} meals first.`})}
     const params=days.map((day,i)=>({day,idea:selectedIdeas[i]||{},householdSize,adults,children,dietTags,equipment,useUp,notes,telemetry}));
     const firstPass=await Promise.allSettled(params.map(p=>buildOne(p)));

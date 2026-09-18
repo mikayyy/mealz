@@ -37,6 +37,7 @@ async function savePlan(body,{db,owned,userId,household=false,householdId=null})
 async function updateGrocery(body,db){const {planId,name,unit,category,checked}=body;if(!planId||!name)throw new Error('Missing grocery item information.');const parts=[`weekly_plan_id=eq.${enc(planId)}`,`name=eq.${enc(name)}`,`category=eq.${enc(category||'Other')}`,unit?`unit=eq.${enc(unit)}`:'unit=is.null'];await db(`grocery_items?${parts.join('&')}`,{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({checked:!!checked})});return {ok:true}}
 
 export default async function handler(req,res){
+  res.setHeader('Cache-Control','no-store');
   const telemetry=startTelemetry('plan',{method:req.method});
   if(!supabaseConfigured()){telemetry.finish(500,{reason:'supabase_not_configured'});return res.status(500).json({error:'Supabase is not configured. Add SUPABASE_URL and SUPABASE_SECRET_KEY in Vercel, then redeploy.'})}
   try{
