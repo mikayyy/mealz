@@ -12,13 +12,29 @@ const sdk=`window.supabase={createClient:()=>{
   return {auth:{
     onAuthStateChange(fn){callback=fn},
     async getSession(){if(location.hash.includes('type=recovery'))callback('PASSWORD_RECOVERY',session());return {data:{session:session()}}},
-    async signInWithPassword({email,password}){if(password==='wrong')return {error:{message:'Invalid login credentials'}};const value={user:{id:email,email},access_token:email};emit('SIGNED_IN',value);return {data:{session:value}}},
-    async signUp(){return {data:{session:null}}},
+    async signInWithPassword({email,password}){if(!password||password==='wrong')return {error:{message:'Invalid login credentials'}};const value={user:{id:email,email},access_token:email};emit('SIGNED_IN',value);return {data:{session:value}}},
+    async signUp({password}){return password?{data:{session:null}}:{error:{message:'Password missing'}}},
     async resetPasswordForEmail({}){return {data:{}}},
-    async updateUser({password}){window.savedPassword=password;return {data:{user:session().user}}},
+    async updateUser({password}){if(!password)return {error:{message:'Password missing'}};return {data:{user:session().user}}},
     async signOut(){emit('SIGNED_OUT',null);return {error:null}}
   }};
 }};`;
+
+async function revealPassword(page,value){
+  const input=page.locator('#mealzAuthPassword');
+  assert.equal(await input.getAttribute('type'),'password');
+  await input.fill(value);
+  const before=await page.locator('#mealzAuthMessage').textContent();
+  await page.getByRole('button',{name:'Show password',exact:true}).click();
+  assert.equal(await input.getAttribute('type'),'text');
+  assert.equal(await input.inputValue(),value);
+  await page.getByRole('button',{name:'Hide password',exact:true}).press('Space');
+  assert.equal(await input.getAttribute('type'),'password');
+  await page.getByRole('button',{name:'Show password',exact:true}).press('Enter');
+  assert.equal(await input.getAttribute('type'),'text');
+  assert.equal(await input.inputValue(),value);
+  assert.equal(await page.locator('#mealzAuthMessage').textContent(),before,'Reveal must not submit the form');
+}
 
 test('account browser flows',async t=>{
   const browser=await chromium.launch({headless:true,...(process.env.MEALZ_CHROME_PATH?{executablePath:process.env.MEALZ_CHROME_PATH}:{})});
@@ -118,19 +134,32 @@ test('account browser flows',async t=>{
     });
     await t.test('password sign-in, signup confirmation, and reset request states',async()=>{
       const f=await fixture(),p=f.page;await p.goto('http://mealz.test');
-      await p.locator('[data-mode="signup"]').click();await p.locator('#mealzAuthEmail').fill('new@test.com');await p.locator('#mealzAuthPassword').fill('long-password');await p.locator('form button').click();
+      await p.locator('[data-mode="signup"]').click();await p.locator('#mealzAuthEmail').fill('new@test.com');await revealPassword(p,'long-password');await p.locator('form button[type="submit"]').click();
       await p.getByText('Check your email to confirm your account, then return here to sign in.',{exact:true}).waitFor();assert.equal(f.requests.length,0);
-      await p.locator('[data-mode="signin"]').click();await p.locator('[data-mode="reset"]').click();await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('form button').click();
+      await p.locator('[data-mode="signin"]').click();await p.locator('[data-mode="reset"]').click();await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('form button[type="submit"]').click();
       await p.getByText('If an account exists for that email, a reset link is on its way.',{exact:true}).waitFor();
-      await p.locator('[data-mode="signin"]').click();await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('#mealzAuthPassword').fill('wrong');await p.locator('form button').click();await p.getByText('Invalid login credentials',{exact:true}).waitFor();
-      await p.locator('#mealzAuthPassword').fill('long-password');await p.locator('form button').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
+      await p.locator('[data-mode="signin"]').click();await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('#mealzAuthPassword').fill('wrong');await p.locator('form button[type="submit"]').click();await p.getByText('Invalid login credentials',{exact:true}).waitFor();
+      await p.locator('#mealzAuthPassword').fill('long-password');await p.locator('form button[type="submit"]').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
       await f.close();
     });
     await t.test('recovery is shown before meal loading and password update resumes the same household',async()=>{
       const f=await fixture('existing@test.com'),p=f.page;
-      await p.goto('http://mealz.test/?reset=1#type=recovery');await p.locator('#mealzAuthPassword').fill('replacement-password');
-      assert.equal(f.requests.length,0);await p.locator('form button').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
+      await p.goto('http://mealz.test/?reset=1#type=recovery');await revealPassword(p,'replacement-password');
+      assert.equal(f.requests.length,0);await p.locator('form button[type="submit"]').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
       assert.equal(new URL(p.url()).search,'');await f.close();
+    });
+    await t.test('Account password changes support reveal and reopen hidden',async()=>{
+      const f=await fixture('existing@test.com'),p=f.page;
+      await p.goto('http://mealz.test');await p.locator('[data-week-action="edit-profile"]').waitFor();
+      await p.locator('#accountSettings').click();await p.locator('#setPassword').click();
+      await revealPassword(p,'new-account-password');
+      if(process.env.MEALZ_SCREENSHOT_DIR)await p.screenshot({path:process.env.MEALZ_SCREENSHOT_DIR+'/password-reveal.png',fullPage:true});
+      await p.locator('form button[type="submit"]').click();
+      await p.locator('[data-week-action="edit-profile"]').waitFor();
+      await p.locator('#accountSettings').click();await p.locator('#setPassword').click();
+      assert.equal(await p.locator('#mealzAuthPassword').getAttribute('type'),'password');
+      assert.equal(await p.locator('#mealzAuthPassword').inputValue(),'');
+      await f.close();
     });
     await t.test('account switches clear the old view and token refresh does not rerender edits',async()=>{
       const f=await fixture('existing@test.com'),p=f.page;

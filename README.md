@@ -8,6 +8,11 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.17.1
+- Added accessible eye buttons to show/hide passwords on sign-in, signup, password reset, and password-change forms. Passwords start hidden each time a form opens.
+- Kept password submission working while revealed and added browser regression coverage for mouse/keyboard toggling and submission.
+- No database or configuration changes required.
+
 ### v0.17.0 — households, passwords, and account security
 - Added Create / Join Household onboarding, with Profile setup for new households and shared data loading for invited members.
 - Added Account controls for sign-out, password changes, and owner-only invitation-code replacement, including existing migrated households.
