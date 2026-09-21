@@ -11,7 +11,7 @@ export async function enforceRateLimit(key,limit,windowSeconds=900){
   }
   if(!result?.allowed){
     const error=new AuthError('Too many attempts. Please wait a few minutes and try again.',429);
-    error.retryAfter=result?.retry_after||windowSeconds;
+    /** @type {AuthError & {retryAfter?: number}} */(error).retryAfter=result?.retry_after||windowSeconds;
     throw error;
   }
 }

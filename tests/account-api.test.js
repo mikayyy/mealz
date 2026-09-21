@@ -56,7 +56,7 @@ test('household creation uses verified identity and never sends the raw invitati
 });
 test('rate limiter fails closed and returns a retry interval when exhausted',async t=>{
   env(t);t.mock.method(globalThis,'fetch',async()=>json({allowed:false,retry_after:45}));
-  await assert.rejects(enforceRateLimit('household:a',10),error=>error.status===429&&error.retryAfter===45);
+  await assert.rejects(enforceRateLimit('household:a',10),error=>/** @type {any} */(error).status===429&&/** @type {any} */(error).retryAfter===45);
   t.mock.method(globalThis,'fetch',async()=>{throw new Error('missing RPC')});
   await assert.rejects(enforceRateLimit('household:a',10),{status:503});
 });

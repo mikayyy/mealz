@@ -176,17 +176,27 @@ tests.
 
 ## Phase 0 error baseline
 
-The unsuppressed error baseline is intentionally not guessed in this document.
-Phase 0 must run the complete first `tsc` check before adding suppressions and
-update this section with:
+The first complete `tsc` run checked all runtime and test JavaScript before any
+file-level suppression and reported 377 errors:
 
-- total compiler errors;
-- implicit/unsafe value errors;
-- nullable or undefined access errors;
-- inferred-property mismatches;
-- global-script resolution errors;
-- CommonJS/UMD resolution errors; and
-- other errors, including any likely latent runtime bugs.
+| Category | Count | Notes |
+| --- | ---: | --- |
+| Global-script resolution | 225 | 220 `TS2304` and five `TS2552` errors from implicit cross-file browser globals |
+| Inferred-property mismatch | 114 | 111 `TS2339` and three `TS2353` errors, primarily DOM element narrowing and inferred object shapes |
+| CommonJS test/module mode | 38 | `TS1470` errors from `import.meta` under the initial Node16 module setting |
+| Implicit `any` | 0 | Non-strict Phase 0 does not enable `noImplicitAny` |
+| Nullable/undefined access | 0 | Non-strict Phase 0 does not enable `strictNullChecks` |
+| UMD/CommonJS wrapper resolution | 0 | The two dual-use deterministic modules resolved successfully |
+
+No compiler finding demonstrated a confirmed runtime bug. Four server findings
+identified useful type gaps: the optional rate-limit retry value and an inferred
+cron scope/object shape. They were resolved with JSDoc annotations and casts,
+without changing control flow.
+
+Seven heavily coupled browser files use documented `@ts-nocheck` directives:
+`account-client.js`, `app.js`, `auth-client.js`, `client-foundation.js`,
+`grocery-order.js`, `navigation-polish.js`, and `weeks.js`. The deterministic
+shared modules and all API files remain checked. Tests also remain checked.
 
 ## Constraints for the migration
 

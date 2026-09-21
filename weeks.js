@@ -1,3 +1,4 @@
+// @ts-nocheck -- Ordered browser globals are intentionally deferred to the client architecture phase.
 // Week-first navigation: Monday-Sunday is the canonical Mealz week.
 let weekScreenMode='dashboard';
 let selectedWeekStart=null;

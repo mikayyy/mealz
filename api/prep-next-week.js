@@ -6,6 +6,7 @@ import {startTelemetry} from './_lib/telemetry.js';
 
 function nextMonday(){const d=new Date();const day=d.getUTCDay();let add=(8-day)%7;if(add===0)add=7;d.setUTCDate(d.getUTCDate()+add);return d.toISOString().slice(0,10)}
 function ideaCountForDays(n){return n>=5?Math.min(9,n+2):6}
+/** @param {{householdId: unknown, ownerId?: unknown}} scope */
 function scopeClause({householdId}){if(!householdId)throw new Error('Household scope is required.');return `&household_id=eq.${enc(householdId)}`}
 function profileFromRow(row){if(!row)return null;return {adults:Number(row.adults||0),children:Number(row.children||0),householdSize:Number(row.household_size||5),dietTags:Array.isArray(row.diet_tags)?row.diet_tags:[],equipment:Array.isArray(row.equipment)?row.equipment:[]}}
 

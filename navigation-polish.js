@@ -1,3 +1,4 @@
+// @ts-nocheck -- Ordered browser globals are intentionally deferred to the client architecture phase.
 // Directory-style navigation keeps week hierarchy visible while preserving flexible paths.
 (()=>{
   function crumbButton(label,onClick){const b=document.createElement('button');b.type='button';b.className='breadcrumb-link';b.textContent=label;b.onclick=onClick;return b}
