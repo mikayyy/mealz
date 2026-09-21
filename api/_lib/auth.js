@@ -37,7 +37,8 @@ export async function requireUser(req){
 
 export function respondAuthError(res,error){
   if(!(error instanceof AuthError))return false;
-  if(error.retryAfter)res.setHeader('Retry-After',String(error.retryAfter));
+  const retryAfter=/** @type {AuthError & {retryAfter?: number}} */(error).retryAfter;
+  if(retryAfter)res.setHeader('Retry-After',String(retryAfter));
   res.status(error.status||401).json({error:error.message,code:error.status===429?'RATE_LIMITED':error.status===403?'HOUSEHOLD_REQUIRED':'AUTH_REQUIRED'});
   return true;
 }

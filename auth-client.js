@@ -1,3 +1,4 @@
+// @ts-nocheck -- Ordered browser globals are intentionally deferred to the client architecture phase.
 // Supabase remains the source of truth. Quick login is a trusted-device convenience layer.
 (()=>{
   const nativeFetch=window.fetch.bind(window);

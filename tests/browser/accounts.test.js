@@ -202,9 +202,9 @@ test('account browser flows',async t=>{
     await t.test('account switches clear the old view and token refresh does not rerender edits',async()=>{
       const f=await fixture('existing@test.com'),p=f.page;
       await p.goto('http://mealz.test');await p.locator('[data-week-action="edit-profile"]').click();
-      await p.evaluate(()=>window.testAuthEvent('TOKEN_REFRESHED',{user:{id:'existing@test.com',email:'existing@test.com'},access_token:'existing@test.com'}));
+      await p.evaluate(()=>/** @type {any} */(window).testAuthEvent('TOKEN_REFRESHED',{user:{id:'existing@test.com',email:'existing@test.com'},access_token:'existing@test.com'}));
       await p.locator('#adultPlus').click();assert.equal(await p.locator('.counter-value').first().textContent(),'4');
-      await p.evaluate(()=>window.testAuthEvent('SIGNED_IN',{user:{id:'other@test.com',email:'other@test.com'},access_token:'other@test.com'}));
+      await p.evaluate(()=>/** @type {any} */(window).testAuthEvent('SIGNED_IN',{user:{id:'other@test.com',email:'other@test.com'},access_token:'other@test.com'}));
       await p.locator('#createHousehold').waitFor();assert.equal(await p.locator('#profileDone').count(),0);
       await f.close();
     });
