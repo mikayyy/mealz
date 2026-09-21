@@ -8,6 +8,14 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.18.0 — performance and UX foundation
+- Coalesced duplicate dashboard/week requests so repeated navigation reuses in-flight work instead of issuing redundant loads.
+- Added idle prefetching for likely Current/Next Week detail views while keeping prefetch failure isolated from real navigation.
+- Added lightweight dashboard skeletons and busy states for week actions so waits are visible without blanking the app.
+- Improved scroll-to-top behavior by keying screen changes to week/mode/breadcrumb context, fixing same-title screens such as Meals across different weeks while preserving same-screen rerenders.
+- Added regression coverage for loading coalescing, prefetch isolation, busy feedback, structured loading UI, and route-aware scroll behavior.
+- No database migration or configuration changes required.
+
 ### v0.17.1
 - Added accessible eye buttons to show/hide passwords on sign-in, signup, password reset, and password-change forms. Passwords start hidden each time a form opens.
 - Kept password submission working while revealed and added browser regression coverage for mouse/keyboard toggling and submission.
