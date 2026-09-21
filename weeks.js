@@ -2,7 +2,8 @@
 let weekScreenMode='dashboard';
 let selectedWeekStart=null;
 let weeksOverview=null;
-let weeksOverviewLoading=false;
+let weeksOverviewPromise=null;
+const weekLoadPromises=new Map();
 let activeSwapEpoch=null;
 let navigationEpoch=0;
 const weekCache=new Map();
@@ -33,18 +34,32 @@ function profileCard(){
   const diet=(s.dietTags||[]).length?s.dietTags.join(' · '):'No dietary style selected';
   return `<div class="card household-summary"><div><h2>Profile</h2><p>${s.adults} adult${s.adults===1?'':'s'} · ${s.children} child${s.children===1?'':'ren'} · ${esc(diet)}</p></div><button class=secondary data-week-action="edit-profile">Edit</button></div>`;
 }
-async function loadWeeksOverview(force=false){if(DEV){weeksOverview={current:null,next:null,past:[]};return weeksOverview}if(weeksOverview&&!force)return weeksOverview;if(weeksOverviewLoading)return weeksOverview;weeksOverviewLoading=true;try{weeksOverview=await apiJson(`/api/weeks?current_start=${encodeURIComponent(currentWeekStart())}&next_start=${encodeURIComponent(nextWeekStart())}`);return weeksOverview}catch(e){s.syncError=e.message;save();weeksOverview={current:null,next:null,past:[]};return weeksOverview}finally{weeksOverviewLoading=false}}
+async function loadWeeksOverview(force=false){if(DEV){weeksOverview={current:null,next:null,past:[]};return weeksOverview}if(weeksOverview&&!force)return weeksOverview;if(weeksOverviewPromise&&!force)return weeksOverviewPromise;const pending=apiJson(`/api/weeks?current_start=${encodeURIComponent(currentWeekStart())}&next_start=${encodeURIComponent(nextWeekStart())}`).then(result=>{weeksOverview=result;return result}).catch(e=>{s.syncError=e.message;save();weeksOverview={current:null,next:null,past:[]};return weeksOverview}).finally(()=>{if(weeksOverviewPromise===pending)weeksOverviewPromise=null});weeksOverviewPromise=pending;return pending}
 function applyWeekData(start,d){if(!d?.plan)return false;selectedWeekStart=start;s.viewWeekStart=start;s.meals=sortMealsByDay(d.meals||[]);s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of d.groceryItems||[])s.checked[groceryKey(i)]=!!i.checked;save();return true}
 function cacheCurrentState(start){if(!start||!s.planId)return;weekCache.set(start,{plan:{id:s.planId,cooking_days:s.days||[],use_up:s.useUp||'',notes:s.notes||''},meals:sortMealsByDay(s.meals||[]),groceryItems:groceryData().map(i=>({...i,checked:!!s.checked[i.key]}))})}
 async function hydrateWeek(start,{force=false}={}){
   if(!start)return false;
   // The selected week is navigation state, even when the data is already hydrated.
-  // Previously this was only set on a network/cache hydration path, which could leave
-  // Meals/Groceries without a route back to the dashboard for the already-loaded week.
   selectedWeekStart=start;
   if(!force&&weekCache.has(start))return applyWeekData(start,weekCache.get(start));
   if(!force&&s.viewWeekStart===start&&s.planId&&(s.meals||[]).length){cacheCurrentState(start);return true}
-  try{const d=await apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`);if(!d.plan)return false;weekCache.set(start,d);return applyWeekData(start,d)}catch(e){s.syncError=e.message;save();return false}
+  let pending=!force?weekLoadPromises.get(start):null;
+  if(!pending){
+    pending=apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`).finally(()=>{if(weekLoadPromises.get(start)===pending)weekLoadPromises.delete(start)});
+    weekLoadPromises.set(start,pending);
+  }
+  try{const d=await pending;if(!d?.plan)return false;weekCache.set(start,d);return applyWeekData(start,d)}catch(e){s.syncError=e.message;save();return false}
+}
+function prefetchWeek(start){
+  if(DEV||!start||weekCache.has(start)||weekLoadPromises.has(start))return;
+  let pending=apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`).then(d=>{if(d?.plan)weekCache.set(start,d);return d}).catch(()=>null).finally(()=>{if(weekLoadPromises.get(start)===pending)weekLoadPromises.delete(start)});
+  weekLoadPromises.set(start,pending);
+}
+function scheduleDashboardPrefetch(o){
+  const starts=[o?.next?.weekStart,o?.current?.weekStart].filter(Boolean);
+  if(!starts.length)return;
+  const run=()=>starts.forEach(prefetchWeek);
+  if('requestIdleCallback'in window)requestIdleCallback(run,{timeout:1200});else setTimeout(run,0);
 }
 function cancelTransientNavigation(){activeSwapEpoch=null;navigationEpoch++}
 function backToWeeks(){cancelTransientNavigation();weekScreenMode='dashboard';selectedWeekStart=null;dashboard()}
@@ -73,15 +88,18 @@ async function openWeekGroceries(start){cancelTransientNavigation();const ok=awa
 
 async function handleWeekAction(button){
   const action=button?.dataset?.weekAction,start=button?.dataset?.week;
-  if(!action)return;
-  if(action==='plan-next')return startNextWeekPlanning(false);
-  if(action==='replan-next')return startNextWeekPlanning(true);
-  if(action==='view-meals')return openWeekMeals(start);
-  if(action==='view-groceries')return openWeekGroceries(start);
-  if(action==='edit-profile'){
-    cancelTransientNavigation();
-    weekScreenMode='dashboard';
-    return profile();
+  if(!action||button.disabled)return;
+  const originalLabel=button.textContent;
+  const waitsForData=['replan-next','view-meals','view-groceries'].includes(action);
+  if(waitsForData){button.disabled=true;button.setAttribute('aria-busy','true');button.textContent='Opening…'}
+  try{
+    if(action==='plan-next')return startNextWeekPlanning(false);
+    if(action==='replan-next')return await startNextWeekPlanning(true);
+    if(action==='view-meals')return await openWeekMeals(start);
+    if(action==='view-groceries')return await openWeekGroceries(start);
+    if(action==='edit-profile'){cancelTransientNavigation();weekScreenMode='dashboard';return profile()}
+  }finally{
+    if(waitsForData&&button.isConnected){button.disabled=false;button.removeAttribute('aria-busy');button.textContent=originalLabel}
   }
 }
 
@@ -99,12 +117,13 @@ function wireWeekActions(){
   });
 }
 
-async function dashboard(){weekScreenMode='dashboard';selectedWeekStart=null;wireWeekActions();if(weeksOverview){renderDashboard(weeksOverview);return}app.innerHTML='<h1>Your Weeks</h1><p class=subtle>mealz weeks run Monday through Sunday.</p><div class="status">Loading your meal plans…</div>';const o=await loadWeeksOverview();renderDashboard(o)}
+async function dashboard(){weekScreenMode='dashboard';selectedWeekStart=null;wireWeekActions();if(weeksOverview){renderDashboard(weeksOverview);return}app.innerHTML='<h1>Your Weeks</h1><p class=subtle>mealz weeks run Monday through Sunday.</p><div class="dashboard-loading" role="status" aria-live="polite"><span class="sr-only">Loading your meal plans…</span><div class="skeleton-line skeleton-title"></div><div class="skeleton-card"></div><div class="skeleton-line"></div><div class="skeleton-card"></div></div>';const o=await loadWeeksOverview();renderDashboard(o)}
 function renderDashboard(o){
   const next=o?.next,current=o?.current,past=o?.past||[];
   const nextActions=next?[{label:'Meals',action:'view-meals'},{label:'Groceries',action:'view-groceries'},{label:'Replan',action:'replan-next'}]:[{label:'Plan next week',action:'plan-next'}];
   const savedActions=[{label:'Meals',action:'view-meals'},{label:'Groceries',action:'view-groceries'}];
   app.innerHTML=`<h1>Your Weeks</h1><p class=subtle>Choose a week, then work with its meals and groceries.</p>${cloudNote()}${profileCard()}<section class=week-section><h3>Next Week</h3>${weekCard('NEXT WEEK',next,{actions:nextActions,emptyText:'Ready when you are. Build the week before Monday arrives.'})}</section><section class=week-section><h3>This Week</h3>${weekCard('THIS WEEK',current,{actions:current?savedActions:[],emptyText:'No saved meal plan for this Monday–Sunday week.'})}</section><section class=week-section><div class=week-section-heading><h3>Past Weeks</h3><span class=small>${past.length?`${past.length} recent`:'No history yet'}</span></div>${past.length?past.map(w=>weekCard('PAST WEEK',w,{actions:savedActions})).join(''):'<div class="card empty-history"><p>Past weeks will collect here as you use mealz.</p></div>'}</section>`;
+  scheduleDashboardPrefetch(o);
 }
 
 planningWeekStart=function(){return selectedWeekStart||nextWeekStart()};
