@@ -36,7 +36,7 @@
     if(saveButton&&/save household/i.test(saveButton.textContent||''))saveButton.textContent='save profile';
     const profileIntro=heading?.nextElementSibling;
     if(heading?.textContent==='profile'&&profileIntro?.classList?.contains('subtle')){
-      const introText='Set the preferences mealz should remember from week to week.';
+      const introText='set the preferences mealz should remember from week to week.';
       // Even an unchanged textContent assignment replaces the text node and
       // retriggers our subtree observer. Only write when normalization is needed.
       if(profileIntro.textContent!==introText)profileIntro.textContent=introText;
