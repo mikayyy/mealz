@@ -49,7 +49,8 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
   });
   try{
     await page.goto('http://mealz.test');
-    await page.locator('#app h1').waitFor();
+    try{await page.locator('#app h1').waitFor()}
+    catch(error){throw new Error(`mealz did not boot: ${JSON.stringify({errors,body:await page.locator('body').innerText(),html:await page.locator('#app').innerHTML()})}`,{cause:error})}
     await page.evaluate(()=>view('groceries'));
     await page.getByText('2 cans tomato',{exact:true}).waitFor();
     await page.locator('[data-grocery-action="toggle"]').check();
