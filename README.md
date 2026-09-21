@@ -8,6 +8,15 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.19.0 — brand and visual system refresh
+- Rebuilt the client visual system around Inter, warm off-white, near-black, two neutral greys, and signal orange (#E85D04).
+- Replaced rounded cards, pill controls, shadows, serif headings, and green brand chrome with a flat, grid-driven Swiss-minimal system.
+- Added a monochrome lowercase mealz wordmark with a subtle cut-detail z and changed the primary tagline to “already sorted.”
+- Refreshed auth, Weeks, Meals, Recipes, Groceries, Profile, Account, breadcrumbs, loading states, and shared controls without changing authentication flow structure.
+- Removed emoji from controlled product UI and separated neutral loading/error states from completed-action confirmation styling.
+- Added automated brand guardrails for typography, palette, geometry, signal-orange behavior, wordmark treatment, and emoji removal.
+- No database migration or configuration changes required.
+
 ### v0.18.0 — performance and UX foundation
 - Coalesced duplicate dashboard/week requests so repeated navigation reuses in-flight work instead of issuing redundant loads.
 - Added idle prefetching for likely Current/Next Week detail views while keeping prefetch failure isolated from real navigation.
