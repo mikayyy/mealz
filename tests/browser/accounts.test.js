@@ -167,6 +167,7 @@ test('account browser flows',async t=>{
       const f=await fixture(),p=f.page;await p.goto('http://mealz.test');
       await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('#mealzAuthPassword').fill('long-password');await p.locator('form button[type="submit"]').click();
       await p.locator('#quickSetupForm').waitFor();await p.locator('#quickLabel').fill('Michael');await p.locator('#quickSetupPin').fill('2468');await p.locator('#quickConfirmPin').fill('2468');await p.locator('#quickSetupForm button[type="submit"]').click();
+      await p.locator('#mealzAuthGate').waitFor({state:'detached'});
       await p.locator('[data-week-action="edit-profile"]').waitFor();
       const stored=await p.evaluate(()=>localStorage.getItem('mealz:quick-login:v1'));
       assert.ok(stored.includes('Michael'));assert.ok(!stored.includes('2468'));
