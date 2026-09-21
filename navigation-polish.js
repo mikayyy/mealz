@@ -2,7 +2,7 @@
 (()=>{
   function crumbButton(label,onClick){const b=document.createElement('button');b.type='button';b.className='breadcrumb-link';b.textContent=label;b.onclick=onClick;return b}
   function crumbText(label,kind='current'){const s=document.createElement('span');s.className=kind==='context'?'breadcrumb-context':'breadcrumb-current';s.textContent=label;return s}
-  function sep(){const s=document.createElement('span');s.className='breadcrumb-sep';s.textContent='›';s.setAttribute('aria-hidden','true');return s}
+  function sep(){const s=document.createElement('span');s.className='breadcrumb-sep';s.textContent='/';s.setAttribute('aria-hidden','true');return s}
   function installCrumbs(parts,{switchTo=null}={}){
     app.querySelector('.week-context')?.remove();app.querySelector('.breadcrumb-shell')?.remove();app.querySelector('.breadcrumb-row')?.remove();app.querySelector('.breadcrumb-nav')?.remove();
     const h1=app.querySelector('h1');if(!h1)return;
