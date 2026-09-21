@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
 
-const migrationUrl=new URL('../migrations/2026-09-21_editable_groceries.sql',import.meta.url);
+const migrationUrl=new URL('../migrations/20260921212102_editable_groceries_v0210.sql',import.meta.url);
 
 test('editable grocery migration is idempotent and enforces generated source identity',async()=>{
   const db=new PGlite();
