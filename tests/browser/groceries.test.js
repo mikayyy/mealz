@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {chromium} from 'playwright';
 
-const sdk=`window.supabase={createClient:()=>({auth:{
+const sdk=`window.supabase={createClient:()=>{return {auth:{
   onAuthStateChange(){},
   async getSession(){return {data:{session:{user:{id:'shopper@test.com',email:'shopper@test.com'},access_token:'shopper@test.com'}}}},
   async signOut(){return {error:null}}
-}})}};`;
+}};}};`;
 
 test('saved grocery list supports toggle, add, edit, and delete without changing recipes',async()=>{
   const browser=await chromium.launch({headless:true,...(process.env.MEALZ_CHROME_PATH?{executablePath:process.env.MEALZ_CHROME_PATH}:{})});
