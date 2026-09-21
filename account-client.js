@@ -41,9 +41,11 @@
   }
   function settings(){
     cancelTransientNavigation();
-    app.innerHTML=`<button class="secondary" id="accountBack">← weeks</button><h1>account</h1><p class="subtle">${esc(MealzAuth.user?.email||'')}</p><div class="card account-card"><h2>${esc(home.household.name)}</h2><p>you are a household ${esc(home.role)}.</p>${home.role==='owner'?'<button class="secondary" id="replaceInvite">create a new invitation code</button><p class="small">replaces the previous code. existing members stay connected.</p>':'<p>ask your household owner for an invitation code to share.</p>'}<button class="secondary" id="setPassword">set or change password</button><p id="accountStatus" role="status"></p></div>`;
+    app.innerHTML=`<button class="secondary" id="accountBack">← weeks</button><h1>account</h1><p class="subtle">${esc(MealzAuth.user?.email||'')}</p><div class="card account-card"><h2>${esc(home.household.name)}</h2><p>you are a household ${esc(home.role)}.</p>${home.role==='owner'?'<button class="secondary" id="replaceInvite">create a new invitation code</button><p class="small">replaces the previous code. existing members stay connected.</p>':'<p>ask your household owner for an invitation code to share.</p>'}<button class="secondary" id="setPassword">set or change password</button><div class="account-divider"></div><h2>quick login</h2><p class="small">${MealzAuth.quickLoginEnabled?'this account is remembered on this browser.':'this browser does not remember this account yet.'}</p><button class="secondary" id="quickLoginSettings">${MealzAuth.quickLoginEnabled?'update quick login':'set up quick login'}</button>${MealzAuth.quickLoginEnabled?'<button class="secondary" id="forgetQuickLogin">forget this account on this device</button>':''}<p id="accountStatus" role="status"></p></div>`;
     document.querySelector('#accountBack').onclick=backToWeeks;
     document.querySelector('#setPassword').onclick=()=>MealzAuth.changePassword();
+    document.querySelector('#quickLoginSettings').onclick=()=>MealzAuth.setupQuickLogin();
+    document.querySelector('#forgetQuickLogin')?.addEventListener('click',async()=>{await MealzAuth.forgetQuickLogin();settings()});
     document.querySelector('#replaceInvite')?.addEventListener('click',async event=>{
       if(!confirm('Replace the invitation code? The previous code will stop working. Existing members will stay connected.'))return;
       event.target.disabled=true;

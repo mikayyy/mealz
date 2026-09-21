@@ -18,3 +18,11 @@
 .password-toggle:hover{background:var(--grey-100)}
 .password-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .password-toggle[data-revealed="false"] .eye-slash{display:none}.password-field input::-ms-reveal{display:none}
+
+.remembered-list{display:grid;border-top:1px solid var(--grey-300);margin-top:6px}
+.remembered-account{display:grid;gap:3px;text-align:left;padding:16px 0;border:0;border-bottom:1px solid var(--grey-300);background:transparent;color:var(--ink)}
+.remembered-account:hover{background:linear-gradient(90deg,var(--grey-100),transparent 55%)}
+.remembered-name{font-size:18px;font-weight:700;letter-spacing:-.025em}
+.remembered-email{font-size:11px;color:var(--grey-700)}
+.pin-input{font-size:28px;letter-spacing:.32em;text-align:center;font-variant-numeric:tabular-nums}
+.account-divider{height:1px;background:var(--grey-300);margin:8px 0 4px}
