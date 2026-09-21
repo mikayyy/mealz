@@ -1,9 +1,9 @@
-# mealz v0.17.0 account rollout
+# mealz account rollout and trusted-device login
 
 ## Required deployment order
 
 1. Keep the current v0.16.3 production deployment running while preparing the database. Do not create replacement accounts for existing users.
-2. In Supabase SQL Editor, run all of `migrations/2026-09-17_account_security.sql`. The v0.16 household and compatibility migrations must already be applied. The new migration preserves household/profile/meal data, adds atomic household-management RPCs and shared rate-limit counters, and narrows browser privileges for membership and invitation columns. It is safe to rerun.
+2. In Supabase SQL Editor, run all of `migrations/2026-09-17_account_security.sql`. For v0.20.0 and later, also run `migrations/2026-09-21_trusted_device_login.sql`. The v0.16 household and compatibility migrations must already be applied. The new migration preserves household/profile/meal data, adds atomic household-management RPCs and shared rate-limit counters, and narrows browser privileges for membership and invitation columns. It is safe to rerun.
 3. Confirm Email authentication is enabled in Supabase. Keep email confirmation enabled. Set Site URL to `https://mealz-pink.vercel.app`, and allow that URL plus `https://mealz-pink.vercel.app/?reset=1` in Redirect URLs. If testing a Vercel preview, add its exact URLs temporarily. Verify email delivery/SMTP for confirmation and reset messages before inviting friends.
 4. Keep `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY` (or legacy `SUPABASE_ANON_KEY`), `OPENAI_API_KEY`, and `CRON_SECRET` configured in Vercel. No additional secrets or services are needed.
 5. After migration success and CI success, merge/deploy v0.17.0. Do not deploy without the migration: AI and household writes deliberately return a temporary-unavailable error when the rate-limit RPC is missing.
@@ -50,3 +50,12 @@ Production smoke checks after deployment:
 The live email-delivery and live database checks require your Supabase project; mocked browser tests do not certify them. If a rollout issue appears, revert the application commit through a new deployment. The migration is additive and privilege-narrowing; do not delete household data or reverse the earlier household migrations.
 
 References: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [auth event handling](https://supabase.com/docs/reference/javascript/auth-onauthstatechange), and [password reset](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail).
+
+## v0.20 trusted-device quick login
+
+- Quick login is optional and is only offered after a successful full Supabase sign-in.
+- Remembered account names live only in that browser. There is no public/global account directory.
+- A 4-digit PIN is not sufficient by itself: the server also requires a random device token stored on that browser. PINs are scrypt-hashed and unlock attempts are limited to five per minute using the shared Postgres rate limiter.
+- Trusted-device records are service-only and cannot be read directly by authenticated or anonymous browser roles.
+- Quick unlock generates a fresh Supabase magic-link token hash server-side and exchanges it through the normal Supabase client. RLS and household authorization remain unchanged.
+- Account → quick login can update or revoke the remembered device. Removing an account from the signed-out picker only removes the local browser entry; revocation from Account also disables the server-side token.
