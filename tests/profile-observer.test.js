@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 
 const source=readFileSync(new URL('../client-foundation.js',import.meta.url),'utf8');
-const introText='Set the preferences mealz should remember from week to week.';
+const introText='set the preferences mealz should remember from week to week.';
 
 // Model childList delivery explicitly: setting Element.textContent replaces its
 // text child even when the string is unchanged. Bound delivery so a regression
@@ -24,7 +24,7 @@ function foundationHarness(initialHeading='your weeks'){
   function mount(headingText){
     nodes.clear();
     const heading=element(headingText);
-    const intro=element('Set the preferences mealz should remember from week to week.',true);
+    const intro=element('set the preferences mealz should remember from week to week.',true);
     const button=element('save profile');
     heading.nextElementSibling=intro;
     nodes.set('h1',heading);
