@@ -1,14 +1,14 @@
 .auth-gate{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:var(--bg);overflow-y:auto}
-.auth-card{width:min(100%,420px);margin:auto;background:var(--surface);border:1px solid var(--grey-300);border-radius:0;padding:30px;box-shadow:none}
-.auth-wordmark{font-size:34px;margin-bottom:5px}
-.auth-tagline{margin:0 0 36px;color:var(--grey-700);font-size:12px}
-.auth-card h1{margin:0 0 8px;font-size:28px;text-transform:lowercase}
-.auth-copy{margin:0 0 24px;color:var(--grey-700);line-height:1.5}
+.auth-card{width:min(100%,440px);margin:auto;background:var(--surface);border:0;border-top:2px solid var(--ink);border-radius:0;padding:34px 30px 30px;box-shadow:none}
+.auth-wordmark{font-size:36px;margin-bottom:6px}
+.auth-tagline{margin:0 0 44px;color:var(--grey-700);font-size:11px;letter-spacing:.015em}
+.auth-card h1{margin:0 0 10px;font-size:31px;line-height:1.04;text-transform:lowercase}
+.auth-copy{margin:0 0 28px;color:var(--grey-700);line-height:1.55;max-width:34ch}
 .auth-card label{display:block;margin:0 0 7px;font-weight:650;text-transform:lowercase}
 .auth-card input{margin-bottom:14px}
 .auth-message{min-height:22px;margin:16px 0 0;color:var(--grey-700);font-size:13px}
 .auth-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px}
-.auth-links button{background:none;border:0;color:var(--ink);padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+.auth-links button{background:none;border:0;color:var(--ink);padding:6px 0;text-decoration:none;border-bottom:1px solid var(--grey-300)}.auth-links button:hover{border-bottom-color:var(--ink)}
 .account-controls{display:flex;gap:8px;margin-top:0}
 .account-card{display:grid;gap:14px}
 .account-card form{display:grid;gap:12px}
