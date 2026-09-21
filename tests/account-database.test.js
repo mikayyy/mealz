@@ -32,10 +32,10 @@ test('Postgres household security, transactions, and distributed rate limits',as
     await db.exec(sql('2026-09-15_households.sql').replace('create extension if not exists pgcrypto;',''));
     await db.exec(sql('2026-09-17_account_security.sql'));
     await db.exec(sql('2026-09-21_trusted_device_login.sql'));
-    await db.exec(sql('2026-09-21_supabase_hardening.sql'));
+    await db.exec(sql('20260921194345_supabase_hardening_v0202.sql'));
     // Migration can be safely reapplied.
     await db.exec(sql('2026-09-17_account_security.sql'));
-    await db.exec(sql('2026-09-21_supabase_hardening.sql'));
+    await db.exec(sql('20260921194345_supabase_hardening_v0202.sql'));
     async function manage(user,action,name,hash){
       await db.exec('set role service_role');
       try{return (await db.query('select mealz_manage_household($1,$2,$3,$4,$5) as result',[user,action,name,hash,'ABCD'])).rows[0].result}
