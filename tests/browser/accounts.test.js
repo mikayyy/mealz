@@ -12,7 +12,8 @@ const sdk=`window.supabase={createClient:()=>{
   return {auth:{
     onAuthStateChange(fn){callback=fn},
     async getSession(){if(location.hash.includes('type=recovery'))callback('PASSWORD_RECOVERY',session());return {data:{session:session()}}},
-    async signInWithPassword({email,password}){if(!password||password==='wrong')return {error:{message:'Invalid login credentials'}};const value={user:{id:email,email},access_token:email};emit('SIGNED_IN',value);return {data:{session:value}}},
+    async signInWithPassword({email,password}){if(!password||password==='wrong')return {error:{message:'Invalid login credentials'}};const value={user:{id:email,email},access_token:email,refresh_token:'refresh-'+email};emit('SIGNED_IN',value);return {data:{session:value}}},
+    async verifyOtp({token_hash}){const email=String(token_hash||'').replace(/^quick:/,'');const value={user:{id:email,email},access_token:email,refresh_token:'refresh-'+email};emit('SIGNED_IN',value);return {data:{session:value},error:null}},
     async signUp({password}){return password?{data:{session:null}}:{error:{message:'Password missing'}}},
     async resetPasswordForEmail({}){return {data:{}}},
     async updateUser({password}){if(!password)return {error:{message:'Password missing'}};return {data:{user:session().user}}},
@@ -45,7 +46,7 @@ test('account browser flows',async t=>{
       const errors=[];page.on('pageerror',e=>errors.push(e.message));
       const homes=new Map([['existing@test.com',{id:'existing',name:'Existing family',role:'owner'}]]);
       const profiles=new Map([['existing',{adults:3,children:2,dietTags:['Vegan'],equipment:['Oven']}]]);
-      const requests=[];let failConfig=false,failSave=false,failHome=false,expireSession=false;
+      const requests=[];const quickDevices=new Map();let quickSeq=0;let failConfig=false,failSave=false,failHome=false,expireSession=false;
       if(user)await context.addInitScript(user=>{
         if(!sessionStorage.getItem('seeded')){
           localStorage.setItem('test-session',JSON.stringify({user:{id:user,email:user},access_token:user}));
@@ -62,6 +63,24 @@ test('account browser flows',async t=>{
         if(url.pathname.startsWith('/api/')){
           if(url.pathname==='/api/auth-config')return route.fulfill({status:failConfig?503:200,json:{enabled:true,supabaseUrl:'https://auth.test',publishableKey:'public'}});
           const who=request.headers().authorization?.replace('Bearer ','');
+          if(url.pathname==='/api/quick-login'){
+            const body=request.postDataJSON();
+            if(body.action==='setup'){
+              assert.ok(who,'Quick-login setup must carry a session token');
+              const deviceToken='device-'+(++quickSeq)+'-'+who;
+              quickDevices.set(deviceToken,{userId:who,email:who,label:body.label,pin:body.pin});
+              return route.fulfill({status:201,json:{ok:true,userId:who,email:who,label:body.label,deviceToken}});
+            }
+            if(body.action==='unlock'){
+              const device=quickDevices.get(body.deviceToken);
+              if(!device||device.pin!==body.pin)return route.fulfill({status:401,json:{error:'That code did not work.'}});
+              return route.fulfill({json:{ok:true,tokenHash:'quick:'+device.email,label:device.label,email:device.email}});
+            }
+            if(body.action==='revoke'){
+              assert.ok(who,'Quick-login revoke must carry a session token');
+              quickDevices.delete(body.deviceToken);return route.fulfill({json:{ok:true}});
+            }
+          }
           assert.ok(who,'API calls must carry a session token');requests.push({path:url.pathname,who,method:request.method()});
           if(expireSession)return route.fulfill({status:401,json:{error:'Session expired'}});
           let data={},home=homes.get(who);
@@ -141,7 +160,22 @@ test('account browser flows',async t=>{
       await p.locator('[data-mode="signin"]').click();await p.locator('[data-mode="reset"]').click();await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('form button[type="submit"]').click();
       await p.getByText('if an account exists for that email, a reset link is on its way.',{exact:true}).waitFor();
       await p.locator('[data-mode="signin"]').click();await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('#mealzAuthPassword').fill('wrong');await p.locator('form button[type="submit"]').click();await p.getByText('Invalid login credentials',{exact:true}).waitFor();
-      await p.locator('#mealzAuthPassword').fill('long-password');await p.locator('form button[type="submit"]').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
+      await p.locator('#mealzAuthPassword').fill('long-password');await p.locator('form button[type="submit"]').click();await p.locator('#quickSetupSkip').waitFor();await p.locator('#quickSetupSkip').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
+      await f.close();
+    });
+    await t.test('trusted-device quick login remembers only local accounts and unlocks with a PIN',async()=>{
+      const f=await fixture(),p=f.page;await p.goto('http://mealz.test');
+      await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('#mealzAuthPassword').fill('long-password');await p.locator('form button[type="submit"]').click();
+      await p.locator('#quickSetupForm').waitFor();await p.locator('#quickLabel').fill('Michael');await p.locator('#quickSetupPin').fill('2468');await p.locator('#quickConfirmPin').fill('2468');await p.locator('#quickSetupForm button[type="submit"]').click();
+      await p.locator('[data-week-action="edit-profile"]').waitFor();
+      const stored=await p.evaluate(()=>localStorage.getItem('mealz:quick-login:v1'));
+      assert.ok(stored.includes('Michael'));assert.ok(!stored.includes('2468'));
+      await p.locator('#signOut').click();await p.getByText('Michael',{exact:true}).waitFor();
+      assert.equal(await p.locator('.remembered-account').count(),1);
+      await p.getByText('Michael',{exact:true}).click();await p.locator('#quickPin').fill('0000');await p.locator('#quickPinForm button').click();await p.getByText('That code did not work.',{exact:true}).waitFor();
+      await p.locator('#quickPin').fill('2468');await p.locator('#quickPinForm button').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
+      await p.locator('#accountSettings').click();await p.locator('#forgetQuickLogin').click();
+      assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('mealz:quick-login:v1')||'[]').length),0);
       await f.close();
     });
     await t.test('recovery is shown before meal loading and password update resumes the same household',async()=>{
