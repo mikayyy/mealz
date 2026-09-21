@@ -6,7 +6,7 @@ data.
 
 ## Migration
 
-Apply `migrations/2026-09-21_supabase_hardening.sql` after the v0.20 trusted
+Apply `migrations/20260921194345_supabase_hardening_v0202.sql` after the v0.20 trusted
 device migration. The migration is transactional and safe to reapply.
 
 It:
