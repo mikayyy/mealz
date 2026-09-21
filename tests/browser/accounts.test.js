@@ -56,6 +56,8 @@ test('account browser flows',async t=>{
       await page.route('**/*',async route=>{
         const request=route.request(),url=new URL(request.url());
         if(url.hostname==='cdn.jsdelivr.net')return route.fulfill({contentType:'text/javascript',body:sdk});
+        if(url.hostname==='fonts.googleapis.com')return route.fulfill({contentType:'text/css',body:''});
+        if(url.hostname==='fonts.gstatic.com')return route.fulfill({status:204,body:''});
         assert.equal(url.hostname,'mealz.test');
         if(url.pathname.startsWith('/api/')){
           if(url.pathname==='/api/auth-config')return route.fulfill({status:failConfig?503:200,json:{enabled:true,supabaseUrl:'https://auth.test',publishableKey:'public'}});
