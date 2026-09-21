@@ -4,6 +4,7 @@ let selectedWeekStart=null;
 let weeksOverview=null;
 let weeksOverviewPromise=null;
 const weekLoadPromises=new Map();
+const weekPrefetchPromises=new Map();
 let activeSwapEpoch=null;
 let navigationEpoch=0;
 const weekCache=new Map();
@@ -43,6 +44,10 @@ async function hydrateWeek(start,{force=false}={}){
   selectedWeekStart=start;
   if(!force&&weekCache.has(start))return applyWeekData(start,weekCache.get(start));
   if(!force&&s.viewWeekStart===start&&s.planId&&(s.meals||[]).length){cacheCurrentState(start);return true}
+  if(!force&&weekPrefetchPromises.has(start)){
+    await weekPrefetchPromises.get(start);
+    if(weekCache.has(start))return applyWeekData(start,weekCache.get(start));
+  }
   let pending=!force?weekLoadPromises.get(start):null;
   if(!pending){
     pending=apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`).finally(()=>{if(weekLoadPromises.get(start)===pending)weekLoadPromises.delete(start)});
@@ -51,9 +56,9 @@ async function hydrateWeek(start,{force=false}={}){
   try{const d=await pending;if(!d?.plan)return false;weekCache.set(start,d);return applyWeekData(start,d)}catch(e){s.syncError=e.message;save();return false}
 }
 function prefetchWeek(start){
-  if(DEV||!start||weekCache.has(start)||weekLoadPromises.has(start))return;
-  let pending=apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`).then(d=>{if(d?.plan)weekCache.set(start,d);return d}).catch(()=>null).finally(()=>{if(weekLoadPromises.get(start)===pending)weekLoadPromises.delete(start)});
-  weekLoadPromises.set(start,pending);
+  if(DEV||!start||weekCache.has(start)||weekLoadPromises.has(start)||weekPrefetchPromises.has(start))return;
+  let pending=apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`).then(d=>{if(d?.plan)weekCache.set(start,d);return d}).catch(()=>null).finally(()=>{if(weekPrefetchPromises.get(start)===pending)weekPrefetchPromises.delete(start)});
+  weekPrefetchPromises.set(start,pending);
 }
 function scheduleDashboardPrefetch(o){
   const starts=[o?.next?.weekStart,o?.current?.weekStart].filter(Boolean);
