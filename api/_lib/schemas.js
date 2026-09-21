@@ -1,5 +1,7 @@
+/** @type {GroceryCategory[]} */
 const CATEGORIES=['Produce','Meat & Seafood','Dairy & Eggs','Frozen','Bakery','Pantry','Other'];
 
+/** @type {JsonSchema} */
 const ingredientSchema={
   type:'object',
   additionalProperties:false,
@@ -13,6 +15,7 @@ const ingredientSchema={
   }
 };
 
+/** @type {JsonSchema} */
 const mealSchema={
   type:'object',
   additionalProperties:false,
@@ -33,6 +36,11 @@ const mealSchema={
   }
 };
 
+/**
+ * Runtime schema for an exact-size idea response.
+ * @param {number} count
+ * @returns {JsonSchema}
+ */
 export function ideasSchema(count){
   return {
     type:'object',
@@ -59,6 +67,7 @@ export function ideasSchema(count){
   };
 }
 
+/** @type {JsonSchema} */
 export const recipeSchema={
   type:'object',
   additionalProperties:false,
@@ -66,6 +75,7 @@ export const recipeSchema={
   properties:{meal:mealSchema}
 };
 
+/** @type {JsonSchema} */
 export const swapSchema={
   type:'object',
   additionalProperties:false,

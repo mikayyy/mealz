@@ -2,6 +2,12 @@ import {sb} from './supabase.js';
 import {AuthError} from './auth.js';
 
 // Postgres counters hold across serverless instances and cold starts.
+/**
+ * @param {string} key
+ * @param {number} limit
+ * @param {number} [windowSeconds]
+ * @returns {Promise<void>}
+ */
 export async function enforceRateLimit(key,limit,windowSeconds=900){
   let result;
   try{
