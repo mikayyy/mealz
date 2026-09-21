@@ -73,3 +73,25 @@ test('the wordmark remains a persistent dashboard escape hatch',()=>{
 });
 
 test('legacy bottom navigation stays removed',()=>{assert.doesNotMatch(index,/class="bottom-nav"/)});
+
+
+test('week data loading is coalesced and likely weeks are prefetched while idle',()=>{
+  assert.match(weeks,/weeksOverviewPromise/);
+  assert.match(weeks,/weekLoadPromises=new Map\(\)/);
+  assert.match(weeks,/if\(weeksOverviewPromise&&!force\)return weeksOverviewPromise/);
+  assert.match(weeks,/weekLoadPromises\.get\(start\)/);
+  assert.match(weeks,/requestIdleCallback/);
+  assert.match(weeks,/scheduleDashboardPrefetch\(o\)/);
+});
+
+test('week actions expose busy feedback while data is loading',()=>{
+  assert.match(weeks,/button\.setAttribute\('aria-busy','true'\)/);
+  assert.match(weeks,/button\.textContent='Opening…'/);
+  assert.match(weeks,/button\.disabled=true/);
+});
+
+test('dashboard loading state preserves page structure instead of showing a blank screen',()=>{
+  assert.match(weeks,/dashboard-loading/);
+  assert.match(styles,/\.skeleton-card\{/);
+  assert.match(styles,/prefers-reduced-motion/);
+});
