@@ -40,7 +40,8 @@ test('remembered account picker is local-only and has no global user enumeration
 });
 
 test('quick-login setup and revocation require a verified signed-in user',()=>{
+  assert.match(api,/\['setup','unlock','revoke'\]\.includes\(action\)/);
   assert.match(api,/const auth=await requireUser\(req\)/);
   assert.match(api,/action==='revoke'/);
-  assert.match(api,/action==='setup'/);
+  assert.ok(api.indexOf('const auth=await requireUser(req)')<api.indexOf("const pin=String(req.body?.pin||'')"));
 });
