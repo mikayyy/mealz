@@ -32,15 +32,15 @@ test('all durable sub-screens have a route back toward Weeks',()=>{
 });
 
 test('meals and groceries expose reciprocal week-preserving switches',()=>{
-  assert.match(navigationPolish,/label:'Groceries'.*action:\(\)=>groceries\(\)/s);
-  assert.match(navigationPolish,/label:'Meals'.*action:\(\)=>meals\(\)/s);
-  assert.match(navigationPolish,/weekParts\('Meals'\)/);
-  assert.match(navigationPolish,/weekParts\('Groceries'\)/);
+  assert.match(navigationPolish,/label:'groceries'.*action:\(\)=>groceries\(\)/s);
+  assert.match(navigationPolish,/label:'meals'.*action:\(\)=>meals\(\)/s);
+  assert.match(navigationPolish,/weekParts\('meals'\)/);
+  assert.match(navigationPolish,/weekParts\('groceries'\)/);
 });
 
 test('recipe screen relies on interactive hierarchy instead of a redundant back button',()=>{
   assert.match(navigationPolish,/app\.querySelector\('#back'\)\?\.remove\(\)/);
-  assert.match(navigationPolish,/weekParts\('Meals',\{sectionAction:\(\)=>meals\(\)\}\)/);
+  assert.match(navigationPolish,/weekParts\('meals',\{sectionAction:\(\)=>meals\(\)\}\)/);
   assert.doesNotMatch(navigationPolish,/Back to meals/);
 });
 
@@ -52,8 +52,8 @@ test('non-page breadcrumb context is visually distinct from links and current pa
 });
 
 test('meal ideas preserve Plan as an interactive parent in the hierarchy',()=>{
-  assert.match(navigationPolish,/planningParts\('Meal Ideas'\)/);
-  assert.match(navigationPolish,/\{label:'Plan',action:current==='Plan'\?null:plan\}/);
+  assert.match(navigationPolish,/planningParts\('meal ideas'\)/);
+  assert.match(navigationPolish,/\{label:'plan',action:current==='Plan'?null:plan\}/);
 });
 
 test('cancelled swap requests cannot navigate forward or repaint stale breadcrumbs later',()=>{
@@ -69,7 +69,7 @@ test('interactive buttons expose the expected pointer cursor',()=>{
 });
 
 test('the wordmark remains a persistent dashboard escape hatch',()=>{
-  assert.match(weeks,/aria-label','Go to weeks dashboard'/);
+  assert.match(weeks,/aria-label','go to weeks dashboard'/);
   assert.match(weeks,/brandHome\.onclick=backToWeeks/);
 });
 
@@ -87,7 +87,7 @@ test('week data loading is coalesced and likely weeks are prefetched while idle'
 
 test('week actions expose busy feedback while data is loading',()=>{
   assert.match(weeks,/button\.setAttribute\('aria-busy','true'\)/);
-  assert.match(weeks,/button\.textContent='Opening…'/);
+  assert.match(weeks,/button\.textContent='opening…'/);
   assert.match(weeks,/button\.disabled=true/);
 });
 
