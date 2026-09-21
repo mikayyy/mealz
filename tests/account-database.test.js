@@ -6,6 +6,7 @@ import {PGlite} from '@electric-sql/pglite';
 const userA='00000000-0000-4000-8000-000000000001';
 const userB='00000000-0000-4000-8000-000000000002';
 const userC='00000000-0000-4000-8000-000000000003';
+const userD='00000000-0000-4000-8000-000000000004';
 const hashA='a'.repeat(64),hashB='b'.repeat(64),hashC='c'.repeat(64);
 const sql=name=>readFileSync(new URL(`../migrations/${name}`,import.meta.url),'utf8');
 
@@ -20,7 +21,7 @@ test('Postgres household security, transactions, and distributed rate limits',as
       create function auth.uid() returns uuid language sql stable as
       $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
       grant usage on schema public,auth to authenticated,anon,service_role;
-      insert into auth.users values ('${userA}'),('${userB}'),('${userC}');
+      insert into auth.users values ('${userA}'),('${userB}'),('${userC}'),('${userD}');
       create table profiles(id uuid primary key default gen_random_uuid(),owner_user_id uuid,profile_key text);
       create table weekly_plans(id uuid primary key default gen_random_uuid(),owner_user_id uuid,week_start date);
       create table meals(id uuid primary key default gen_random_uuid(),weekly_plan_id uuid references weekly_plans(id));
@@ -30,8 +31,11 @@ test('Postgres household security, transactions, and distributed rate limits',as
     `);
     await db.exec(sql('2026-09-15_households.sql').replace('create extension if not exists pgcrypto;',''));
     await db.exec(sql('2026-09-17_account_security.sql'));
+    await db.exec(sql('2026-09-21_trusted_device_login.sql'));
+    await db.exec(sql('2026-09-21_supabase_hardening.sql'));
     // Migration can be safely reapplied.
     await db.exec(sql('2026-09-17_account_security.sql'));
+    await db.exec(sql('2026-09-21_supabase_hardening.sql'));
     async function manage(user,action,name,hash){
       await db.exec('set role service_role');
       try{return (await db.query('select mealz_manage_household($1,$2,$3,$4,$5) as result',[user,action,name,hash,'ABCD'])).rows[0].result}
@@ -87,6 +91,27 @@ test('Postgres household security, transactions, and distributed rate limits',as
       await db.exec('set role anon');
       await assert.rejects(db.query('select * from profiles'),/permission denied/);
       await db.exec('reset role');
+    });
+    await t.test('browser roles have only the table privileges they need',async()=>{
+      assert.equal((await db.query("select has_table_privilege('anon','profiles','select') as allowed")).rows[0].allowed,false);
+      assert.equal((await db.query("select has_table_privilege('authenticated','profiles','truncate') as allowed")).rows[0].allowed,false);
+      assert.equal((await db.query("select has_table_privilege('authenticated','profiles','select,insert,update,delete') as allowed")).rows[0].allowed,true);
+      assert.equal((await db.query("select has_table_privilege('authenticated','mealz_trusted_devices','select') as allowed")).rows[0].allowed,false);
+    });
+    await t.test('hardening indexes, optimized policies, and trusted-device cleanup are present',async()=>{
+      const indexes=(await db.query("select indexname from pg_indexes where schemaname='public'")).rows.map(row=>row.indexname);
+      assert.ok(indexes.includes('households_created_by_idx'));
+      assert.ok(indexes.includes('profiles_owner_user_id_idx'));
+      const policies=(await db.query("select qual,with_check from pg_policies where schemaname='public'")).rows;
+      assert.equal(policies.length,8);
+      for(const policy of policies){
+        assert.match(String(policy.qual||''),/\( SELECT auth\.uid\(\) AS uid\)/);
+        if(policy.with_check)assert.match(String(policy.with_check),/\( SELECT auth\.uid\(\) AS uid\)/);
+      }
+      await db.query(`insert into mealz_trusted_devices(user_id,email,label,device_token_hash,pin_salt,pin_hash)
+        values($1,'cleanup@test.com','Cleanup','cleanup-token','salt','hash')`,[userD]);
+      await db.query('delete from auth.users where id=$1',[userD]);
+      assert.equal((await db.query("select count(*)::int as n from mealz_trusted_devices where user_id=$1",[userD])).rows[0].n,0);
     });
     await t.test('joining shares data, cannot double-join, and only owners rotate codes',async()=>{
       assert.equal((await manage(userC,'join',null,hashC)).status,404);
