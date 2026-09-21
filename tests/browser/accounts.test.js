@@ -25,12 +25,12 @@ async function revealPassword(page,value){
   assert.equal(await input.getAttribute('type'),'password');
   await input.fill(value);
   const before=await page.locator('#mealzAuthMessage').textContent();
-  await page.getByRole('button',{name:'Show password',exact:true}).click();
+  await page.getByRole('button',{name:'show password',exact:true}).click();
   assert.equal(await input.getAttribute('type'),'text');
   assert.equal(await input.inputValue(),value);
-  await page.getByRole('button',{name:'Hide password',exact:true}).press('Space');
+  await page.getByRole('button',{name:'hide password',exact:true}).press('Space');
   assert.equal(await input.getAttribute('type'),'password');
-  await page.getByRole('button',{name:'Show password',exact:true}).press('Enter');
+  await page.getByRole('button',{name:'show password',exact:true}).press('Enter');
   assert.equal(await input.getAttribute('type'),'text');
   assert.equal(await input.inputValue(),value);
   assert.equal(await page.locator('#mealzAuthMessage').textContent(),before,'Reveal must not submit the form');
@@ -97,7 +97,7 @@ test('account browser flows',async t=>{
       assert.equal(await p.locator('.counter-value').first().textContent(),'3');
       await p.locator('#adultPlus').click();
       f.failSave=true;await p.locator('#profileDone').click();await p.locator('#profileSaveError').waitFor();
-      assert.equal(await p.locator('#app h1').textContent(),'Profile');
+      assert.equal(await p.locator('#app h1').textContent(),'profile');
       f.failSave=false;await p.locator('#profileDone').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
       assert.equal(f.profiles.get('existing').adults,4);
       await p.locator('#accountSettings').click();p.on('dialog',dialog=>dialog.accept());await p.locator('#replaceInvite').click();await p.locator('.invite-code').waitFor();
@@ -135,9 +135,9 @@ test('account browser flows',async t=>{
     await t.test('password sign-in, signup confirmation, and reset request states',async()=>{
       const f=await fixture(),p=f.page;await p.goto('http://mealz.test');
       await p.locator('[data-mode="signup"]').click();await p.locator('#mealzAuthEmail').fill('new@test.com');await revealPassword(p,'long-password');await p.locator('form button[type="submit"]').click();
-      await p.getByText('Check your email to confirm your account, then return here to sign in.',{exact:true}).waitFor();assert.equal(f.requests.length,0);
+      await p.getByText('check your email to confirm your account, then return here to sign in.',{exact:true}).waitFor();assert.equal(f.requests.length,0);
       await p.locator('[data-mode="signin"]').click();await p.locator('[data-mode="reset"]').click();await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('form button[type="submit"]').click();
-      await p.getByText('If an account exists for that email, a reset link is on its way.',{exact:true}).waitFor();
+      await p.getByText('if an account exists for that email, a reset link is on its way.',{exact:true}).waitFor();
       await p.locator('[data-mode="signin"]').click();await p.locator('#mealzAuthEmail').fill('existing@test.com');await p.locator('#mealzAuthPassword').fill('wrong');await p.locator('form button[type="submit"]').click();await p.getByText('Invalid login credentials',{exact:true}).waitFor();
       await p.locator('#mealzAuthPassword').fill('long-password');await p.locator('form button[type="submit"]').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
       await f.close();
@@ -148,7 +148,7 @@ test('account browser flows',async t=>{
       assert.equal(f.requests.length,0);await p.locator('form button[type="submit"]').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
       assert.equal(new URL(p.url()).search,'');await f.close();
     });
-    await t.test('Account password changes support reveal and reopen hidden',async()=>{
+    await t.test('account password changes support reveal and reopen hidden',async()=>{
       const f=await fixture('existing@test.com'),p=f.page;
       await p.goto('http://mealz.test');await p.locator('[data-week-action="edit-profile"]').waitFor();
       await p.locator('#accountSettings').click();await p.locator('#setPassword').click();
