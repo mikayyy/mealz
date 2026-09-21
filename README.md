@@ -8,6 +8,15 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.20.2 — Supabase hardening
+- Removed anonymous table privileges and narrowed authenticated access to the CRUD operations mealz uses.
+- Optimized all eight household RLS policies so `auth.uid()` is evaluated once per statement.
+- Added covering indexes for the two foreign keys identified by the Supabase performance advisor.
+- Added automatic trusted-device cleanup when an Auth user is deleted.
+- Added generated production database types as a checked, server-side contract.
+- Added executable regression coverage for privileges, household isolation, policy shape, indexes, migration idempotence, and trusted-device cleanup.
+- Recorded and verified production migration `20260921194345_supabase_hardening_v0202`.
+
 ### v0.20.1 — type-safety foundation
 - Added a documented v0.20 JavaScript, API, browser-global, test, and Vercel migration baseline.
 - Added pinned TypeScript and Node 22 type dependencies without renaming runtime files or introducing a frontend build step.
