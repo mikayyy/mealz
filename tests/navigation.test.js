@@ -53,7 +53,7 @@ test('non-page breadcrumb context is visually distinct from links and current pa
 
 test('meal ideas preserve Plan as an interactive parent in the hierarchy',()=>{
   assert.match(navigationPolish,/planningParts\('meal ideas'\)/);
-  assert.match(navigationPolish,/\{label:'plan',action:current==='Plan'?null:plan\}/);
+  assert.match(navigationPolish,/\{label:'plan',action:current==='Plan'\?null:plan\}/);
 });
 
 test('cancelled swap requests cannot navigate forward or repaint stale breadcrumbs later',()=>{
@@ -65,7 +65,7 @@ test('cancelled swap requests cannot navigate forward or repaint stale breadcrum
 
 test('interactive buttons expose the expected pointer cursor',()=>{
   assert.match(styles,/button:not\(:disabled\)\{cursor:pointer\}/);
-  assert.match(styles,/button:disabled\{cursor:not-allowed\}/);
+  assert.match(styles,/button:disabled\{[^}]*cursor:not-allowed/);
 });
 
 test('the wordmark remains a persistent dashboard escape hatch',()=>{
