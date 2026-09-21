@@ -127,7 +127,12 @@ interface GroceryItem {
   unit: string | null;
   category: GroceryCategory;
   checked: boolean;
+  source: 'generated' | 'manual';
+  source_key: string | null;
+  user_modified: boolean;
+  deleted: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 interface Conflict {

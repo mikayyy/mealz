@@ -14,7 +14,7 @@
 *{box-sizing:border-box}
 html{background:var(--bg)}
 body{margin:0;font-family:Inter,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45;letter-spacing:-.01em}
-button,input,textarea{font:inherit;color:inherit}
+button,input,textarea,select{font:inherit;color:inherit}
 button,input,textarea,.card,.idea-card,.grocery-item{transition:border-color 120ms ease,background-color 120ms ease,color 120ms ease,opacity 120ms ease,transform 120ms ease}
 button:not(:disabled){cursor:pointer}
 button:disabled{cursor:not-allowed;opacity:.45}
@@ -34,10 +34,10 @@ h3{font-size:11px;line-height:1.2;font-weight:700;letter-spacing:.055em}
 .section{margin:40px 0}
 .label,label{font-weight:650}.label{font-size:12px;letter-spacing:.01em}
 .label{display:block;margin-bottom:8px}
-input,textarea{width:100%;padding:14px 12px;border:1px solid var(--grey-300);border-radius:0;background:var(--surface)}
-input:hover,textarea:hover{border-color:#A8A7A2}
+input,textarea,select{width:100%;padding:14px 12px;border:1px solid var(--grey-300);border-radius:0;background:var(--surface)}
+input:hover,textarea:hover,select:hover{border-color:#A8A7A2}
 textarea{min-height:92px;resize:vertical}
-input:focus,textarea:focus{border-color:var(--ink)}
+input:focus,textarea:focus,select:focus{border-color:var(--ink)}
 .primary,.secondary,.day-btn,.equipment-btn,.preference-btn,.make-again{border-radius:0;min-height:44px;padding:10px 13px;font-weight:650;letter-spacing:-.005em}
 .primary{width:100%;border:1px solid var(--ink);background:var(--ink);color:#fff}
 .primary:hover:not(:disabled){background:#2A2A2A;transform:translateY(-1px)}.primary:active:not(:disabled){transform:translateY(0)}
@@ -74,6 +74,9 @@ input:focus,textarea:focus{border-color:var(--ink)}
 .recipe-list li,.grocery-item{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--grey-100)}
 .recipe-list input,.grocery-item input{width:18px;height:18px;accent-color:var(--ink)}
 .checked span{text-decoration:line-through;color:var(--grey-700)}
+.grocery-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:22px 0}.grocery-toolbar p{margin:0}.grocery-toolbar .secondary{white-space:nowrap}
+.grocery-item{align-items:center;justify-content:space-between}.grocery-check{display:flex;align-items:center;gap:10px;min-width:0;font-weight:500}.grocery-check span{overflow-wrap:anywhere}.grocery-row-actions{display:flex;gap:9px;flex-shrink:0}.grocery-text-button{border:0;background:transparent;padding:4px 0;color:var(--grey-700);font-size:11px;text-decoration:underline}
+.grocery-form{padding:16px 0;border-top:1px solid var(--grey-300);border-bottom:1px solid var(--grey-300)}.grocery-edit-form{width:100%;border-top:0}.grocery-form-grid{display:grid;grid-template-columns:2fr 1fr;gap:12px}.grocery-form-grid label{font-size:11px;color:var(--grey-700)}.grocery-form-grid input,.grocery-form-grid select{margin-top:5px;padding:10px}.grocery-form-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.grocery-form-actions .primary,.grocery-form-actions .secondary{width:100%}
 .category{margin-top:34px}.category h3{padding-bottom:9px;border-bottom:1px solid var(--ink);text-transform:lowercase}
 .status{padding:12px 0;margin:14px 0;border-top:1px solid var(--grey-300);border-bottom:1px solid var(--grey-300);background:transparent;border-radius:0}
 .status--loading,.status--info{color:var(--grey-700)}

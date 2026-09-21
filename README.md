@@ -8,6 +8,12 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.21.0 — consolidated, editable grocery lists
+- Combines equivalent ingredients across recipes using deterministic shopping names and compatible unit conversions while preserving recipe-specific ingredient wording.
+- Makes saved grocery rows authoritative, with household-scoped add, edit, delete, and check-off controls.
+- Preserves manual items, household edits, checked state, and deletion choices when a weekly plan is rebuilt.
+- Recorded and verified production migration `20260921212102_editable_groceries_v0210`.
+
 ### v0.20.2 — Supabase hardening
 - Removed anonymous table privileges and narrowed authenticated access to the CRUD operations mealz uses.
 - Optimized all eight household RLS policies so `auth.uid()` is evaluated once per statement.

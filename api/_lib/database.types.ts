@@ -19,30 +19,45 @@ export type Database = {
           category: string
           checked: boolean
           created_at: string
+          deleted: boolean
           id: string
           name: string
           quantity: number | null
+          source: string
+          source_key: string | null
           unit: string | null
+          updated_at: string
+          user_modified: boolean
           weekly_plan_id: string
         }
         Insert: {
           category?: string
           checked?: boolean
           created_at?: string
+          deleted?: boolean
           id?: string
           name: string
           quantity?: number | null
+          source?: string
+          source_key?: string | null
           unit?: string | null
+          updated_at?: string
+          user_modified?: boolean
           weekly_plan_id: string
         }
         Update: {
           category?: string
           checked?: boolean
           created_at?: string
+          deleted?: boolean
           id?: string
           name?: string
           quantity?: number | null
+          source?: string
+          source_key?: string | null
           unit?: string | null
+          updated_at?: string
+          user_modified?: boolean
           weekly_plan_id?: string
         }
         Relationships: [
