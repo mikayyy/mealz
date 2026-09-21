@@ -45,7 +45,7 @@
     document.querySelector('#accountBack').onclick=backToWeeks;
     document.querySelector('#setPassword').onclick=()=>MealzAuth.changePassword();
     document.querySelector('#quickLoginSettings').onclick=()=>MealzAuth.setupQuickLogin();
-    document.querySelector('#forgetQuickLogin')?.addEventListener('click',()=>{MealzAuth.forgetQuickLogin();settings()});
+    document.querySelector('#forgetQuickLogin')?.addEventListener('click',async()=>{await MealzAuth.forgetQuickLogin();settings()});
     document.querySelector('#replaceInvite')?.addEventListener('click',async event=>{
       if(!confirm('Replace the invitation code? The previous code will stop working. Existing members will stay connected.'))return;
       event.target.disabled=true;
