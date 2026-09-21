@@ -4,17 +4,12 @@
   const QUICK_KEY='mealz:quick-login:v1';
   const QUICK_OFFER_KEY='mealz:offer-quick-login';
   const QUICK_UNLOCK_KEY='mealz:quick-unlocked';
-  const PIN_ATTEMPT_LIMIT=5;
-  const PIN_COOLDOWN_MS=60000;
-  const PBKDF2_ITERATIONS=310000;
   let state={initialized:false,session:null,user:null,client:null};
   let resolveReady;
   const ready=new Promise(resolve=>{resolveReady=resolve});
   let recovering=new URLSearchParams(location.search).get('reset')==='1';
 
   const escape=value=>String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const bytesToBase64=bytes=>btoa(String.fromCharCode(...new Uint8Array(bytes)));
-  const base64ToBytes=value=>Uint8Array.from(atob(value),c=>c.charCodeAt(0));
   const quickAccounts=()=>{try{const value=JSON.parse(localStorage.getItem(QUICK_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return []}};
   const saveQuickAccounts=accounts=>localStorage.setItem(QUICK_KEY,JSON.stringify(accounts));
   const rememberedFor=userId=>quickAccounts().find(account=>account.userId===userId)||null;
@@ -24,6 +19,12 @@
     if(!userId)return;
     for(const key of Object.keys(localStorage))if(key.startsWith(`mealz:${userId}:`))localStorage.removeItem(key);
   }
+  function upsertRemembered(record){
+    const accounts=quickAccounts().filter(account=>account.userId!==record.userId);
+    accounts.unshift(record);
+    saveQuickAccounts(accounts.slice(0,8));
+  }
+  function forgetRemembered(userId){saveQuickAccounts(quickAccounts().filter(account=>account.userId!==userId))}
   function gate(){
     let node=document.querySelector('#mealzAuthGate');
     if(!node){node=document.createElement('div');node.id='mealzAuthGate';node.className='auth-gate';document.body.appendChild(node)}
@@ -31,39 +32,21 @@
     return node;
   }
   function removeGate(){document.querySelector('#mealzAuthGate')?.remove();document.querySelector('#app')?.removeAttribute('inert')}
-
-  async function derivePinKey(pin,salt){
-    const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveKey']);
-    return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:PBKDF2_ITERATIONS,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
-  }
-  async function encryptSession(pin,session){
-    const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
-    const key=await derivePinKey(pin,salt);
-    const plain=new TextEncoder().encode(JSON.stringify({access_token:session.access_token,refresh_token:session.refresh_token}));
-    const ciphertext=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,plain);
-    return {salt:bytesToBase64(salt),iv:bytesToBase64(iv),ciphertext:bytesToBase64(ciphertext)};
-  }
-  async function decryptSession(pin,account){
-    const key=await derivePinKey(pin,base64ToBytes(account.salt));
-    const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:base64ToBytes(account.iv)},key,base64ToBytes(account.ciphertext));
-    return JSON.parse(new TextDecoder().decode(plain));
-  }
-  function upsertRemembered(record){
-    const accounts=quickAccounts().filter(account=>account.userId!==record.userId);
-    accounts.unshift(record);saveQuickAccounts(accounts.slice(0,8));
-  }
-  function forgetRemembered(userId){saveQuickAccounts(quickAccounts().filter(account=>account.userId!==userId))}
-  function updateRemembered(userId,patch){
-    saveQuickAccounts(quickAccounts().map(account=>account.userId===userId?{...account,...patch}:account));
-  }
-  function lockedFor(account){
-    const remaining=Number(account.lockedUntil||0)-Date.now();
-    return Math.max(0,remaining);
-  }
-
   function authShell(title,copy,body,message=''){
     return `<div class="auth-card"><div class="auth-wordmark" aria-label="mealz">meal<span class="brand-z" aria-hidden="true">z</span></div><p class="auth-tagline">already sorted.</p><h1>${title}</h1><p class="auth-copy">${copy}</p>${body}<p class="auth-message" id="mealzAuthMessage" role="status" aria-live="polite">${escape(message)}</p></div>`;
   }
+  async function quickRequest(body,{authenticated=false}={}){
+    const headers={'Content-Type':'application/json'};
+    if(authenticated){
+      if(!state.session?.access_token)throw new Error('Sign in again to manage quick login.');
+      headers.Authorization=`Bearer ${state.session.access_token}`;
+    }
+    const response=await nativeFetch('/api/quick-login',{method:'POST',headers,body:JSON.stringify(body)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Quick login is unavailable.');
+    return data;
+  }
+
   function renderRemembered(message=''){
     const accounts=quickAccounts(),node=gate();
     if(!accounts.length)return renderGate('signin',message);
@@ -73,37 +56,33 @@
     node.querySelectorAll('[data-quick-user]').forEach(button=>button.onclick=()=>renderPin(button.dataset.quickUser));
     node.querySelector('#quickAddAccount').onclick=()=>renderGate('signin');
   }
+
   function renderPin(userId,message=''){
     const account=rememberedFor(userId);if(!account)return renderRemembered();
-    const node=gate(),wait=lockedFor(account);
+    const node=gate();
     node.innerHTML=authShell('your code',`${escape(account.label||defaultLabel(account.email))} · ${escape(account.email)}`,`
       <form id="quickPinForm">
         <label for="quickPin">4-digit code</label>
-        <input id="quickPin" class="pin-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4}" maxlength="4" required aria-label="4-digit code" ${wait?'disabled':''}>
-        <button class="primary" type="submit" ${wait?'disabled':''}>unlock</button>
+        <input id="quickPin" class="pin-input" type="password" inputmode="numeric" autocomplete="off" pattern="[0-9]{4}" maxlength="4" required aria-label="4-digit code">
+        <button class="primary" type="submit">unlock</button>
       </form>
-      <div class="auth-links"><button id="quickBack">back</button><button id="quickForget">forget this account</button></div>`,wait?`too many attempts. try again in ${Math.ceil(wait/1000)} seconds.`:message);
+      <div class="auth-links"><button id="quickBack">back</button><button id="quickForget">remove from this browser</button></div>`,message);
     node.querySelector('#quickBack').onclick=()=>renderRemembered();
-    node.querySelector('#quickForget').onclick=()=>{forgetRemembered(userId);renderRemembered('account forgotten on this device.')};
-    const form=node.querySelector('#quickPinForm');
-    if(wait){setTimeout(()=>{if(document.querySelector('#quickPinForm'))renderPin(userId)},Math.min(wait+100,PIN_COOLDOWN_MS));return}
-    form.onsubmit=async event=>{
+    node.querySelector('#quickForget').onclick=()=>{forgetRemembered(userId);renderRemembered('account removed from this browser.')};
+    node.querySelector('#quickPinForm').onsubmit=async event=>{
       event.preventDefault();
-      const input=node.querySelector('#quickPin'),button=form.querySelector('button[type=submit]'),status=node.querySelector('#mealzAuthMessage');
-      const pin=input.value.trim();if(!/^\d{4}$/.test(pin)){status.textContent='enter four digits.';return}
+      const form=event.currentTarget,input=form.querySelector('#quickPin'),button=form.querySelector('button[type=submit]'),status=node.querySelector('#mealzAuthMessage'),pin=input.value.trim();
+      if(!/^\d{4}$/.test(pin)){status.textContent='enter four digits.';return}
       button.disabled=true;input.disabled=true;status.textContent='opening…';
       try{
-        const session=await decryptSession(pin,account);
-        const result=await state.client.auth.setSession(session);
+        const data=await quickRequest({action:'unlock',deviceToken:account.deviceToken,pin});
+        const result=await state.client.auth.verifyOtp({token_hash:data.tokenHash,type:'email'});
         if(result.error)throw result.error;
-        updateRemembered(userId,{attempts:0,lockedUntil:0,lastUsedAt:Date.now()});
         sessionStorage.setItem(QUICK_UNLOCK_KEY,'1');
         location.reload();
       }catch(error){
-        const latest=rememberedFor(userId)||account,attempts=Number(latest.attempts||0)+1;
-        const lockedUntil=attempts>=PIN_ATTEMPT_LIMIT?Date.now()+PIN_COOLDOWN_MS:0;
-        updateRemembered(userId,{attempts:lockedUntil?0:attempts,lockedUntil});
-        renderPin(userId,lockedUntil?'too many attempts. wait a minute, then try again.':'that code did not work.');
+        button.disabled=false;input.disabled=false;input.value='';input.focus();
+        status.textContent=error.message||'that code did not work.';
       }
     };
   }
@@ -111,7 +90,7 @@
   function renderQuickSetup(message=''){
     if(!state.session||!state.user)return removeGate();
     const node=gate(),existing=rememberedFor(state.user.id);
-    node.innerHTML=authShell(existing?'update quick login':'make this device yours?','next time, choose your name and use a 4-digit code. your code stays on this device.',`
+    node.innerHTML=authShell(existing?'update quick login':'make this device yours?','next time, choose your name and use a 4-digit code. the remembered device token and code work together.',`
       <form id="quickSetupForm">
         <label for="quickLabel">name on this device</label>
         <input id="quickLabel" maxlength="40" autocomplete="nickname" value="${escape(existing?.label||defaultLabel(state.user.email))}" required>
@@ -130,10 +109,10 @@
       if(pin!==confirm){status.textContent='the codes do not match.';return}
       const button=form.querySelector('button[type=submit]');button.disabled=true;status.textContent='saving…';
       try{
-        const encrypted=await encryptSession(pin,state.session);
-        upsertRemembered({userId:state.user.id,email:state.user.email||'',label:label||defaultLabel(state.user.email),...encrypted,attempts:0,lockedUntil:0,createdAt:existing?.createdAt||Date.now(),lastUsedAt:Date.now()});
+        const data=await quickRequest({action:'setup',label,pin,previousDeviceToken:existing?.deviceToken||null},{authenticated:true});
+        upsertRemembered({userId:data.userId,email:data.email,label:data.label,deviceToken:data.deviceToken,createdAt:existing?.createdAt||Date.now(),lastUsedAt:Date.now()});
         sessionStorage.removeItem(QUICK_OFFER_KEY);removeGate();
-      }catch(error){button.disabled=false;status.textContent='quick login could not be saved. try again.'}
+      }catch(error){button.disabled=false;status.textContent=error.message||'quick login could not be saved.'}
     };
   }
 
@@ -142,11 +121,15 @@
     const title={signin:'sign in',signup:'create your account',reset:'reset your password',password:'choose a password',reauth:'confirm it’s you',error:'Unable to connect'}[mode];
     const hasPassword=['signin','signup','password','reauth'].includes(mode);
     const copy=mode==='signup'?'next, create a household or join the people you cook with.':mode==='reset'?'we’ll email you a link to choose a password. existing mealz accounts can use this too.':mode==='password'?'use at least 8 characters.':mode==='reauth'?'enter your account password before changing sensitive settings.':'use your full sign-in once on this device. quick login can come next.';
-    node.innerHTML=authShell(title,copy,mode==='error'?'<button id="authRetry" class="primary">try again</button>':`<form id="mealzAuthForm">${mode!=='password'?`<label for="mealzAuthEmail">email</label><input id="mealzAuthEmail" type="email" autocomplete="email" required maxlength="254" ${mode==='reauth'?`value="${escape(state.user?.email||'')}" readonly`:''}>`:''}${hasPassword?`<label for="mealzAuthPassword">password</label><div class="password-field"><input id="mealzAuthPassword" type="password" autocomplete="${mode==='signin'?'current-password':'new-password'}" required minlength="${mode==='signin'?1:8}" maxlength="128"><button id="togglePassword" class="password-toggle" type="button" aria-controls="mealzAuthPassword" aria-label="show password" title="show password" data-revealed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m3 3 18 18"/></svg></button></div>`:''}<button class="primary" type="submit">${{signin:'sign in',signup:'create account',reset:'send reset link',password:'save password',reauth:'continue'}[mode]}</button></form><div class="auth-links">${mode==='signin'?'<button data-mode="signup">create an account</button><button data-mode="reset">forgot or need a password?</button>'+(quickAccounts().length?'<button id="backToRemembered">remembered accounts</button>':''):mode==='password'?'<button id="passwordCancel">cancel</button>':'<button data-mode="signin">back to sign in</button>'}</div>`,message);
+    const emailField=mode==='password'?'':`<label for="mealzAuthEmail">email</label><input id="mealzAuthEmail" type="email" autocomplete="email" required maxlength="254" ${mode==='reauth'?`value="${escape(state.user?.email||'')}" readonly`:''}>`;
+    const passwordField=hasPassword?`<label for="mealzAuthPassword">password</label><div class="password-field"><input id="mealzAuthPassword" type="password" autocomplete="${mode==='signin'||mode==='reauth'?'current-password':'new-password'}" required minlength="${mode==='signin'||mode==='reauth'?1:8}" maxlength="128"><button id="togglePassword" class="password-toggle" type="button" aria-controls="mealzAuthPassword" aria-label="show password" title="show password" data-revealed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m3 3 18 18"/></svg></button></div>`:'';
+    const submitLabel={signin:'sign in',signup:'create account',reset:'send reset link',password:'save password',reauth:'continue'}[mode];
+    const links=mode==='signin'?'<button data-mode="signup">create an account</button><button data-mode="reset">forgot or need a password?</button>'+(quickAccounts().length?'<button id="backToRemembered">remembered accounts</button>':''):mode==='password'||mode==='reauth'?'<button id="authCancel">cancel</button>':'<button data-mode="signin">back to sign in</button>';
+    node.innerHTML=authShell(title,copy,mode==='error'?'<button id="authRetry" class="primary">try again</button>':`<form id="mealzAuthForm">${emailField}${passwordField}<button class="primary" type="submit">${submitLabel}</button></form><div class="auth-links">${links}</div>`,message);
     node.querySelector('#authRetry')?.addEventListener('click',()=>location.reload());
     node.querySelector('#backToRemembered')?.addEventListener('click',()=>renderRemembered());
     node.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>renderGate(button.dataset.mode));
-    node.querySelector('#passwordCancel')?.addEventListener('click',()=>{recovering=false;history.replaceState(null,'',location.pathname);location.reload()});
+    node.querySelector('#authCancel')?.addEventListener('click',()=>{if(mode==='password'&&recovering){recovering=false;history.replaceState(null,'',location.pathname);location.reload()}else removeGate()});
     node.querySelector('#togglePassword')?.addEventListener('click',event=>{
       const input=node.querySelector('#mealzAuthPassword'),visible=input.type==='password';
       input.type=visible?'text':'password';const button=event.currentTarget,label=visible?'hide password':'show password';
@@ -166,7 +149,11 @@
         if(result.error)throw result.error;
         if(mode==='reauth'){sessionStorage.removeItem(QUICK_UNLOCK_KEY);renderGate('password');return}
         if(mode==='password'){recovering=false;history.replaceState(null,'',location.pathname);location.reload();return}
-        if(result.data?.session){sessionStorage.removeItem(QUICK_UNLOCK_KEY);sessionStorage.setItem(QUICK_OFFER_KEY,'1');location.reload();return}
+        if(result.data?.session){
+          sessionStorage.removeItem(QUICK_UNLOCK_KEY);
+          if(!rememberedFor(result.data.session.user?.id))sessionStorage.setItem(QUICK_OFFER_KEY,'1');
+          location.reload();return
+        }
         status.textContent=mode==='reset'?'if an account exists for that email, a reset link is on its way.':'check your email to confirm your account, then return here to sign in.';
       }catch(error){status.textContent=error.message||'Please try again.'}
       finally{if(button.isConnected)button.disabled=false}
@@ -207,7 +194,7 @@
       if(!state.session)renderRemembered(recovering?'your reset link expired. request another link below.':'');
       else if(recovering)renderGate('password');
       else if(sessionStorage.getItem(QUICK_OFFER_KEY)==='1'&&!rememberedFor(state.user.id))renderQuickSetup();
-      else removeGate();
+      else{sessionStorage.removeItem(QUICK_OFFER_KEY);removeGate()}
     }catch(error){renderGate('error',error.message||'Could not connect. Please try again.')}
     finally{state.initialized=true;resolveReady(state)}
   }
@@ -218,11 +205,18 @@
     get quickLoginEnabled(){return !!rememberedFor(state.user?.id)},
     changePassword(){sessionStorage.getItem(QUICK_UNLOCK_KEY)==='1'?renderGate('reauth'):renderGate('password')},
     setupQuickLogin(){renderQuickSetup()},
-    forgetQuickLogin(){if(state.user?.id)forgetRemembered(state.user.id)},
+    async forgetQuickLogin(){
+      const record=rememberedFor(state.user?.id);
+      if(record){
+        try{await quickRequest({action:'revoke',deviceToken:record.deviceToken},{authenticated:true})}catch{}
+        forgetRemembered(state.user.id);
+      }
+    },
     async signOut({forgetDevice=false}={}){
-      const previous=state.user?.id;if(forgetDevice)forgetRemembered(previous);
+      const previous=state.user?.id;
+      if(forgetDevice)await this.forgetQuickLogin();
       const {error}=await state.client.auth.signOut({scope:'local'});if(error)throw error;
-      clearAccountCache(previous);state.session=null;state.user=null;document.querySelector('#app')?.replaceChildren();location.reload();
+      clearAccountCache(previous);state.session=null;state.user=null;sessionStorage.removeItem(QUICK_UNLOCK_KEY);document.querySelector('#app')?.replaceChildren();location.reload();
     }
   };
   init();
