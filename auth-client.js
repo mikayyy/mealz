@@ -3,6 +3,7 @@
   const nativeFetch=window.fetch.bind(window);
   const QUICK_KEY='mealz:quick-login:v1';
   const QUICK_OFFER_KEY='mealz:offer-quick-login';
+  const QUICK_UNLOCK_KEY='mealz:quick-unlocked';
   const PIN_ATTEMPT_LIMIT=5;
   const PIN_COOLDOWN_MS=60000;
   const PBKDF2_ITERATIONS=310000;
@@ -96,6 +97,7 @@
         const result=await state.client.auth.setSession(session);
         if(result.error)throw result.error;
         updateRemembered(userId,{attempts:0,lockedUntil:0,lastUsedAt:Date.now()});
+        sessionStorage.setItem(QUICK_UNLOCK_KEY,'1');
         location.reload();
       }catch(error){
         const latest=rememberedFor(userId)||account,attempts=Number(latest.attempts||0)+1;
@@ -137,10 +139,10 @@
 
   function renderGate(mode='signin',message=''){
     const node=gate();
-    const title={signin:'sign in',signup:'create your account',reset:'reset your password',password:'choose a password',error:'Unable to connect'}[mode];
-    const hasPassword=['signin','signup','password'].includes(mode);
-    const copy=mode==='signup'?'next, create a household or join the people you cook with.':mode==='reset'?'we’ll email you a link to choose a password. existing mealz accounts can use this too.':mode==='password'?'use at least 8 characters.':'use your full sign-in once on this device. quick login can come next.';
-    node.innerHTML=authShell(title,copy,mode==='error'?'<button id="authRetry" class="primary">try again</button>':`<form id="mealzAuthForm">${mode!=='password'?'<label for="mealzAuthEmail">email</label><input id="mealzAuthEmail" type="email" autocomplete="email" required maxlength="254">':''}${hasPassword?`<label for="mealzAuthPassword">password</label><div class="password-field"><input id="mealzAuthPassword" type="password" autocomplete="${mode==='signin'?'current-password':'new-password'}" required minlength="${mode==='signin'?1:8}" maxlength="128"><button id="togglePassword" class="password-toggle" type="button" aria-controls="mealzAuthPassword" aria-label="show password" title="show password" data-revealed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m3 3 18 18"/></svg></button></div>`:''}<button class="primary" type="submit">${{signin:'sign in',signup:'create account',reset:'send reset link',password:'save password'}[mode]}</button></form><div class="auth-links">${mode==='signin'?'<button data-mode="signup">create an account</button><button data-mode="reset">forgot or need a password?</button>'+(quickAccounts().length?'<button id="backToRemembered">remembered accounts</button>':''):mode==='password'?'<button id="passwordCancel">cancel</button>':'<button data-mode="signin">back to sign in</button>'}</div>`,message);
+    const title={signin:'sign in',signup:'create your account',reset:'reset your password',password:'choose a password',reauth:'confirm it’s you',error:'Unable to connect'}[mode];
+    const hasPassword=['signin','signup','password','reauth'].includes(mode);
+    const copy=mode==='signup'?'next, create a household or join the people you cook with.':mode==='reset'?'we’ll email you a link to choose a password. existing mealz accounts can use this too.':mode==='password'?'use at least 8 characters.':mode==='reauth'?'enter your account password before changing sensitive settings.':'use your full sign-in once on this device. quick login can come next.';
+    node.innerHTML=authShell(title,copy,mode==='error'?'<button id="authRetry" class="primary">try again</button>':`<form id="mealzAuthForm">${mode!=='password'?`<label for="mealzAuthEmail">email</label><input id="mealzAuthEmail" type="email" autocomplete="email" required maxlength="254" ${mode==='reauth'?`value="${escape(state.user?.email||'')}" readonly`:''}>`:''}${hasPassword?`<label for="mealzAuthPassword">password</label><div class="password-field"><input id="mealzAuthPassword" type="password" autocomplete="${mode==='signin'?'current-password':'new-password'}" required minlength="${mode==='signin'?1:8}" maxlength="128"><button id="togglePassword" class="password-toggle" type="button" aria-controls="mealzAuthPassword" aria-label="show password" title="show password" data-revealed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/><path class="eye-slash" d="m3 3 18 18"/></svg></button></div>`:''}<button class="primary" type="submit">${{signin:'sign in',signup:'create account',reset:'send reset link',password:'save password',reauth:'continue'}[mode]}</button></form><div class="auth-links">${mode==='signin'?'<button data-mode="signup">create an account</button><button data-mode="reset">forgot or need a password?</button>'+(quickAccounts().length?'<button id="backToRemembered">remembered accounts</button>':''):mode==='password'?'<button id="passwordCancel">cancel</button>':'<button data-mode="signin">back to sign in</button>'}</div>`,message);
     node.querySelector('#authRetry')?.addEventListener('click',()=>location.reload());
     node.querySelector('#backToRemembered')?.addEventListener('click',()=>renderRemembered());
     node.querySelectorAll('[data-mode]').forEach(button=>button.onclick=()=>renderGate(button.dataset.mode));
@@ -157,13 +159,14 @@
       button.disabled=true;status.textContent='please wait…';
       try{
         const auth=state.client.auth;let result;
-        if(mode==='signin')result=await auth.signInWithPassword({email,password});
+        if(mode==='signin'||mode==='reauth')result=await auth.signInWithPassword({email,password});
         if(mode==='signup')result=await auth.signUp({email,password,options:{emailRedirectTo:location.origin}});
         if(mode==='reset')result=await auth.resetPasswordForEmail(email,{redirectTo:`${location.origin}/?reset=1`});
         if(mode==='password')result=await auth.updateUser({password});
         if(result.error)throw result.error;
+        if(mode==='reauth'){sessionStorage.removeItem(QUICK_UNLOCK_KEY);renderGate('password');return}
         if(mode==='password'){recovering=false;history.replaceState(null,'',location.pathname);location.reload();return}
-        if(result.data?.session){sessionStorage.setItem(QUICK_OFFER_KEY,'1');location.reload();return}
+        if(result.data?.session){sessionStorage.removeItem(QUICK_UNLOCK_KEY);sessionStorage.setItem(QUICK_OFFER_KEY,'1');location.reload();return}
         status.textContent=mode==='reset'?'if an account exists for that email, a reset link is on its way.':'check your email to confirm your account, then return here to sign in.';
       }catch(error){status.textContent=error.message||'Please try again.'}
       finally{if(button.isConnected)button.disabled=false}
@@ -213,7 +216,7 @@
     ready,
     get session(){return state.session},get user(){return state.user},get recovering(){return recovering},
     get quickLoginEnabled(){return !!rememberedFor(state.user?.id)},
-    changePassword(){renderGate('password')},
+    changePassword(){sessionStorage.getItem(QUICK_UNLOCK_KEY)==='1'?renderGate('reauth'):renderGate('password')},
     setupQuickLogin(){renderQuickSetup()},
     forgetQuickLogin(){if(state.user?.id)forgetRemembered(state.user.id)},
     async signOut({forgetDevice=false}={}){
