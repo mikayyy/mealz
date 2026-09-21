@@ -176,6 +176,7 @@ test('account browser flows',async t=>{
       await p.getByText('Michael',{exact:true}).click();await p.locator('#quickPin').fill('0000');await p.locator('#quickPinForm button').click();await p.getByText('That code did not work.',{exact:true}).waitFor();
       await p.locator('#quickPin').fill('2468');await p.locator('#quickPinForm button').click();await p.locator('[data-week-action="edit-profile"]').waitFor();
       await p.locator('#accountSettings').click();await p.locator('#forgetQuickLogin').click();
+      await p.locator('#forgetQuickLogin').waitFor({state:'detached'});
       assert.equal(await p.evaluate(()=>JSON.parse(localStorage.getItem('mealz:quick-login:v1')||'[]').length),0);
       await f.close();
     });
