@@ -15,7 +15,7 @@ test('browser auth bootstrap loads before the application client',()=>{
   const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   assert.match(index,/supabase-js@2/);
   assert.ok(index.indexOf('/auth-client.js')<index.indexOf('/app.js'));
-  assert.match(index,/class="brand">mealz</);
+  assert.match(index,/class="brand"[^>]*aria-label="mealz"[^>]*>meal<span class="brand-z"/);
 });
 
 test('auth bootstrap has a bounded config wait',()=>{

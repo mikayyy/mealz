@@ -8,7 +8,7 @@
     if(!conflicts.length)return '';
     const unique=[...new Set(conflicts.flatMap(c=>c.matches))];
     const prefs=[...new Set(conflicts.map(c=>c.preference))];
-    return `<div class="constraint-warning" id="constraintWarning"><div class="constraint-icon">⚠️</div><div><b>These ingredients may conflict with your profile settings.</b><p>${esc(unique.join(', '))} ${unique.length===1?'does':'do'} not fit ${esc(prefs.join(' + '))}. mealz will follow your profile preference, so it may leave ${unique.length===1?'that ingredient':'those ingredients'} out.</p><button class="constraint-edit" id="constraintEditHousehold" type="button">Edit Profile</button></div></div>`;
+    return `<div class="constraint-warning" id="constraintWarning"><div><b>These ingredients may conflict with your profile settings.</b><p>${esc(unique.join(', '))} ${unique.length===1?'does':'do'} not fit ${esc(prefs.join(' + '))}. mealz will follow your profile preference, so it may leave ${unique.length===1?'that ingredient':'those ingredients'} out.</p><button class="constraint-edit" id="constraintEditHousehold" type="button">edit profile</button></div></div>`;
   }
 
   function renderUseUpConflict(){
@@ -29,14 +29,14 @@
 
   function applyProfileLabels(){
     const heading=appRoot.querySelector('h1');
-    if(heading?.textContent?.trim()==='Household')heading.textContent='Profile';
+    if(heading?.textContent?.trim()==='Household')heading.textContent='profile';
     const summaryHeading=appRoot.querySelector('.household-summary h2');
-    if(summaryHeading?.textContent?.trim()==='Household')summaryHeading.textContent='Profile';
+    if(summaryHeading?.textContent?.trim()==='Household')summaryHeading.textContent='profile';
     const saveButton=appRoot.querySelector('#profileDone');
-    if(saveButton&&/save household/i.test(saveButton.textContent||''))saveButton.textContent='Save Profile';
+    if(saveButton&&/save household/i.test(saveButton.textContent||''))saveButton.textContent='save profile';
     const profileIntro=heading?.nextElementSibling;
-    if(heading?.textContent==='Profile'&&profileIntro?.classList?.contains('subtle')){
-      const introText='Set the preferences mealz should remember from week to week.';
+    if(heading?.textContent==='profile'&&profileIntro?.classList?.contains('subtle')){
+      const introText='set the preferences mealz should remember from week to week.';
       // Even an unchanged textContent assignment replaces the text node and
       // retriggers our subtree observer. Only write when normalization is needed.
       if(profileIntro.textContent!==introText)profileIntro.textContent=introText;

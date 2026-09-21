@@ -4,12 +4,12 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 
 const source=readFileSync(new URL('../client-foundation.js',import.meta.url),'utf8');
-const introText='Set the preferences mealz should remember from week to week.';
+const introText='set the preferences mealz should remember from week to week.';
 
 // Model childList delivery explicitly: setting Element.textContent replaces its
 // text child even when the string is unchanged. Bound delivery so a regression
 // fails instead of starving the test runner's event loop like the browser did.
-function foundationHarness(initialHeading='Your Weeks'){
+function foundationHarness(initialHeading='your weeks'){
   let callback,observing=false,pending=false,writes=0;
   const nodes=new Map();
   const app={querySelector:selector=>nodes.get(selector)||null};
@@ -24,11 +24,11 @@ function foundationHarness(initialHeading='Your Weeks'){
   function mount(headingText){
     nodes.clear();
     const heading=element(headingText);
-    const intro=element('Set the preferences Mealz should remember from week to week.',true);
-    const button=element('Save Household');
+    const intro=element('set the preferences mealz should remember from week to week.',true);
+    const button=element('save profile');
     heading.nextElementSibling=intro;
     nodes.set('h1',heading);
-    if(headingText==='Household'||headingText==='Profile')nodes.set('#profileDone',button);
+    if(headingText==='Household'||headingText==='profile')nodes.set('#profileDone',button);
     mutate();
     return {heading,intro,button};
   }
@@ -56,9 +56,9 @@ function foundationHarness(initialHeading='Your Weeks'){
 }
 
 function assertProfile(screen){
-  assert.equal(screen.heading.textContent,'Profile');
+  assert.equal(screen.heading.textContent,'profile');
   assert.equal(screen.intro.textContent,introText);
-  assert.equal(screen.button.textContent,'Save Profile');
+  assert.equal(screen.button.textContent,'save profile');
 }
 
 test('opening Profile and rerendering preferences settles the observer',()=>{
@@ -72,13 +72,13 @@ test('opening Profile and rerendering preferences settles the observer',()=>{
     // Breadcrumbs or other unrelated DOM updates must not rewrite Profile text.
     for(let j=0;j<3;j++){h.mutate();h.settle()}
     assert.equal(h.writes,writes);
-    h.mount('Your Weeks');
+    h.mount('your weeks');
     h.settle();
   }
 });
 
 test('Profile already mounted at startup also settles',()=>{
-  const h=foundationHarness('Profile');
+  const h=foundationHarness('profile');
   h.settle();
   assertProfile(h.initial);
 });
@@ -87,12 +87,12 @@ test('later text changes are normalized without overriding save progress',()=>{
   const h=foundationHarness('Household');
   h.settle();
   h.initial.intro.textContent='Outdated introduction';
-  h.initial.button.textContent='Saving…';
+  h.initial.button.textContent='saving…';
   h.settle();
   assert.equal(h.initial.intro.textContent,introText);
-  assert.equal(h.initial.button.textContent,'Saving…');
+  assert.equal(h.initial.button.textContent,'saving…');
   const summary=h.element('Household');
   h.nodes.set('.household-summary h2',summary);
   h.mutate();h.settle();
-  assert.equal(summary.textContent,'Profile');
+  assert.equal(summary.textContent,'profile');
 });

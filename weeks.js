@@ -24,16 +24,16 @@ function currentWeekStart(){return weekLogic.currentWeekStart()}
 function nextWeekStart(){return weekLogic.nextWeekStart()}
 function parseLocalDate(iso){const [y,m,d]=String(iso).split('-').map(Number);return new Date(y,m-1,d)}
 function weekLabel(start){const a=parseLocalDate(start),b=weekLogic.addDays(a,6);const sameMonth=a.getMonth()===b.getMonth();const monthA=a.toLocaleDateString(undefined,{month:'short'});const monthB=b.toLocaleDateString(undefined,{month:'short'});return sameMonth?`${monthA} ${a.getDate()}–${b.getDate()}`:`${monthA} ${a.getDate()} – ${monthB} ${b.getDate()}`}
-function weekKind(start){if(start===currentWeekStart())return 'This Week';if(start===nextWeekStart())return 'Next Week';return 'Past Week'}
-function mealPreview(w){if(!w?.meals?.length)return 'No meals planned yet.';return w.meals.slice(0,3).map(m=>`${m.emoji||'🍽️'} ${esc(m.title)}`).join(' · ')+(w.meals.length>3?` · +${w.meals.length-3} more`:'')}
+function weekKind(start){if(start===currentWeekStart())return 'this week';if(start===nextWeekStart())return 'next week';return 'past week'}
+function mealPreview(w){if(!w?.meals?.length)return 'no meals planned yet.';return w.meals.slice(0,3).map(m=>esc(m.title)).join(' · ')+(w.meals.length>3?` · +${w.meals.length-3} more`:'')}
 function weekCard(title,w,{actions=[],emptyText}={}){
   const start=w?.weekStart;
   const buttons=actions.map((a,i)=>`<button class=${i===0?'primary':'secondary'} data-week-action="${esc(a.action)}" ${start?`data-week="${esc(start)}"`:''}>${esc(a.label)}</button>`).join('');
-  return `<div class="card week-card ${w?'has-plan':'empty-week'}"><div class=week-card-top><div><div class=week-eyebrow>${esc(title)}</div><h2>${start?esc(weekLabel(start)):''}</h2></div>${w?`<span class=week-count>${w.mealCount||0} meal${Number(w.mealCount||0)===1?'':'s'}</span>`:''}</div><p class=week-preview>${w?mealPreview(w):esc(emptyText||'Nothing planned yet.')}</p><div class=week-actions>${buttons}</div></div>`
+  return `<div class="card week-card ${w?'has-plan':'empty-week'}"><div class=week-card-top><div><div class=week-eyebrow>${esc(title)}</div><h2>${start?esc(weekLabel(start)):''}</h2></div>${w?`<span class=week-count>${w.mealCount||0} meal${Number(w.mealCount||0)===1?'':'s'}</span>`:''}</div><p class=week-preview>${w?mealPreview(w):esc(emptyText||'nothing planned yet.')}</p><div class=week-actions>${buttons}</div></div>`
 }
 function profileCard(){
-  const diet=(s.dietTags||[]).length?s.dietTags.join(' · '):'No dietary style selected';
-  return `<div class="card household-summary"><div><h2>Profile</h2><p>${s.adults} adult${s.adults===1?'':'s'} · ${s.children} child${s.children===1?'':'ren'} · ${esc(diet)}</p></div><button class=secondary data-week-action="edit-profile">Edit</button></div>`;
+  const diet=(s.dietTags||[]).length?s.dietTags.join(' · '):'no dietary style selected';
+  return `<div class="card household-summary"><div><h2>profile</h2><p>${s.adults} adult${s.adults===1?'':'s'} · ${s.children} child${s.children===1?'':'ren'} · ${esc(diet)}</p></div><button class=secondary data-week-action="edit-profile">edit</button></div>`;
 }
 async function loadWeeksOverview(force=false){if(DEV){weeksOverview={current:null,next:null,past:[]};return weeksOverview}if(weeksOverview&&!force)return weeksOverview;if(weeksOverviewPromise&&!force)return weeksOverviewPromise;const pending=apiJson(`/api/weeks?current_start=${encodeURIComponent(currentWeekStart())}&next_start=${encodeURIComponent(nextWeekStart())}`).then(result=>{weeksOverview=result;return result}).catch(e=>{s.syncError=e.message;save();weeksOverview={current:null,next:null,past:[]};return weeksOverview}).finally(()=>{if(weeksOverviewPromise===pending)weeksOverviewPromise=null});weeksOverviewPromise=pending;return pending}
 function applyWeekData(start,d){if(!d?.plan)return false;selectedWeekStart=start;s.viewWeekStart=start;s.meals=sortMealsByDay(d.meals||[]);s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of d.groceryItems||[])s.checked[groceryKey(i)]=!!i.checked;save();return true}
@@ -71,20 +71,20 @@ function backToWeeks(){cancelTransientNavigation();weekScreenMode='dashboard';se
 function addWeekContext(){
   if(!selectedWeekStart||app.querySelector('.week-context'))return;
   const h1=app.querySelector('h1');if(!h1)return;
-  const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← Weeks</button><div><b>${esc(weekKind(selectedWeekStart))}</b><span>${esc(weekLabel(selectedWeekStart))}</span></div>`;
+  const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← weeks</button><div><b>${esc(weekKind(selectedWeekStart))}</b><span>${esc(weekLabel(selectedWeekStart))}</span></div>`;
   h1.before(context);context.querySelector('.week-back').onclick=backToWeeks;
 }
 function addEditorBack(){
   if(app.querySelector('.week-context'))return;
   const h1=app.querySelector('h1');if(!h1)return;
-  const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← Weeks</button><div><b>Next Week</b><span>${esc(weekLabel(nextWeekStart()))}</span></div>`;
+  const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← weeks</button><div><b>next week</b><span>${esc(weekLabel(nextWeekStart()))}</span></div>`;
   h1.before(context);context.querySelector('.week-back').onclick=backToWeeks;
 }
 function addProfileBack(){
   if(app.querySelector('.week-context'))return;
   const h1=app.querySelector('h1');if(!h1)return;
   const fromEditor=weekScreenMode==='editor';
-  const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← ${fromEditor?'Plan':'Weeks'}</button><div><b>Profile</b><span>${fromEditor?'Return to next week planning':'Meal preferences and settings'}</span></div>`;
+  const context=document.createElement('div');context.className='week-context';context.innerHTML=`<button class="secondary week-back" type="button">← ${fromEditor?'plan':'weeks'}</button><div><b>profile</b><span>${fromEditor?'return to next week planning':'meal preferences and settings'}</span></div>`;
   h1.before(context);context.querySelector('.week-back').onclick=()=>{cancelTransientNavigation();plan()};
 }
 async function startNextWeekPlanning(prefill=false){cancelTransientNavigation();weekScreenMode='editor';selectedWeekStart=nextWeekStart();s.viewWeekStart=selectedWeekStart;s.error=null;if(prefill){const ok=await hydrateWeek(selectedWeekStart);if(ok)weeklyDraft={days:sortDays(s.days||[]),useUp:s.useUp||'',notes:s.notes||''};else weeklyDraft={days:[],useUp:'',notes:''}}else{weeklyDraft={days:[],useUp:'',notes:''}}basePlanEditor();addEditorBack()}
@@ -96,7 +96,7 @@ async function handleWeekAction(button){
   if(!action||button.disabled)return;
   const originalLabel=button.textContent;
   const waitsForData=['replan-next','view-meals','view-groceries'].includes(action);
-  if(waitsForData){button.disabled=true;button.setAttribute('aria-busy','true');button.textContent='Opening…'}
+  if(waitsForData){button.disabled=true;button.setAttribute('aria-busy','true');button.textContent='opening…'}
   try{
     if(action==='plan-next')return startNextWeekPlanning(false);
     if(action==='replan-next')return await startNextWeekPlanning(true);
@@ -122,12 +122,12 @@ function wireWeekActions(){
   });
 }
 
-async function dashboard(){weekScreenMode='dashboard';selectedWeekStart=null;wireWeekActions();if(weeksOverview){renderDashboard(weeksOverview);return}app.innerHTML='<h1>Your Weeks</h1><p class=subtle>mealz weeks run Monday through Sunday.</p><div class="dashboard-loading" role="status" aria-live="polite"><span class="sr-only">Loading your meal plans…</span><div class="skeleton-line skeleton-title"></div><div class="skeleton-card"></div><div class="skeleton-line"></div><div class="skeleton-card"></div></div>';const o=await loadWeeksOverview();renderDashboard(o)}
+async function dashboard(){weekScreenMode='dashboard';selectedWeekStart=null;wireWeekActions();if(weeksOverview){renderDashboard(weeksOverview);return}app.innerHTML='<h1>your weeks</h1><p class=subtle>mealz weeks run Monday through Sunday.</p><div class="dashboard-loading" role="status" aria-live="polite"><span class="sr-only">loading your meal plans…</span><div class="skeleton-line skeleton-title"></div><div class="skeleton-card"></div><div class="skeleton-line"></div><div class="skeleton-card"></div></div>';const o=await loadWeeksOverview();renderDashboard(o)}
 function renderDashboard(o){
   const next=o?.next,current=o?.current,past=o?.past||[];
-  const nextActions=next?[{label:'Meals',action:'view-meals'},{label:'Groceries',action:'view-groceries'},{label:'Replan',action:'replan-next'}]:[{label:'Plan next week',action:'plan-next'}];
-  const savedActions=[{label:'Meals',action:'view-meals'},{label:'Groceries',action:'view-groceries'}];
-  app.innerHTML=`<h1>Your Weeks</h1><p class=subtle>Choose a week, then work with its meals and groceries.</p>${cloudNote()}${profileCard()}<section class=week-section><h3>Next Week</h3>${weekCard('NEXT WEEK',next,{actions:nextActions,emptyText:'Ready when you are. Build the week before Monday arrives.'})}</section><section class=week-section><h3>This Week</h3>${weekCard('THIS WEEK',current,{actions:current?savedActions:[],emptyText:'No saved meal plan for this Monday–Sunday week.'})}</section><section class=week-section><div class=week-section-heading><h3>Past Weeks</h3><span class=small>${past.length?`${past.length} recent`:'No history yet'}</span></div>${past.length?past.map(w=>weekCard('PAST WEEK',w,{actions:savedActions})).join(''):'<div class="card empty-history"><p>Past weeks will collect here as you use mealz.</p></div>'}</section>`;
+  const nextActions=next?[{label:'meals',action:'view-meals'},{label:'groceries',action:'view-groceries'},{label:'replan',action:'replan-next'}]:[{label:'plan next week',action:'plan-next'}];
+  const savedActions=[{label:'meals',action:'view-meals'},{label:'groceries',action:'view-groceries'}];
+  app.innerHTML=`<h1>your weeks</h1><p class=subtle>choose a week, then work with its meals and groceries.</p>${cloudNote()}${profileCard()}<section class=week-section><h3>next week</h3>${weekCard('next week',next,{actions:nextActions,emptyText:'ready when you are. build the week before Monday arrives.'})}</section><section class=week-section><h3>this week</h3>${weekCard('this week',current,{actions:current?savedActions:[],emptyText:'no saved meal plan for this Monday–Sunday week.'})}</section><section class=week-section><div class=week-section-heading><h3>past weeks</h3><span class=small>${past.length?`${past.length} recent`:'no history yet'}</span></div>${past.length?past.map(w=>weekCard('past week',w,{actions:savedActions})).join(''):'<div class="card empty-history"><p>past weeks will collect here as you use mealz.</p></div>'}</section>`;
   scheduleDashboardPrefetch(o);
 }
 
@@ -159,8 +159,8 @@ const brandHome=document.querySelector('.brand');
 if(brandHome){
   brandHome.setAttribute('role','button');
   brandHome.setAttribute('tabindex','0');
-  brandHome.setAttribute('aria-label','Go to weeks dashboard');
-  brandHome.setAttribute('title','Go to weeks dashboard');
+  brandHome.setAttribute('aria-label','go to weeks dashboard');
+  brandHome.setAttribute('title','go to weeks dashboard');
   brandHome.onclick=backToWeeks;
   brandHome.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();backToWeeks()}};
 }
