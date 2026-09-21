@@ -8,6 +8,16 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.20.0 — trusted-device quick login
+- Added a remembered-account picker that lists only accounts previously authenticated on the current browser; mealz never exposes a global user directory.
+- Added optional 4-digit quick login after a full Supabase sign-in. The PIN is paired with a 256-bit random device token, hashed server-side with scrypt, and unlock attempts are limited to five per minute.
+- Quick login issues a fresh Supabase session through an admin-generated token hash, so browser storage does not retain reusable Supabase sessions for remembered accounts.
+- Added account controls to set up, update, or revoke quick login on the current browser, plus an “add another person” path for additional remembered accounts.
+- Sensitive password changes require full password confirmation after a quick-login unlock.
+- Added trusted-device security/browser regression coverage.
+- **Before deploying:** apply `migrations/2026-09-21_trusted_device_login.sql` in Supabase.
+- Roadmap note: add an owner-only admin dashboard for signup visibility first, with debugging/operations tools later.
+
 ### v0.19.0 — brand and visual system refresh
 - Rebuilt the client visual system around Inter, warm off-white, near-black, two neutral greys, and signal orange (#E85D04).
 - Replaced rounded cards, pill controls, shadows, serif headings, and green brand chrome with a flat, grid-driven Swiss-minimal system.
@@ -230,3 +240,7 @@ Never place secret API keys in browser code or commit them to GitHub.
 ## Current architecture note
 
 Authentication is user-specific and meal data belongs to households. v0.17.0 requires the household and account-security migrations and fails closed when authenticated access is unavailable. Browser data requests use the user's token and household-membership RLS. Only authenticated household management RPCs and the secret-protected Friday job use server-level database access. See `docs/auth-setup.md` for deployment prerequisites and test commands.
+
+## Future roadmap notes
+
+- **Admin dashboard:** owner-only operational view. Initial scope is seeing who has signed up; later versions may add debugging, account status, delivery/AI diagnostics, and other support tooling.
