@@ -8,6 +8,15 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.20.1 — type-safety foundation
+- Added a documented v0.20 JavaScript, API, browser-global, test, and Vercel migration baseline.
+- Added pinned TypeScript and Node 22 type dependencies without renaming runtime files or introducing a frontend build step.
+- Added non-emitting JavaScript type checking as the first GitHub Actions gate before unit and browser tests.
+- Recorded the initial 377-error compiler baseline and limited temporary suppression to seven heavily coupled browser-global files.
+- Added shared domain contracts and JSDoc coverage for AI schemas, validation, deterministic meal/shopping logic, telemetry, rate limiting, and Profile helpers.
+- Preserved the existing ordered-script, UMD/CommonJS, Supabase authorization, Vercel, and product behavior.
+- No database migration or production configuration changes required.
+
 ### v0.20.0 — trusted-device quick login
 - Added a remembered-account picker that lists only accounts previously authenticated on the current browser; mealz never exposes a global user directory.
 - Added optional 4-digit quick login after a full Supabase sign-in. The PIN is paired with a 256-bit random device token, hashed server-side with scrypt, and unlock attempts are limited to five per minute.
