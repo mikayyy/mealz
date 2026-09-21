@@ -7,6 +7,7 @@ const navigationPolish=readFileSync(new URL('../navigation-polish.js',import.met
 const polish=readFileSync(new URL('../polish.css',import.meta.url),'utf8');
 const styles=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
 const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const foundation=readFileSync(new URL('../client-foundation.js',import.meta.url),'utf8');
 
 test('week navigation sets context before using already-hydrated data',()=>{
   const hydrate=weeks.slice(weeks.indexOf('async function hydrateWeek'),weeks.indexOf('function cancelTransientNavigation'));
@@ -94,4 +95,20 @@ test('dashboard loading state preserves page structure instead of showing a blan
   assert.match(weeks,/dashboard-loading/);
   assert.match(styles,/\.skeleton-card\{/);
   assert.match(styles,/prefers-reduced-motion/);
+});
+
+
+test('scroll reset keys include week context while preserving same-screen rerenders',()=>{
+  assert.match(foundation,/currentScreenKey/);
+  assert.match(foundation,/selectedWeekStart/);
+  assert.match(foundation,/weekScreenMode/);
+  assert.match(foundation,/breadcrumb-current/);
+  assert.match(foundation,/key===lastScreenKey/);
+});
+
+test('prefetch failure cannot replace navigation loading state',()=>{
+  assert.match(weeks,/weekPrefetchPromises=new Map\(\)/);
+  assert.match(weeks,/await weekPrefetchPromises\.get\(start\)/);
+  assert.match(weeks,/if\(weekCache\.has\(start\)\)return applyWeekData/);
+  assert.match(weeks,/let pending=!force\?weekLoadPromises\.get\(start\):null/);
 });
