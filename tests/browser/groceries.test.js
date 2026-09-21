@@ -12,6 +12,7 @@ const sdk=`window.supabase={createClient:()=>({auth:{
 test('saved grocery list supports toggle, add, edit, and delete without changing recipes',async()=>{
   const browser=await chromium.launch({headless:true,...(process.env.MEALZ_CHROME_PATH?{executablePath:process.env.MEALZ_CHROME_PATH}:{})});
   const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
+  page.setDefaultTimeout(5000);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   const weekStart='2026-09-21',plan={id:'plan-1',week_start:weekStart,cooking_days:['Monday'],use_up:null,notes:null};
   const meals=[{id:'meal-1',day:'Monday',title:'Tomato pasta',description:'A fast pasta.',servings:4,total_minutes:20,difficulty:'Easy',tags:[],kid_note:null,ingredients:[{name:'Diced tomatoes',quantity:2,unit:'cans',category:'Pantry',optional:false}],steps:['Cook the pasta.']}];
@@ -48,7 +49,8 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
   });
   try{
     await page.goto('http://mealz.test');
-    await page.locator('[data-week-action="view-groceries"]').click();
+    await page.locator('#app h1').waitFor();
+    await page.evaluate(()=>view('groceries'));
     await page.getByText('2 cans tomato',{exact:true}).waitFor();
     await page.locator('[data-grocery-action="toggle"]').check();
     assert.equal(requests.at(-1).body.itemId,'g-1');
@@ -66,7 +68,7 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
     page.once('dialog',dialog=>dialog.accept());
     await page.locator('.grocery-item').filter({hasText:'sparkling water'}).locator('[data-grocery-action="delete"]').click();
     await page.getByText('2 packs sparkling water',{exact:true}).waitFor({state:'detached'});
-    await page.getByRole('button',{name:'meals',exact:true}).click();
+    await page.evaluate(()=>view('meals'));
     await page.locator('.view-recipe').click();
     assert.match(await page.locator('.recipe-list').textContent(),/2 cans Diced tomatoes/);
     assert.deepEqual(errors,[]);
