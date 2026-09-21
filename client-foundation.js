@@ -52,13 +52,21 @@
   });
   document.addEventListener('input',event=>{if(event.target?.id==='useUp')renderUseUpConflict()});
 
-  let lastHeading='';
+  let lastScreenKey='';
   let lastUseUpInput=null;
-  const resetScrollIfScreenChanged=()=>{
+  const currentScreenKey=()=>{
     const heading=appRoot.querySelector('h1')?.textContent?.trim()||'';
-    if(!heading||heading===lastHeading)return;
-    const hadScreen=!!lastHeading;
-    lastHeading=heading;
+    if(!heading)return '';
+    const week=typeof selectedWeekStart!=='undefined'&&selectedWeekStart?selectedWeekStart:'';
+    const mode=typeof weekScreenMode!=='undefined'?weekScreenMode:'';
+    const crumb=appRoot.querySelector('.breadcrumb-current')?.textContent?.trim()||'';
+    return [heading,week,mode,crumb].join('|');
+  };
+  const resetScrollIfScreenChanged=()=>{
+    const key=currentScreenKey();
+    if(!key||key===lastScreenKey)return;
+    const hadScreen=!!lastScreenKey;
+    lastScreenKey=key;
     if(hadScreen)requestAnimationFrame(()=>window.scrollTo({top:0,left:0,behavior:'auto'}));
   };
   const syncNewPlanningScreen=()=>{
