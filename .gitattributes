@@ -1,0 +1,4 @@
+# Normalize line endings: store LF in the repository, check out with native endings
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf

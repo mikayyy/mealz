@@ -1,14 +1,47 @@
 # mealz account rollout and trusted-device login
 
+Current baseline: **v0.21.1** (`a3007699`). Follow the steps below for a fresh
+installation or when applying new migrations to an existing deployment.
+
 ## Required deployment order
 
-1. Keep the current v0.16.3 production deployment running while preparing the database. Do not create replacement accounts for existing users.
-2. In Supabase SQL Editor, run all of `migrations/2026-09-17_account_security.sql`. For v0.20.0 and later, also run `migrations/2026-09-21_trusted_device_login.sql`. The v0.16 household and compatibility migrations must already be applied. The new migration preserves household/profile/meal data, adds atomic household-management RPCs and shared rate-limit counters, and narrows browser privileges for membership and invitation columns. It is safe to rerun.
-3. Confirm Email authentication is enabled in Supabase. Keep email confirmation enabled. Set Site URL to `https://mealz-pink.vercel.app`, and allow that URL plus `https://mealz-pink.vercel.app/?reset=1` in Redirect URLs. If testing a Vercel preview, add its exact URLs temporarily. Verify email delivery/SMTP for confirmation and reset messages before inviting friends.
-4. Keep `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY` (or legacy `SUPABASE_ANON_KEY`), `OPENAI_API_KEY`, and `CRON_SECRET` configured in Vercel. No additional secrets or services are needed.
-5. After migration success and CI success, merge/deploy v0.17.0. Do not deploy without the migration: AI and household writes deliberately return a temporary-unavailable error when the rate-limit RPC is missing.
-6. Reopen mealz. Existing signed-in users go straight to their household. In **Account → Set or change password**, set a password for future sign-ins. A signed-out existing user can choose **Forgot or need a password?** using their existing email. This preserves the account, household membership, and meal history.
-7. If new-user signup was previously disabled, enable it only after this deployment. Create an invitation via **Account → Create a new invitation code**. Share it privately; the invited person creates their own account, confirms their email, signs in, and chooses **Join a household**.
+Database migrations must be applied **before** deploying the application.
+The application fails closed when required migrations are absent.
+
+1. In Supabase SQL Editor, apply all migrations in this order (each is idempotent
+   and safe to rerun):
+   1. `migrations/2026-09-14_profiles.sql`
+   2. `migrations/2026-09-15_user_ownership_rls.sql`
+   3. `migrations/2026-09-15_households.sql`
+   4. `migrations/2026-09-16_household_compatibility.sql`
+   5. `migrations/2026-09-17_account_security.sql`
+   6. `migrations/2026-09-21_trusted_device_login.sql`
+   7. `migrations/20260921194345_supabase_hardening_v0202.sql`
+   8. `migrations/20260921212102_editable_groceries_v0210.sql`
+2. Confirm Email authentication is enabled in Supabase. Keep email confirmation
+   enabled. Set Site URL to `https://mealz-pink.vercel.app`, and allow that URL
+   plus `https://mealz-pink.vercel.app/?reset=1` in Redirect URLs. If testing a
+   Vercel preview, add its exact URLs temporarily. Verify email delivery/SMTP for
+   confirmation and reset messages before inviting friends.
+3. Keep `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY` (or
+   legacy `SUPABASE_ANON_KEY`), `OPENAI_API_KEY`, and `CRON_SECRET` configured in
+   Vercel. No additional secrets or services are needed.
+4. After migration success and CI success, deploy the application. Do not deploy
+   without the migrations: AI and household writes deliberately return a
+   temporary-unavailable error when the rate-limit RPC is missing.
+5. Reopen mealz. Existing signed-in users go straight to their household. In
+   **Account → Set or change password**, set a password for future sign-ins. A
+   signed-out existing user can choose **Forgot or need a password?** using their
+   existing email. This preserves the account, household membership, and meal
+   history.
+6. If new-user signup was previously disabled, enable it only after this
+   deployment. Create an invitation via **Account → Create a new invitation code**.
+   Share it privately; the invited person creates their own account, confirms their
+   email, signs in, and chooses **Join a household**.
+
+**Rollback:** revert the application to its prior Vercel deployment. The migrations
+are additive and privilege-narrowing; do not delete household data or reverse the
+database migrations as a rollback path.
 
 ## Product rules
 
@@ -28,10 +61,11 @@
 
 ## Verification
 
-Use Node 22 and pnpm 11.19.0:
+Use Node 22 and pnpm 9 (or later):
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm typecheck
 pnpm test
 pnpm exec playwright install chromium
 pnpm test:browser
@@ -46,16 +80,18 @@ Production smoke checks after deployment:
 3. Invited account: join with the code, confirm shared Profile/meals, save a harmless preference and verify it from the owner's account. A bad code should show an error while keeping the form usable.
 4. Separate household: confirm neither family's meals/Profile appear in the other. Sign out and change accounts in the same browser to check local state isolation.
 5. Request a password reset, follow the email, choose a new password, and confirm the same household opens. Verify that expired/reused reset links can recover through another reset request.
+6. Grocery list: verify add, edit, delete, check/uncheck, and that edits survive a replan.
 
-The live email-delivery and live database checks require your Supabase project; mocked browser tests do not certify them. If a rollout issue appears, revert the application commit through a new deployment. The migration is additive and privilege-narrowing; do not delete household data or reverse the earlier household migrations.
+The live email-delivery and live database checks require your Supabase project; mocked browser tests do not certify them. If a rollout issue appears, revert the application commit through a new Vercel deployment. The migrations are additive and privilege-narrowing; do not delete household data or reverse earlier migrations as a rollback path.
 
 References: [Supabase password authentication](https://supabase.com/docs/guides/auth/passwords), [auth event handling](https://supabase.com/docs/reference/javascript/auth-onauthstatechange), and [password reset](https://supabase.com/docs/reference/javascript/auth-resetpasswordforemail).
 
-## v0.20 trusted-device quick login
+## Trusted-device quick login (v0.20.0+)
 
 - Quick login is optional and is only offered after a successful full Supabase sign-in.
 - Remembered account names live only in that browser. There is no public/global account directory.
 - A 4-digit PIN is not sufficient by itself: the server also requires a random device token stored on that browser. PINs are scrypt-hashed and unlock attempts are limited to five per minute using the shared Postgres rate limiter.
-- Trusted-device records are service-only and cannot be read directly by authenticated or anonymous browser roles.
-- Quick unlock generates a fresh Supabase magic-link token hash server-side and exchanges it through the normal Supabase client. RLS and household authorization remain unchanged.
+- Trusted-device records (`mealz_trusted_devices`) and the rate-limit table (`mealz_rate_limits`) are service-only and cannot be read directly by authenticated or anonymous browser roles.
+- Quick unlock uses `SUPABASE_SECRET_KEY` (service role) server-side to generate an admin magic-link token hash, which is then exchanged through the normal Supabase client. RLS and household authorization remain unchanged for all subsequent requests.
+- **Session persistence after unlock:** after a successful quick login, the Supabase client is configured with `persistSession: true` and `autoRefreshToken: true`. A normal Supabase session is therefore persisted in browser storage and auto-refreshed. The device token and PIN are not stored as reusable sessions — only the resulting Supabase session is.
 - Account → quick login can update or revoke the remembered device. Removing an account from the signed-out picker only removes the local browser entry; revocation from Account also disables the server-side token.

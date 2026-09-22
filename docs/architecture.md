@@ -47,10 +47,48 @@ New API endpoints should use these helpers rather than duplicating request code.
 
 Plan replacement now follows a create-then-swap strategy. Mealz builds the new active plan and all child records first. Only after that succeeds does it delete the prior active plan and stale prepared ideas. If the new save fails, Mealz attempts to delete the incomplete replacement and leaves the prior plan intact.
 
-## Near-term technical debt
+## Quick-login privileged access
 
-- Apply `migrations/2026-09-17_account_security.sql` before v0.17.0; follow `docs/auth-setup.md` for the ordered rollout and live checks.
-- Self-service household leaving/ownership transfer remains future work.
-- Plan replacement is safer but still not a true database transaction.
-- The legacy boot hydration can still read the newest active plan without explicit `week_start`.
-- Grocery normalization is still intentionally conservative until unit conversion rules are added.
+`api/quick-login.js` uses `SUPABASE_SECRET_KEY` (service role) only to issue an
+admin-generated magic-link token hash during unlock. All subsequent requests use
+the resulting Supabase user session. The Supabase client is configured with
+`persistSession: true` and `autoRefreshToken: true`, so after a successful unlock
+a normal session is persisted and auto-refreshed in browser storage.
+Trusted-device records and the rate-limit table are service-only and cannot be
+read by authenticated or anonymous browser roles.
+
+## Known technical debt
+
+- **Plan replacement is not transactional.** The create-then-swap strategy is safer
+  than delete-then-create, but a partial failure can leave an incomplete replacement
+  plan. A server-side SQL transaction or security-definer RPC is the correct fix
+  (roadmap Phase 2). Do not approximate transactions with parallel REST calls.
+- **Implicit week fallback.** The legacy boot hydration can still read the newest
+  active plan without an explicit `week_start`. New code should always pass an
+  explicit `week_start`; the fallback should be removed once all callers are
+  week-explicit.
+- **`owner_user_id` still populated.** `api/plan.js`, `api/_lib/profile-store.js`,
+  and `api/prep-next-week.js` still write `owner_user_id` for compatibility.
+  The field is no longer required and will be removed once migrations are confirmed
+  on all production installations.
+- **Self-service household leaving/ownership transfer** remains future work.
+- **Grocery normalization** is intentionally conservative; unit conversion rules are
+  additive and roadmap-tracked.
+- **Typecheck.** Run `pnpm typecheck` to verify TypeScript contracts. Seven
+  browser-global files use `@ts-nocheck` (see `docs/typescript-migration-baseline.md`).
+
+## Migration state
+
+All required migrations must be applied in Supabase before deploying the application.
+The canonical order is:
+
+1. `migrations/2026-09-14_profiles.sql`
+2. `migrations/2026-09-15_user_ownership_rls.sql`
+3. `migrations/2026-09-15_households.sql`
+4. `migrations/2026-09-16_household_compatibility.sql`
+5. `migrations/2026-09-17_account_security.sql`
+6. `migrations/2026-09-21_trusted_device_login.sql`
+7. `migrations/20260921194345_supabase_hardening_v0202.sql`
+8. `migrations/20260921212102_editable_groceries_v0210.sql`
+
+See `docs/auth-setup.md` for the full deployment order and smoke-check procedure.

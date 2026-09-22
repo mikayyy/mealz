@@ -1,7 +1,7 @@
-# TypeScript migration baseline (v0.20.0)
+# TypeScript migration baseline (v0.21.1)
 
 This document records the JavaScript, test, and deployment boundaries on `main`
-at Mealz v0.20.0 (`72df412`). It replaces assumptions from the v0.17.1
+at Mealz v0.21.1 (`a3007699`). It replaces assumptions from the v0.17.1
 migration notes. The migration remains incremental: TypeScript is introduced as
 a checker first, without renaming runtime files or adding a browser build step.
 
@@ -97,6 +97,8 @@ files and one Playwright browser file.
 - `tests/auth.test.js`
 - `tests/brand.test.js`
 - `tests/foundation.test.js`
+- `tests/grocery-api.test.js`
+- `tests/grocery-database.test.js`
 - `tests/household.test.js`
 - `tests/navigation.test.js`
 - `tests/ownership.test.js`
@@ -108,6 +110,7 @@ files and one Playwright browser file.
 ### Browser tests
 
 - `tests/browser/accounts.test.js`
+- `tests/browser/groceries.test.js`
 
 The browser suite intercepts requests and serves `index.html`, JavaScript, and
 CSS directly from the working tree. There is no compiled-output directory.
@@ -164,15 +167,18 @@ glob is correct while routes remain JavaScript. Before the first `.ts` route is
 renamed in Phase 2, preview deployment must prove a mixed JavaScript/TypeScript
 glob preserves both the function duration and cron route.
 
-GitHub Actions currently uses Node 22 and pnpm 11.19.0, then runs:
+GitHub Actions uses Node 22 and pnpm 9+ and runs:
 
 1. `pnpm install --frozen-lockfile`
-2. `pnpm test`
-3. Playwright Chromium installation
-4. `pnpm test:browser`
+2. `pnpm typecheck`
+3. `pnpm test`
+4. Playwright Chromium installation
+5. `pnpm test:browser`
 
-Phase 0 inserts `pnpm typecheck` after dependency installation and before unit
-tests.
+`pnpm typecheck` currently reports zero errors against the v0.21.1 tree.
+The Phase 0 error baseline (377 errors before suppression) was established at
+v0.20.0; seven browser-global files still carry `@ts-nocheck` and are excluded
+from the checked count.
 
 ## Phase 0 error baseline
 
