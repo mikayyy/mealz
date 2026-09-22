@@ -160,7 +160,7 @@ const brandHome=document.querySelector('.brand');
 if(brandHome){
   brandHome.setAttribute('role','button');
   brandHome.setAttribute('tabindex','0');
-  brandHome.setAttribute('aria-label','go to weeks dashboard');
+  brandHome.setAttribute('aria-label','mealz — go to weeks dashboard');
   brandHome.setAttribute('title','go to weeks dashboard');
   brandHome.onclick=backToWeeks;
   brandHome.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();backToWeeks()}};

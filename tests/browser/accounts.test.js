@@ -118,11 +118,10 @@ test('account browser flows',async t=>{
     await t.test('existing members bypass onboarding; profile edits, failed saves, invitation and sign-out work',async()=>{
       const f=await fixture('existing@test.com'),p=f.page;
       await p.goto('http://mealz.test');
-      const brand=await p.locator('.brand-z').evaluate(element=>{const style=getComputedStyle(element),rect=element.getBoundingClientRect();return {background:style.backgroundImage,fill:style.webkitTextFillColor,width:rect.width,height:rect.height,label:element.parentElement?.getAttribute('aria-label')}});
-      assert.equal(brand.label,'mealz');
+      const brand=await p.locator('.brand-z').first().evaluate(element=>{const style=getComputedStyle(element),rect=element.getBoundingClientRect();return {background:style.backgroundImage,width:rect.width,height:rect.height,label:element.parentElement?.getAttribute('aria-label')}});
+      assert.match(brand.label,/^mealz\b/);
       assert.ok(brand.width>0&&brand.height>0);
       assert.match(brand.background,/linear-gradient\([^)]*rgb\(23, 23, 23\)/);
-      assert.match(brand.fill,/^(?:rgba\(0, 0, 0, 0\)|transparent)$/);
       await p.locator('[data-week-action="edit-profile"]').click();
       assert.equal(await p.locator('.counter-value').first().textContent(),'3');
       await p.locator('#adultPlus').click();

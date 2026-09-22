@@ -69,7 +69,7 @@ test('interactive buttons expose the expected pointer cursor',()=>{
 });
 
 test('the wordmark remains a persistent dashboard escape hatch',()=>{
-  assert.match(weeks,/aria-label','go to weeks dashboard'/);
+  assert.match(weeks,/aria-label','mealz — go to weeks dashboard'/);
   assert.match(weeks,/brandHome\.onclick=backToWeeks/);
 });
 
