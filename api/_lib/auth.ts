@@ -1,17 +1,19 @@
 const PUBLIC_KEY=()=>process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
 
 export class AuthError extends Error{
+  status: number;
+  retryAfter?: number;
   constructor(message='Authentication required.',status=401){super(message);this.name='AuthError';this.status=status}
 }
 
 export function authConfigured(){return !!(process.env.SUPABASE_URL&&PUBLIC_KEY())}
-export function bearerToken(req){
+export function bearerToken(req: any){
   const raw=String(req?.headers?.authorization||req?.headers?.Authorization||'');
   const match=raw.match(/^Bearer\s+(.+)$/i);
   return match?.[1]?.trim()||'';
 }
 
-export async function requireUser(req){
+export async function requireUser(req: any){
   if(!authConfigured()){
     throw new AuthError('Authentication is not configured.',503);
   }
@@ -35,9 +37,9 @@ export async function requireUser(req){
   }finally{clearTimeout(timer)}
 }
 
-export function respondAuthError(res,error){
+export function respondAuthError(res: any, error: any){
   if(!(error instanceof AuthError))return false;
-  const retryAfter=/** @type {AuthError & {retryAfter?: number}} */(error).retryAfter;
+  const retryAfter = error.retryAfter;
   if(retryAfter)res.setHeader('Retry-After',String(retryAfter));
   res.status(error.status||401).json({error:error.message,code:error.status===429?'RATE_LIMITED':error.status===403?'HOUSEHOLD_REQUIRED':'AUTH_REQUIRED'});
   return true;

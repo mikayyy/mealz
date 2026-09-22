@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {bearerToken} from '../api/_lib/auth.js';
+import {bearerToken} from '../api/_lib/auth.ts';
 
 const authClient=readFileSync(new URL('../auth-client.js',import.meta.url),'utf8');
 
@@ -32,13 +32,13 @@ test('authenticated API interception never waits indefinitely for a future login
 test('user-facing APIs require verified sessions when auth is configured',()=>{
   const files=['generate-ideas.js','expand-meals.js','swap-meal.js','plan.js','profile.js','weeks.js','pregenerated-ideas.js','feedback.js'];
   for(const file of files){
-    const source=readFileSync(new URL(`../api/${file}`,import.meta.url),'utf8');
+    const source=readFileSync(new URL(`../api/${file.replace('.js', '.ts')}`,import.meta.url),'utf8');
     assert.match(source,/requireUser\(req\)/,file);
   }
 });
 
 test('auth config never exposes the server secret key',()=>{
-  const source=readFileSync(new URL('../api/auth-config.js',import.meta.url),'utf8');
+  const source=readFileSync(new URL('../api/auth-config.ts',import.meta.url),'utf8');
   assert.doesNotMatch(source,/SUPABASE_SECRET_KEY/);
   assert.match(source,/publicAuthConfig/);
 });

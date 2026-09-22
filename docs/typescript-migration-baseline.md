@@ -204,10 +204,50 @@ Seven heavily coupled browser files use documented `@ts-nocheck` directives:
 `grocery-order.js`, `navigation-polish.js`, and `weeks.js`. The deterministic
 shared modules and all API files remain checked. Tests also remain checked.
 
+## Phase 1 error baseline (T1)
+
+Task T1 established an informational error baseline by temporarily removing
+`@ts-nocheck` from each of the seven browser files and running a targeted
+typecheck with cross-file globals declared in `types/browser-globals.d.ts`.
+
+| File | Total Errors | Global-Script | DOM Narrowing | Property Mismatches | Module/Import | Other |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `account-client.js` | 0 | 0 | 0 | 0 | 0 | 0 |
+| `app.js` | 51 | 51 | 0 | 0 | 0 | 0 |
+| `auth-client.js` | 0 | 0 | 0 | 0 | 0 | 0 |
+| `client-foundation.js` | 0 | 0 | 0 | 0 | 0 | 0 |
+| `grocery-order.js` | 14 | 11 | 0 | 0 | 0 | 3 |
+| `navigation-polish.js` | 0 | 0 | 0 | 0 | 0 | 0 |
+| `weeks.js` | 18 | 7 | 0 | 0 | 0 | 11 |
+
+**Notes:**
+- `app.js` (51 errors): Primarily DOM element narrowing (`Element` lacks `onclick`, `dataset`, `value`, `disabled`, `checked`, `onchange` properties) due to `document.querySelector` returning `Element` instead of specific HTMLElement subtypes.
+- `grocery-order.js` (14 errors): 11 DOM narrowing errors plus 3 assignment errors (function reassignment and const mutation).
+- `weeks.js` (18 errors): 7 DOM narrowing (`onclick`, `closest`, `onkeydown`) plus 11 function reassignment errors from the week-navigation wrapper pattern.
+- `account-client.js`, `auth-client.js`, `client-foundation.js`, `navigation-polish.js`: Zero errors — these files already align with the declared cross-file globals and do not have internal type conflicts.
+
+This baseline is **informational only**. No `@ts-nocheck` files were modified in Phase 1. The seven files remain deferred to the client architecture phase.
+
+## Phase 1 decisions
+
+During Phase 1 implementation (`.kilo/plans/1790082470976-typescript-migration-phase-1.md`), the following decisions were made:
+
+- **Q1 (Handling the 7 `@ts-nocheck` files):** Hybrid C → A. We successfully captured the informational error baseline (see T1 above). The files themselves remain unchanged and `tsc` ignores them in normal runs. They will be typed when a client architecture decision introduces a bundler.
+- **Q2 (Already-checked files):** A. All API helpers (`api/_lib/*.js`) and shared logic modules (`shared-logic.js`, `shopping-logic.js`) received tighter JSDoc typings to remove implicit `any` usage. 
+- **Q3 (Pilot `.ts` conversion):** A. We skipped converting `api/_lib/schemas.js` to `.ts`. A test conversion proved that without a build step or a TypeScript loader (like `tsx`), Node.js `node --test` fails to resolve local imports from `.ts` files. We maintain the strict Phase 0 constraint: no `.js`→`.ts` file renames until a build step is introduced.
+
+## Phase 2 decisions
+
+During Phase 2 implementation, the following decisions were made:
+
+- **Backend Conversion:** All backend API routes and helpers (`api/*.js` and `api/_lib/*.js`) were successfully renamed to `.ts` and converted to native TypeScript syntax. JSDoc types and `/// <reference>` tags were replaced with proper ES module `import type` declarations.
+- **Test execution:** The `tsx` loader was introduced as a `node --import tsx` test argument, allowing the Node native `--test` runner to seamlessly execute tests and resolve `.js` imports to the new `.ts` files on disk without needing a separate build step. Some test setups using `fs.readFileSync` for raw source text required path adjustments.
+- **Vercel configuration:** The Vercel function glob in `vercel.json` was updated to `"api/**/*.{js,ts}"` to ensure the `maxDuration` rule applies to the new `.ts` backend routes.
+
 ## Constraints for the migration
 
-- Do not rename runtime `.js` files in Phases 0 or 1.
-- Do not add a frontend bundler or emitted build output.
+- Do not rename browser `.js` files until a frontend bundler is introduced.
+- Do not add a frontend bundler or emitted build output yet.
 - Do not change the browser script order.
 - Preserve Monday-Sunday week identity and explicit `week_start` usage.
 - Preserve user-scoped Supabase access, household RLS, and server-only trusted

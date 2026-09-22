@@ -1,6 +1,6 @@
-type DayName = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+export type DayName = 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
 
-type GroceryCategory =
+export type GroceryCategory =
   | 'Produce'
   | 'Meat & Seafood'
   | 'Dairy & Eggs'
@@ -9,9 +9,9 @@ type GroceryCategory =
   | 'Pantry'
   | 'Other';
 
-type ShoppingCategory = 'Produce' | 'Meat & Dairy' | 'Pantry' | 'Frozen' | 'Misc';
+export type ShoppingCategory = 'Produce' | 'Meat & Dairy' | 'Pantry' | 'Frozen' | 'Misc';
 
-type DietPreference =
+export type DietPreference =
   | 'Vegetarian'
   | 'Vegan'
   | 'Pescatarian'
@@ -28,7 +28,7 @@ type DietPreference =
   | 'Nut-Free'
   | 'No Dietary Restrictions';
 
-interface Ingredient {
+export interface Ingredient {
   name: string;
   quantity: number | null;
   unit: string | null;
@@ -38,7 +38,7 @@ interface Ingredient {
 
 // AI response contracts mirror api/_lib/schemas.js. Those JSON Schemas remain
 // the runtime source of truth; update these declarations whenever a schema changes.
-interface Idea {
+export interface Idea {
   id: string;
   title: string;
   emoji: string;
@@ -48,7 +48,7 @@ interface Idea {
   tags: string[];
 }
 
-interface Meal {
+export interface Meal {
   id: string;
   day: string;
   title: string;
@@ -63,15 +63,15 @@ interface Meal {
   steps: string[];
 }
 
-interface Recipe {
+export interface Recipe {
   meal: Meal;
 }
 
-interface SwapResult {
+export interface SwapResult {
   alternatives: Meal[];
 }
 
-interface Profile {
+export interface Profile {
   adults: number;
   children: number;
   householdSize: number;
@@ -80,32 +80,32 @@ interface Profile {
   stores: string[];
 }
 
-type ProfileInput = Partial<Pick<Profile, 'adults' | 'children' | 'dietTags' | 'equipment'>>;
+export type ProfileInput = Partial<Pick<Profile, 'adults' | 'children' | 'dietTags' | 'equipment'>>;
 
-type HouseholdRole = 'owner' | 'member';
+export type HouseholdRole = 'owner' | 'member';
 
-interface Household {
+export interface Household {
   id: string;
   name: string;
   role?: HouseholdRole;
   join_code_hint?: string | null;
 }
 
-interface HouseholdStatusResult {
+export interface HouseholdStatusResult {
   linked: boolean;
   household: Household | null;
   role: HouseholdRole | null;
   needsProfile?: boolean;
 }
 
-interface HouseholdMutationResult {
+export interface HouseholdMutationResult {
   ok: true;
   household: Household;
   role?: HouseholdRole;
   joinCode?: string;
 }
 
-interface WeeklyPlan {
+export interface WeeklyPlan {
   id: string;
   week_start: string;
   household_id: string;
@@ -119,7 +119,7 @@ interface WeeklyPlan {
   updated_at: string;
 }
 
-interface GroceryItem {
+export interface GroceryItem {
   id: string;
   weekly_plan_id: string;
   name: string;
@@ -135,33 +135,33 @@ interface GroceryItem {
   updated_at: string;
 }
 
-interface Conflict {
+export interface Conflict {
   preference: DietPreference | string;
   label: string;
   matches: string[];
 }
 
-interface TrustedDeviceSetupRequest {
+export interface TrustedDeviceSetupRequest {
   action: 'setup';
   pin: string;
   label: string;
   previousDeviceToken?: string;
 }
 
-interface TrustedDeviceUnlockRequest {
+export interface TrustedDeviceUnlockRequest {
   action: 'unlock';
   deviceToken: string;
   pin: string;
 }
 
-interface TrustedDeviceRevokeRequest {
+export interface TrustedDeviceRevokeRequest {
   action: 'revoke';
   deviceToken: string;
 }
 
-type TrustedDeviceRequest = TrustedDeviceSetupRequest | TrustedDeviceUnlockRequest | TrustedDeviceRevokeRequest;
+export type TrustedDeviceRequest = TrustedDeviceSetupRequest | TrustedDeviceUnlockRequest | TrustedDeviceRevokeRequest;
 
-interface TrustedDeviceSetupResponse {
+export interface TrustedDeviceSetupResponse {
   ok: true;
   userId: string;
   email: string;
@@ -169,20 +169,20 @@ interface TrustedDeviceSetupResponse {
   deviceToken: string;
 }
 
-interface TrustedDeviceUnlockResponse {
+export interface TrustedDeviceUnlockResponse {
   ok: true;
   tokenHash: string;
   label: string;
   email: string;
 }
 
-interface TrustedDeviceRevokeResponse {
+export interface TrustedDeviceRevokeResponse {
   ok: true;
 }
 
-type TrustedDeviceResponse = TrustedDeviceSetupResponse | TrustedDeviceUnlockResponse | TrustedDeviceRevokeResponse;
+export type TrustedDeviceResponse = TrustedDeviceSetupResponse | TrustedDeviceUnlockResponse | TrustedDeviceRevokeResponse;
 
-interface JsonSchema {
+export interface JsonSchema {
   type: string | string[];
   additionalProperties?: boolean;
   required?: string[];
@@ -194,18 +194,18 @@ interface JsonSchema {
   maxItems?: number;
 }
 
-type TelemetryData = Record<string, unknown>;
+export type TelemetryData = Record<string, unknown>;
 
-interface Telemetry {
+export interface Telemetry {
   event(name: string, data?: TelemetryData): void;
   finish(status: number, data?: TelemetryData): void;
   fail(error: unknown, data?: TelemetryData): void;
 }
 
-type DatabaseRequestOptions = RequestInit & {timeoutMs?: number};
-type DataDb = (path: string, options?: DatabaseRequestOptions) => Promise<any>;
+export type DatabaseRequestOptions = RequestInit & {timeoutMs?: number};
+export type DataDb = (path: string, options?: DatabaseRequestOptions) => Promise<any>;
 
-interface ProfileContext {
+export interface ProfileContext {
   db: DataDb;
   householdId: string;
   userId?: string | null;
@@ -214,7 +214,7 @@ interface ProfileContext {
   householdRole?: HouseholdRole | string;
 }
 
-interface ProfileResult {
+export interface ProfileResult {
   profile: Profile | null;
   id: string | null;
   source: 'profiles';

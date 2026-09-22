@@ -1,1 +1,1 @@
-{"functions":{"api/*.js":{"maxDuration":60}},"crons":[{"path":"/api/prep-next-week","schedule":"0 23 * * 5"}]}
+{"functions":{"api/**/*.{js,ts}":{"maxDuration":60}},"crons":[{"path":"/api/prep-next-week","schedule":"0 23 * * 5"}]}
