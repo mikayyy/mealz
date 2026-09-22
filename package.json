@@ -8,7 +8,9 @@
     "test": "node --test tests/*.test.js",
     "test:browser": "node --test tests/browser/*.test.js",
     "release:check": "node scripts/release-check.js",
-    "migration:validate": "node scripts/migrate-validate.js"
+    "migration:validate": "node scripts/migrate-validate.js",
+    "migration:live": "node scripts/migrate-live.js",
+    "migration:apply": "node scripts/migrate-apply.js"
   },
   "engines": {
     "node": "22.x"

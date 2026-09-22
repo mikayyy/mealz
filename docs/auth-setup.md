@@ -70,7 +70,9 @@ Use Node 22 and pnpm 9 (or later):
 pnpm install --frozen-lockfile
 pnpm release:check          # version consistency: package.json, index.html, README, CHANGELOG
 pnpm migration:validate     # schema preflight: applies all migrations to PGlite; verifies tables,
-                            # columns, indexes, functions, RLS, grants, and idempotency
+                             # columns, indexes, functions, RLS, grants, and idempotency
+pnpm migration:live         # live preflight: probes required tables/columns in Supabase; skips if
+                             # no SUPABASE_URL/SUPABASE_SECRET_KEY configured (exit 0)
 pnpm typecheck
 pnpm test
 pnpm exec playwright install chromium
@@ -81,6 +83,21 @@ The `migration:validate` command (`node scripts/migrate-validate.js`) applies al
 migrations from `migrations/manifest.js` in order to an in-process PGlite
 database and checks 86 structural requirements. It requires no live credentials and
 runs before every unit test run in CI.
+
+The `migration:live` command (`node scripts/migrate-live.js`) probes the live
+Supabase database for every required table and column listed in the manifest.
+It is read-only (SELECT probes only). If `SUPABASE_URL` or `SUPABASE_SECRET_KEY`
+are absent it prints `skipped: no credentials` and exits 0 — it never fails a
+run just because secrets are missing. The `migration:apply` command
+(`node scripts/migrate-apply.js`) prints the ordered SQL to stdout for manual
+application in the Supabase SQL Editor; it does not execute SQL itself.
+
+Pre-deploy sequence:
+
+1. `pnpm migration:apply` — review and copy the ordered SQL
+2. Apply the SQL in the Supabase SQL Editor
+3. `pnpm migration:live` — confirm all required objects are present
+4. Deploy the application
 
 Database tests use embedded Postgres with fixtures for the Supabase roles/auth schema and the actual household/account-security migrations. They test cross-household reads/writes/reparenting on six data tables, direct membership/invite privilege denial, shared household access, atomic failure, code rotation, rate exhaustion, and window reset. No live credentials are used. Browser tests execute shipped scripts with mocked auth/API boundaries and isolated storage. CI runs both suites on Linux.
 

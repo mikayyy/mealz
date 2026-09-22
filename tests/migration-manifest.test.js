@@ -15,7 +15,6 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { PGlite } from '@electric-sql/pglite';
 import {
   MIGRATIONS,
   REQUIRED_TABLES,
@@ -23,68 +22,14 @@ import {
   REQUIRED_INDEXES,
   REQUIRED_FUNCTIONS,
 } from '../migrations/manifest.js';
+import { adaptForPGlite, makeDb } from '../migrations/pglite-fixture.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const migrationsDir = join(root, 'migrations');
 
 function readMigration(filename) {
   const sql = readFileSync(join(migrationsDir, filename), 'utf8');
-  return sql
-    .replace(/create extension if not exists pgcrypto\s*;/gi, '')
-    .replace(/\bnot valid\b/gi, '')
-    .replace(/alter table[^;]+validate constraint[^;]+;/gi, '')
-    .replace(/perform pg_advisory_xact_lock\([^)]+\)\s*;/gi, '-- advisory lock omitted');
-}
-
-async function makeDb() {
-  const db = new PGlite();
-  await db.exec(`
-    create role anon;
-    create role authenticated;
-    create role service_role bypassrls;
-    create schema if not exists auth;
-    create table if not exists auth.users (
-      id uuid primary key,
-      created_at timestamptz not null default now()
-    );
-    create or replace function auth.uid()
-    returns uuid language sql stable as
-    $$select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid$$;
-    grant usage on schema public, auth to authenticated, anon, service_role;
-    create table if not exists public.weekly_plans (
-      id uuid primary key default gen_random_uuid(),
-      owner_user_id uuid,
-      week_start date,
-      status text,
-      notes text,
-      household_size integer,
-      equipment text[],
-      created_at timestamptz not null default now()
-    );
-    create table if not exists public.meals (
-      id uuid primary key default gen_random_uuid(),
-      weekly_plan_id uuid references public.weekly_plans(id) on delete cascade
-    );
-    create table if not exists public.ingredients (
-      id uuid primary key default gen_random_uuid(),
-      meal_id uuid references public.meals(id) on delete cascade
-    );
-    create table if not exists public.recipe_steps (
-      id uuid primary key default gen_random_uuid(),
-      meal_id uuid references public.meals(id) on delete cascade
-    );
-    create table if not exists public.grocery_items (
-      id uuid primary key default gen_random_uuid(),
-      weekly_plan_id uuid references public.weekly_plans(id) on delete cascade,
-      name text not null default '',
-      quantity numeric,
-      unit text,
-      category text not null default 'Other',
-      checked boolean not null default false,
-      created_at timestamptz not null default now()
-    );
-  `);
-  return db;
+  return adaptForPGlite(sql);
 }
 
 test('migration manifest: all listed files exist on disk', () => {
@@ -296,11 +241,9 @@ test('migration manifest: hardened RLS policies use (select auth.uid()) form', a
 test('migration manifest: key migrations are idempotent', async () => {
   const db = await makeDb();
   try {
-    // Apply full set first
     for (const filename of MIGRATIONS) {
       await db.exec(readMigration(filename));
     }
-    // Then re-apply the three that must be idempotent
     const idempotent = [
       '2026-09-17_account_security.sql',
       '20260921194345_supabase_hardening_v0202.sql',
@@ -324,8 +267,6 @@ test('migration manifest: trusted-device cleanup fires on auth user deletion', a
     for (const filename of MIGRATIONS) {
       await db.exec(readMigration(filename));
     }
-    // Grant the test superuser INSERT on trusted devices so we can seed a row
-    // without going through the service_role path (PGlite privilege model).
     await db.exec('grant insert on public.mealz_trusted_devices to public');
     await db.query('insert into auth.users(id) values($1)', [userId]);
     await db.query(
@@ -333,13 +274,11 @@ test('migration manifest: trusted-device cleanup fires on auth user deletion', a
        values($1,'cleanup@test.com','Browser','tok-cascade','salt','pin-hash')`,
       [userId],
     );
-    // Verify the row exists before deletion
     const before = await db.query(
       'select count(*)::int as n from mealz_trusted_devices where user_id=$1',
       [userId],
     );
     assert.equal(before.rows[0].n, 1, 'trusted device should exist before user deletion');
-    // Delete the auth user — ON DELETE CASCADE should remove the device
     await db.query('delete from auth.users where id=$1', [userId]);
     const { rows } = await db.query(
       'select count(*)::int as n from mealz_trusted_devices where user_id=$1',

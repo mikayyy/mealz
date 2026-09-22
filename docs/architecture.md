@@ -91,4 +91,20 @@ The canonical order is:
 7. `migrations/20260921194345_supabase_hardening_v0202.sql`
 8. `migrations/20260921212102_editable_groceries_v0210.sql`
 
+### Migration verification
+
+Migration verification runs in two layers:
+
+- **Offline** — `pnpm migration:validate` applies all migrations to an in-process
+  PGlite database and checks the resulting schema (tables, columns, indexes,
+  functions, RLS, grants, idempotency). No live credentials needed.
+- **Live** — `pnpm migration:live` probes the live Supabase database for every
+  required table and column from the manifest using read-only SELECT probes.
+  It skips gracefully when credentials are absent (exit 0) and fails closed
+  (exit 1) when required objects are missing.
+
+**No auto-apply.** Migrations are applied manually in the Supabase SQL Editor.
+`migration:apply` emits the ordered SQL for convenience but never writes to
+the database. The live gate is a read-only check, not an automated writer.
+
 See `docs/auth-setup.md` for the full deployment order and smoke-check procedure.
