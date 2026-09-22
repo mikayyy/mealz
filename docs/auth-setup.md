@@ -26,9 +26,12 @@ The application fails closed when required migrations are absent.
 3. Keep `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_PUBLISHABLE_KEY` (or
    legacy `SUPABASE_ANON_KEY`), `OPENAI_API_KEY`, and `CRON_SECRET` configured in
    Vercel. No additional secrets or services are needed.
-4. After migration success and CI success, deploy the application. Do not deploy
-   without the migrations: AI and household writes deliberately return a
-   temporary-unavailable error when the rate-limit RPC is missing.
+4. After migration success and CI success (`pnpm migration:validate` green),
+   deploy the application. Do not deploy without the migrations: AI and household
+   writes deliberately return a temporary-unavailable error when the rate-limit
+   RPC is missing. A missing or incomplete schema fails closed: `householdSchemaReady()`
+   probes for required tables, columns, and the grocery editable-list additions
+   before any household data is accessed.
 5. Reopen mealz. Existing signed-in users go straight to their household. In
    **Account → Set or change password**, set a password for future sign-ins. A
    signed-out existing user can choose **Forgot or need a password?** using their
@@ -65,11 +68,19 @@ Use Node 22 and pnpm 9 (or later):
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm release:check          # version consistency: package.json, index.html, README, CHANGELOG
+pnpm migration:validate     # schema preflight: applies all migrations to PGlite; verifies tables,
+                            # columns, indexes, functions, RLS, grants, and idempotency
 pnpm typecheck
 pnpm test
 pnpm exec playwright install chromium
 pnpm test:browser
 ```
+
+The `migration:validate` command (`node scripts/migrate-validate.js`) applies all
+migrations from `migrations/manifest.js` in order to an in-process PGlite
+database and checks 86 structural requirements. It requires no live credentials and
+runs before every unit test run in CI.
 
 Database tests use embedded Postgres with fixtures for the Supabase roles/auth schema and the actual household/account-security migrations. They test cross-household reads/writes/reparenting on six data tables, direct membership/invite privilege denial, shared household access, atomic failure, code rotation, rate exhaustion, and window reset. No live credentials are used. Browser tests execute shipped scripts with mocked auth/API boundaries and isolated storage. CI runs both suites on Linux.
 

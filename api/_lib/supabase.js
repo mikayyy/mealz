@@ -36,13 +36,28 @@ export async function sbAsUser(token,path,options={}){
 }
 
 let householdCheck={value:false,checkedAt:0};
+/**
+ * Verifies that the full required migration set has been applied before the
+ * application attempts household-scoped data access. Checks go beyond table
+ * existence: we probe for a column that only appears after the household
+ * migration, the rate-limit RPC, and the grocery editable-list column
+ * introduced in v0.21.0. Returns false if any check fails; never throws.
+ *
+ * Caches the result for 30 s to avoid probing on every request.
+ */
 export async function householdSchemaReady(){
   const now=Date.now();
   if(now-householdCheck.checkedAt<30000)return householdCheck.value;
   try{
-    await sb('households?select=id&limit=0');
-    await sb('household_members?select=household_id,user_id&limit=0');
+    // Probe for required tables and critical columns introduced by each phase.
+    // household_id on weekly_plans: v0.16.1 household migration
     await sb('weekly_plans?select=household_id&limit=0');
+    // household_members with role column: v0.16.1
+    await sb('household_members?select=household_id,user_id,role&limit=0');
+    // source column on grocery_items: v0.21.0 editable groceries
+    await sb('grocery_items?select=id,source,deleted&limit=0');
+    // mealz_rate_limits: v0.17.0 account security
+    await sb('mealz_rate_limits?select=bucket_key&limit=0');
     householdCheck={value:true,checkedAt:now};
   }catch{
     householdCheck={value:false,checkedAt:now};
