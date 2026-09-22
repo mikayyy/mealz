@@ -46,7 +46,7 @@ test('account browser flows',async t=>{
       const errors=[];page.on('pageerror',e=>errors.push(e.message));
       const homes=new Map([['existing@test.com',{id:'existing',name:'Existing family',role:'owner'}]]);
       const profiles=new Map([['existing',{adults:3,children:2,dietTags:['Vegan'],equipment:['Oven']}]]);
-      const requests=[];const quickDevices=new Map();let quickSeq=0;let failConfig=false,failSave=false,failHome=false,expireSession=false;
+      const requests=[];const quickDevices=new Map();let quickSeq=0;let failConfig=false,failSave=false,failHome=false,expireSession=false,failWeeksOnce=false,planData=null;
       if(user)await context.addInitScript(user=>{
         if(!sessionStorage.getItem('seeded')){
           localStorage.setItem('test-session',JSON.stringify({user:{id:user,email:user},access_token:user}));
@@ -103,17 +103,26 @@ test('account browser flows',async t=>{
               profiles.set(home.id,request.postDataJSON());
             }
             data={profile:profiles.get(home.id)||null};
-          }else if(url.pathname==='/api/weeks')data={current:null,next:null,past:[]};
+          }else if(url.pathname==='/api/plan'&&request.method()==='GET')data=planData||{plan:null,meals:[],groceryItems:[]};
+          else if(url.pathname==='/api/weeks'){
+            if(failWeeksOnce){failWeeksOnce=false;return route.fulfill({status:503,json:{error:'Temporary cloud interruption'}})}
+            data={current:null,next:null,past:[]};
+          }
           return route.fulfill({json:data});
         }
         const file=url.pathname==='/'?'index.html':url.pathname.slice(1);
         return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html',body:readFileSync(new URL('../../'+file,import.meta.url))});
       });
-      return {page,context,requests,profiles,errors,set failConfig(v){failConfig=v},set failSave(v){failSave=v},set failHome(v){failHome=v},set expireSession(v){expireSession=v},async close(){assert.deepEqual(errors,[]);await context.close()}};
+      return {page,context,requests,profiles,errors,set failConfig(v){failConfig=v},set failSave(v){failSave=v},set failHome(v){failHome=v},set expireSession(v){expireSession=v},set failWeeksOnce(v){failWeeksOnce=v},set planData(v){planData=v},async close(){assert.deepEqual(errors,[]);await context.close()}};
     }
     await t.test('existing members bypass onboarding; profile edits, failed saves, invitation and sign-out work',async()=>{
       const f=await fixture('existing@test.com'),p=f.page;
       await p.goto('http://mealz.test');
+      const brand=await p.locator('.brand-z').evaluate(element=>{const style=getComputedStyle(element),rect=element.getBoundingClientRect();return {background:style.backgroundImage,fill:style.webkitTextFillColor,width:rect.width,height:rect.height,label:element.parentElement?.getAttribute('aria-label')}});
+      assert.equal(brand.label,'mealz');
+      assert.ok(brand.width>0&&brand.height>0);
+      assert.match(brand.background,/linear-gradient\([^)]*rgb\(23, 23, 23\)/);
+      assert.match(brand.fill,/^(?:rgba\(0, 0, 0, 0\)|transparent)$/);
       await p.locator('[data-week-action="edit-profile"]').click();
       assert.equal(await p.locator('.counter-value').first().textContent(),'3');
       await p.locator('#adultPlus').click();
@@ -125,6 +134,27 @@ test('account browser flows',async t=>{
       assert.equal(await p.locator('.invite-code').textContent(),'NEWC-2345');
       await p.locator('#signOut').click();await p.locator('#mealzAuthEmail').waitFor();
       assert.equal(await p.locator('#app').textContent(),'');
+      await f.close();
+    });
+    await t.test('a transient sync failure clears after recovery and never enters durable state',async()=>{
+      const f=await fixture('existing@test.com'),p=f.page;
+      f.planData={plan:{id:'plan-1',cooking_days:['Monday'],use_up:'',notes:''},meals:[{id:'meal-1',day:'Monday',title:'Tomato pasta',ingredients:[{name:'diced tomatoes',quantity:2,unit:'cans',category:'Pantry'}],steps:['Cook.']}],groceryItems:[{id:'grocery-1',name:'tomatoes',quantity:2,unit:'cans',category:'Pantry',checked:false}]};
+      f.failWeeksOnce=true;
+      await p.goto('http://mealz.test');
+      await p.getByText('Cloud sync delayed.',{exact:true}).waitFor();
+      await p.evaluate(()=>view('groceries'));
+      await p.getByText('2 cans tomatoes',{exact:true}).waitFor();
+      const stored=await p.evaluate(()=>JSON.parse(localStorage.getItem(Object.keys(localStorage).find(key=>key.startsWith('mealz:existing@test.com:')))||'{}'));
+      assert.equal(stored.syncError,undefined);
+      assert.equal(stored.meals[0].title,'Tomato pasta');
+      assert.equal(stored.groceryItems[0].name,'tomatoes');
+      await p.evaluate(async()=>{await loadWeeksOverview(true);await dashboard()});
+      assert.equal(await p.getByText('Cloud sync delayed.',{exact:true}).count(),0);
+      await p.reload();
+      await p.locator('[data-week-action="edit-profile"]').waitFor();
+      assert.equal(await p.getByText('Cloud sync delayed.',{exact:true}).count(),0);
+      await p.evaluate(()=>view('groceries'));
+      await p.getByText('2 cans tomatoes',{exact:true}).waitFor();
       await f.close();
     });
     await t.test('new household goes to Profile and never imports another account’s cached data',async()=>{

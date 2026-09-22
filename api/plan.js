@@ -1,10 +1,7 @@
 import {dataDb,enc,supabaseConfigured} from './_lib/supabase.js';
 import {startTelemetry} from './_lib/telemetry.js';
 import {requireUser,respondAuthError} from './_lib/auth.js';
-import {createRequire} from 'node:module';
-
-const require=createRequire(import.meta.url);
-const shopping=require('../shopping-logic.js');
+import shopping from '../shopping-logic.js';
 const GROCERY_CATEGORIES=new Set(['Produce','Meat & Seafood','Dairy & Eggs','Frozen','Bakery','Pantry','Other']);
 const boundedText=(value,label,{required=false,max=120}={})=>{const text=String(value??'').trim();if(required&&!text)throw new Error(`${label} is required.`);if(text.length>max)throw new Error(`${label} is too long.`);return text};
 const groceryQuantity=value=>{if(value===null||value===undefined||value==='')return null;const number=Number(value);if(!Number.isFinite(number)||number<0||number>100000)throw new Error('Quantity must be a positive number.');return number};

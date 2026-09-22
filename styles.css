@@ -24,7 +24,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,.brand[role=butt
 .topbar{border-bottom:1px solid var(--grey-300);display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;position:relative}.topbar::after{content:'';position:absolute;left:26px;bottom:-1px;width:36px;height:2px;background:var(--ink)}
 .brand,.auth-wordmark{font-family:Inter,Helvetica,Arial,sans-serif;font-size:31px;font-weight:800;letter-spacing:-.075em;line-height:.95;color:var(--ink)}
 .brand[role=button]{cursor:pointer;width:max-content}
-.brand-z{display:inline-block;background:linear-gradient(to bottom,currentColor 0 45%,transparent 45% 53%,currentColor 53% 100%);-webkit-background-clip:text;background-clip:text;color:transparent;transform:translateX(-.01em)}
+.brand-z{display:inline-block;background:linear-gradient(to bottom,var(--ink) 0 45%,transparent 45% 53%,var(--ink) 53% 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;transform:translateX(-.01em)}
 .tagline{font-size:11px;color:var(--grey-700);margin-top:7px;letter-spacing:.015em}
 h1,h2,h3{font-family:Inter,Helvetica,Arial,sans-serif;color:var(--ink);letter-spacing:-.035em}
 h1{font-size:34px;line-height:1.03;margin:0 0 12px;font-weight:760;max-width:14ch}
