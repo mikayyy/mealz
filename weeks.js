@@ -36,8 +36,8 @@ function profileCard(){
   const diet=(s.dietTags||[]).length?s.dietTags.join(' · '):'no dietary style selected';
   return `<div class="card household-summary"><div><h2>profile</h2><p>${s.adults} adult${s.adults===1?'':'s'} · ${s.children} child${s.children===1?'':'ren'} · ${esc(diet)}</p></div><button class=secondary data-week-action="edit-profile">edit</button></div>`;
 }
-async function loadWeeksOverview(force=false){if(DEV){weeksOverview={current:null,next:null,past:[]};return weeksOverview}if(weeksOverview&&!force)return weeksOverview;if(weeksOverviewPromise&&!force)return weeksOverviewPromise;const pending=apiJson(`/api/weeks?current_start=${encodeURIComponent(currentWeekStart())}&next_start=${encodeURIComponent(nextWeekStart())}`).then(result=>{weeksOverview=result;return result}).catch(e=>{s.syncError=e.message;save();weeksOverview={current:null,next:null,past:[]};return weeksOverview}).finally(()=>{if(weeksOverviewPromise===pending)weeksOverviewPromise=null});weeksOverviewPromise=pending;return pending}
-function applyWeekData(start,d){if(!d?.plan)return false;selectedWeekStart=start;s.viewWeekStart=start;s.meals=sortMealsByDay(d.meals||[]);s.groceryItems=d.groceryItems||[];s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of s.groceryItems)s.checked[i.id||groceryKey(i)]=!!i.checked;save();return true}
+async function loadWeeksOverview(force=false){if(DEV){weeksOverview={current:null,next:null,past:[]};return weeksOverview}if(weeksOverview&&!force)return weeksOverview;if(weeksOverviewPromise&&!force)return weeksOverviewPromise;const pending=apiJson(`/api/weeks?current_start=${encodeURIComponent(currentWeekStart())}&next_start=${encodeURIComponent(nextWeekStart())}`).then(result=>{weeksOverview=result;clearSyncError();save();return result}).catch(e=>{s.syncError=e.message;save();weeksOverview={current:null,next:null,past:[]};return weeksOverview}).finally(()=>{if(weeksOverviewPromise===pending)weeksOverviewPromise=null});weeksOverviewPromise=pending;return pending}
+function applyWeekData(start,d){if(!d?.plan)return false;selectedWeekStart=start;s.viewWeekStart=start;s.meals=sortMealsByDay(d.meals||[]);s.groceryItems=d.groceryItems||[];s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of s.groceryItems)s.checked[i.id||groceryKey(i)]=!!i.checked;clearSyncError();save();return true}
 function cacheCurrentState(start){if(!start||!s.planId)return;weekCache.set(start,{plan:{id:s.planId,cooking_days:s.days||[],use_up:s.useUp||'',notes:s.notes||''},meals:sortMealsByDay(s.meals||[]),groceryItems:(s.groceryItems||[]).map(i=>({...i}))})}
 async function hydrateWeek(start,{force=false}={}){
   if(!start)return false;
@@ -54,7 +54,7 @@ async function hydrateWeek(start,{force=false}={}){
     pending=apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`).finally(()=>{if(weekLoadPromises.get(start)===pending)weekLoadPromises.delete(start)});
     weekLoadPromises.set(start,pending);
   }
-  try{const d=await pending;if(!d?.plan)return false;weekCache.set(start,d);return applyWeekData(start,d)}catch(e){s.syncError=e.message;save();return false}
+  try{const d=await pending;clearSyncError();save();if(!d?.plan)return false;weekCache.set(start,d);return applyWeekData(start,d)}catch(e){s.syncError=e.message;save();return false}
 }
 function prefetchWeek(start){
   if(DEV||!start||weekCache.has(start)||weekLoadPromises.has(start)||weekPrefetchPromises.has(start))return;
@@ -160,7 +160,7 @@ const brandHome=document.querySelector('.brand');
 if(brandHome){
   brandHome.setAttribute('role','button');
   brandHome.setAttribute('tabindex','0');
-  brandHome.setAttribute('aria-label','go to weeks dashboard');
+  brandHome.setAttribute('aria-label','mealz — go to weeks dashboard');
   brandHome.setAttribute('title','go to weeks dashboard');
   brandHome.onclick=backToWeeks;
   brandHome.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();backToWeeks()}};

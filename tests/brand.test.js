@@ -44,4 +44,7 @@ test('wordmark and tagline use the approved treatment',()=>{
   assert.match(index,/brand-z/);
   assert.match(index,/already sorted\./);
   assert.match(authClient,/already sorted\./);
+  assert.match(styles,/\.brand-z\{[^}]*var\(--ink\)[^}]*transparent[^}]*var\(--ink\)/);
+  assert.match(styles,/-webkit-text-fill-color:transparent/);
+  assert.doesNotMatch(styles,/\.brand-z\{[^}]*currentColor/);
 });

@@ -8,6 +8,12 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Changelog
 
+### v0.21.1 — stabilization
+- Fixed the stylized wordmark z so its cut-detail rendering remains visible across browsers.
+- Fixed the `/api/plan` Vercel invocation failure caused by incompatible module initialization.
+- Stopped transient cloud sync errors from persisting after successful recovery or returning after reload.
+- Added regression coverage for wordmark rendering, server runtime compatibility, and sync recovery.
+
 ### v0.21.0 — consolidated, editable grocery lists
 - Combines equivalent ingredients across recipes using deterministic shopping names and compatible unit conversions while preserving recipe-specific ingredient wording.
 - Makes saved grocery rows authoritative, with household-scoped add, edit, delete, and check-off controls.
