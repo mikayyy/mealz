@@ -20,6 +20,7 @@ jobs:
       - run: pnpm migration:validate
       - run: pnpm migration:live
       - run: pnpm typecheck
+      - run: pnpm runtime:smoke
       - run: pnpm test
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser

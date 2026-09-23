@@ -18,7 +18,7 @@ test('detailed ingredient categories collapse into shopping groups',()=>{
 });
 
 test('shopping names remove preparation language without mutating recipe ingredients',()=>{
-  /** @type {Array<{ingredients:Array<Partial<Ingredient>>}>} */
+  /** @type {Array<{ingredients:Array<Partial<import('../types.js').Ingredient>>}>} */
   const meals=[
     {ingredients:[{name:'Garlic, finely grated',quantity:1,unit:'clove',category:'Produce'}]},
     {ingredients:[{name:'minced garlic cloves',quantity:19,unit:'cloves',category:'Produce'}]},
@@ -77,7 +77,7 @@ test('plan rebuild refreshes generated amounts while preserving checked state',(
 });
 
 test('plan rebuild keeps edits, manual additions, and deletion markers',()=>{
-  /** @type {Array<Partial<GroceryItem> & {source:string,source_key:string|null,user_modified:boolean,deleted:boolean}>} */
+  /** @type {Array<Partial<import('../types.js').GroceryItem> & {source:string,source_key:string|null,user_modified:boolean,deleted:boolean}>} */
   const previous=[
     {name:'tomatoes for salsa',quantity:4,unit:'whole',category:'Produce',checked:false,source:'generated',source_key:'tomato::count',user_modified:true,deleted:false},
     {name:'olive oil',quantity:2,unit:'tbsp',category:'Pantry',checked:false,source:'generated',source_key:'olive oil::volume',user_modified:false,deleted:true},

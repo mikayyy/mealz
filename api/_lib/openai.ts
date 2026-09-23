@@ -1,15 +1,29 @@
-export function outputText(response){
+import type { JsonSchema, Telemetry } from '../../types.js';
+
+export function outputText(response: any){
   if(response?.output_text)return response.output_text;
-  return (response?.output||[]).flatMap(x=>x.content||[]).map(c=>c.text||'').join('\n');
+  return (response?.output||[]).flatMap((x: any)=>x.content||[]).map((c: any)=>c.text||'').join('\n');
 }
 
-export function parseLooseJson(text){
+export function parseLooseJson(text: string){
   const s=String(text||'').trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'');
   try{return JSON.parse(s)}catch{
     const a=s.indexOf('{'),b=s.lastIndexOf('}');
     if(a>=0&&b>a)return JSON.parse(s.slice(a,b+1));
     throw new Error('invalid-json');
   }
+}
+
+interface CallOpenAIOptions {
+  prompt: string;
+  schema?: JsonSchema;
+  schemaName?: string;
+  schemaDescription?: string;
+  timeoutMs?: number;
+  model?: string;
+  reasoningEffort?: string;
+  maxOutputTokens?: number;
+  telemetry?: Telemetry;
 }
 
 export async function callOpenAIJson({
@@ -22,12 +36,12 @@ export async function callOpenAIJson({
   reasoningEffort='low',
   maxOutputTokens=4000,
   telemetry
-}){
+}: CallOpenAIOptions){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   const started=Date.now();
   try{
-    const body={
+    const body: Record<string, any>={
       model,
       input:prompt,
       store:false,
@@ -43,6 +57,7 @@ export async function callOpenAIJson({
       body:JSON.stringify(body)
     });
     const raw=await response.json().catch(()=>null);
+
     telemetry?.event('openai_response',{
       model,
       status:response.status,
