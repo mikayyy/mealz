@@ -8,18 +8,25 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Current release
 
-**v0.21.1** (2026-09-22 · `a3007699`) — Stabilization patch for v0.21.0.
+**v0.21.2** (2026-09-23) — Grocery consolidation repair.
 
-- Fixed the stylized wordmark z so its cut-detail rendering remains visible across browsers.
-- Fixed the `/api/plan` Vercel invocation failure caused by incompatible module initialization.
-- Stopped transient cloud sync errors from persisting after successful recovery or returning after reload.
-- Added regression coverage for wordmark rendering, server runtime compatibility, and sync recovery.
+- Repairs legacy generated grocery rows that predate deterministic source keys.
+- Combines preparation variants such as diced and sliced onions without changing recipe wording.
+- Treats small, medium, large, and whole produce as compatible count units.
+- Preserves manual items, household edits, deletion markers, and conservative checked state during repair.
+- Adds unit and browser coverage for repair, reload, and recipe preservation.
 
-No database migration or Vercel configuration change required.
+No database migration or Vercel configuration change required. Legacy lists repair once through the existing authenticated plan-sync path.
 
 See [CHANGELOG.md](CHANGELOG.md) for the complete version history back to v0.1.0.
 
 ## Changelog (recent)
+
+### v0.21.2 — grocery consolidation repair
+- Repairs legacy generated grocery rows once, then persists the consolidated list.
+- Combines compatible preparation and produce-size variants while preserving recipe-specific wording.
+- Preserves manual items, edits, deletion markers, and checked state during repair.
+- Adds regression coverage for legacy rows and reload behavior.
 
 ### v0.21.0 — consolidated, editable grocery lists
 - Combines equivalent ingredients across recipes using deterministic shopping names and compatible unit conversions while preserving recipe-specific ingredient wording.

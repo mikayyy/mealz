@@ -34,6 +34,19 @@ test('shopping names remove preparation language without mutating recipe ingredi
   assert.equal(meals[2].ingredients[0].name,'Diced tomatoes');
 });
 
+test('preparation wording and produce sizes combine into one count without changing recipes',()=>{
+  /** @type {Array<{ingredients:Array<Partial<import('../types.js').Ingredient>>}>} */
+  const meals=[
+    {ingredients:[{name:'Diced onions',quantity:1,unit:'large',category:'Produce'}]},
+    {ingredients:[{name:'sliced onion',quantity:1,unit:'medium',category:'Produce'}]}
+  ];
+  const snapshot=structuredClone(meals);
+  assert.deepEqual(shopping.consolidateGroceries(meals),[
+    {name:'onion',quantity:2,unit:'whole',category:'Produce',source_key:'onion::count'}
+  ]);
+  assert.deepEqual(meals,snapshot);
+});
+
 test('compatible volume and weight units combine across recipes',()=>{
   const groceries=shopping.consolidateGroceries([
     {ingredients:[{name:'olive oil',quantity:1,unit:'tbsp',category:'Pantry'},{name:'chicken breast',quantity:8,unit:'oz',category:'Meat & Seafood'}]},
@@ -73,6 +86,24 @@ test('plan rebuild refreshes generated amounts while preserving checked state',(
   assert.deepEqual(groceries,[{
     name:'tomato',quantity:3,unit:'whole',category:'Produce',source_key:'tomato::count',
     checked:true,source:'generated',user_modified:false,deleted:false
+  }]);
+});
+
+test('plan rebuild consolidates duplicate legacy rows with no source keys',()=>{
+  /** @type {Array<Partial<import('../types.js').GroceryItem> & {source:string,source_key:string|null,user_modified:boolean,deleted:boolean}>} */
+  const previous=[
+    {name:'Fresh garlic, grated',quantity:2,unit:'cloves',category:'Produce',checked:true,source:'generated',source_key:null,user_modified:false,deleted:false},
+    {name:'Garlic',quantity:3,unit:'cloves',category:'Produce',checked:true,source:'generated',source_key:null,user_modified:false,deleted:false},
+    {name:'Garlic, minced',quantity:13,unit:'cloves',category:'Produce',checked:false,source:'generated',source_key:null,user_modified:false,deleted:false}
+  ];
+  const groceries=shopping.reconcileGroceries(previous,[{ingredients:[
+    {name:'Fresh garlic, grated',quantity:2,unit:'cloves',category:'Produce'},
+    {name:'Garlic',quantity:3,unit:'cloves',category:'Produce'},
+    {name:'Garlic, minced',quantity:13,unit:'cloves',category:'Produce'}
+  ]}]);
+  assert.deepEqual(groceries,[{
+    name:'garlic',quantity:2,unit:'bulbs',category:'Produce',source_key:'garlic::garlic-count',
+    checked:false,source:'generated',user_modified:false,deleted:false
   }]);
 });
 

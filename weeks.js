@@ -153,7 +153,7 @@ swapMeal=async function(id){
   return result;
 };
 showSwapChoices=function(original,alts){if(activeSwapEpoch==null)return;baseShowSwapChoices(original,alts);addWeekContext()};
-syncPlan=async function(){const week=planningWeekStart();const result=await baseSyncPlan();weeksOverview=null;weekCache.delete(week);cacheCurrentState(week);return result};
+syncPlan=async function(weekStart=planningWeekStart()){const result=await baseSyncPlan(weekStart);weeksOverview=null;weekCache.delete(weekStart);cacheCurrentState(weekStart);return result};
 
 // The wordmark is a persistent escape hatch back to the week dashboard on every screen.
 const brandHome=document.querySelector('.brand');

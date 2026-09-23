@@ -6,6 +6,25 @@ branch on `https://github.com/mikayyy/mealz`.
 
 ---
 
+## v0.21.2 — 2026-09-23
+
+Grocery consolidation repair.
+
+- Detects generated grocery rows created before deterministic `source_key`
+  values and repairs them once through the existing authenticated plan-sync
+  path.
+- Consolidates preparation variants such as diced and sliced onions while
+  preserving the original wording in each recipe.
+- Treats small, medium, large, and whole produce as compatible count units.
+- Preserves manual items, household edits, deletion markers, and conservative
+  checked state while consolidating duplicate legacy rows.
+- Adds unit and browser regression coverage for repair, reload, and recipe
+  preservation.
+
+No database migration required. No Vercel configuration change required.
+
+---
+
 ## v0.21.1 — 2026-09-22 · `a3007699`
 
 Stabilization patch for v0.21.0.
