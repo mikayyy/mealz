@@ -1,5 +1,3 @@
-/// <reference types="../../types.d.ts" />
-
 /** @type {GroceryCategory[]} */
 const CATEGORIES=['Produce','Meat & Seafood','Dairy & Eggs','Frozen','Bakery','Pantry','Other'];
 

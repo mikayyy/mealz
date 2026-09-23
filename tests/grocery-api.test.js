@@ -2,14 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-let source;
-test.before(async () => {
-  source = await readFile(new URL('../api/plan.ts',import.meta.url),'utf8');
-});
+const source=await readFile(new URL('../api/plan.js',import.meta.url),'utf8');
 
 test('plan handler loads without import.meta in the CommonJS Vercel runtime path',async()=>{
   assert.doesNotMatch(source,/import\.meta|createRequire/);
-  const module=await import('../api/plan.ts');
+  const module=await import('../api/plan.js');
   assert.equal(typeof module.default,'function');
 });
 

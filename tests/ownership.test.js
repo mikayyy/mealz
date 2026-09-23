@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const supabase=readFileSync(new URL('../api/_lib/supabase.ts',import.meta.url),'utf8');
-const auth=readFileSync(new URL('../api/_lib/auth.ts',import.meta.url),'utf8');
-const plan=readFileSync(new URL('../api/plan.ts',import.meta.url),'utf8');
-const profile=readFileSync(new URL('../api/profile.ts',import.meta.url),'utf8');
-const weeks=readFileSync(new URL('../api/weeks.ts',import.meta.url),'utf8');
+const supabase=readFileSync(new URL('../api/_lib/supabase.js',import.meta.url),'utf8');
+const auth=readFileSync(new URL('../api/_lib/auth.js',import.meta.url),'utf8');
+const plan=readFileSync(new URL('../api/plan.js',import.meta.url),'utf8');
+const profile=readFileSync(new URL('../api/profile.js',import.meta.url),'utf8');
+const weeks=readFileSync(new URL('../api/weeks.js',import.meta.url),'utf8');
 const migration=readFileSync(new URL('../migrations/2026-09-15_user_ownership_rls.sql',import.meta.url),'utf8');
 
 test('verified auth exposes the bearer token only after user verification',()=>{

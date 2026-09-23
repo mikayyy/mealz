@@ -3,9 +3,9 @@
   if(typeof module==='object'&&module.exports)module.exports=api;
   else root.MealzShopping=api;
 })(typeof globalThis!=='undefined'?globalThis:this,function(){
-  /** @type {import('./types.js').ShoppingCategory[]} */
+  /** @type {ShoppingCategory[]} */
   const SHOPPING_CATEGORY_ORDER=['Produce','Meat & Dairy','Pantry','Frozen','Misc'];
-  /** @type {Record<string, import('./types.js').ShoppingCategory>} */
+  /** @type {Record<string, ShoppingCategory>} */
   const CATEGORY_MAP={
     'Produce':'Produce',
     'Meat & Seafood':'Meat & Dairy',
@@ -33,7 +33,7 @@
     bulb:'bulb',bulbs:'bulb',head:'bulb',heads:'bulb',
     whole:'whole',each:'whole',count:'whole',piece:'whole',pieces:'whole'
   };
-  /** @param {unknown} category @returns {import('./types.js').ShoppingCategory} */
+  /** @param {unknown} category @returns {ShoppingCategory} */
   function shoppingCategory(category){return CATEGORY_MAP[String(category||'Other')]||'Misc'}
   /** @param {unknown} category @returns {number} */
   function categoryRank(category){const i=SHOPPING_CATEGORY_ORDER.indexOf(shoppingCategory(category));return i<0?SHOPPING_CATEGORY_ORDER.length:i}
@@ -98,15 +98,15 @@
   }
   /** @param {unknown} name @returns {boolean} */
   function isPantryStaple(name){return PANTRY_STAPLES.has(cleanGroceryName(name))}
-  /** @param {Partial<import('./types.js').Ingredient> & {source_key?:string}} item @returns {string} */
+  /** @param {Partial<Ingredient> & {source_key?:string}} item @returns {string} */
   function grocerySourceKey(item){
     const name=cleanGroceryName(item?.name),unit=normalizeUnit(item?.unit),family=unitFamily(name,unit);
     return item?.source_key||`${name}::${family}`;
   }
   /**
    * Consolidate ingredients across recipes without changing recipe-facing data.
-   * @param {Array<{ingredients?: Array<Partial<import('./types.js').Ingredient>>}> | null | undefined} meals
-   * @returns {Array<Partial<import('./types.js').GroceryItem> & {source_key:string}>}
+   * @param {Array<{ingredients?: Array<Partial<Ingredient>>}> | null | undefined} meals
+   * @returns {Array<Partial<GroceryItem> & {source_key:string}>}
    */
   function consolidateGroceries(meals){
     const map=new Map();
@@ -131,8 +131,8 @@
    * Carry household grocery-list choices into a rebuilt plan. Generated amounts
    * refresh unless a household member edited them; manual rows and generated
    * deletion markers survive. Recipe ingredient objects remain untouched.
-   * @param {Array<Partial<import('./types.js').GroceryItem> & {source?:string,source_key?:string,user_modified?:boolean,deleted?:boolean}> | null | undefined} previous
-   * @param {Array<{ingredients?: Array<Partial<import('./types.js').Ingredient>>}> | null | undefined} meals
+   * @param {Array<Partial<GroceryItem> & {source?:string,source_key?:string,user_modified?:boolean,deleted?:boolean}> | null | undefined} previous
+   * @param {Array<{ingredients?: Array<Partial<Ingredient>>}> | null | undefined} meals
    */
   function reconcileGroceries(previous,meals){
     const generated=consolidateGroceries(meals);

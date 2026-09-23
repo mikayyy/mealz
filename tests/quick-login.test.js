@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 
-const api=readFileSync(new URL('../api/quick-login.ts',import.meta.url),'utf8');
+const api=readFileSync(new URL('../api/quick-login.js',import.meta.url),'utf8');
 const client=readFileSync(new URL('../auth-client.js',import.meta.url),'utf8');
 const migration=readFileSync(new URL('../migrations/2026-09-21_trusted_device_login.sql',import.meta.url),'utf8');
 

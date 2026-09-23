@@ -1,6 +1,5 @@
 import {sb} from './supabase.js';
 import {AuthError} from './auth.js';
-/// <reference types="../../types.d.ts" />
 
 // Postgres counters hold across serverless instances and cold starts.
 /**

@@ -6,7 +6,8 @@ import {startTelemetry} from './_lib/telemetry.js';
 
 function nextMonday(){const d=new Date();const day=d.getUTCDay();let add=(8-day)%7;if(add===0)add=7;d.setUTCDate(d.getUTCDate()+add);return d.toISOString().slice(0,10)}
 function ideaCountForDays(n){return n>=5?Math.min(9,n+2):6}
-function scopeClause({householdId}: {householdId: unknown, ownerId?: unknown}){if(!householdId)throw new Error('Household scope is required.');return `&household_id=eq.${enc(householdId)}`}
+/** @param {{householdId: unknown, ownerId?: unknown}} scope */
+function scopeClause({householdId}){if(!householdId)throw new Error('Household scope is required.');return `&household_id=eq.${enc(householdId)}`}
 function profileFromRow(row){if(!row)return null;return {adults:Number(row.adults||0),children:Number(row.children||0),householdSize:Number(row.household_size||5),dietTags:Array.isArray(row.diet_tags)?row.diet_tags:[],equipment:Array.isArray(row.equipment)?row.equipment:[]}}
 
 async function prepareOne({householdId,ownerId=null,profile=null,profileSource='profiles',weekStart,telemetry}){
@@ -34,7 +35,7 @@ async function prepareOne({householdId,ownerId=null,profile=null,profileSource='
   const data=await callOpenAIJson({prompt,schema:ideasSchema(ideaCount),schemaName:'mealz_prepared_ideas',schemaDescription:`Exactly ${ideaCount} lightweight dinner ideas for next week.`,timeoutMs:45000,reasoningEffort:'low',maxOutputTokens:2500,telemetry});
   const ideas=data.ideas;
   await sb(`weekly_plans?week_start=eq.${enc(weekStart)}&status=eq.ideas${clause}`,{method:'DELETE',headers:{Prefer:'return=minimal'}});
-  const planRow: Record<string, any>={week_start:weekStart,household_size:householdSize,cooking_days:days,equipment,use_up:null,notes:null,status:'ideas'};
+  const planRow={week_start:weekStart,household_size:householdSize,cooking_days:days,equipment,use_up:null,notes:null,status:'ideas'};
   if(householdId){planRow.household_id=householdId;if(ownerId)planRow.owner_user_id=ownerId}else if(ownerId)planRow.owner_user_id=ownerId;
   const plans=await sb('weekly_plans',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([planRow])});
   const plan=plans[0];
