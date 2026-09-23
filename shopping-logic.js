@@ -31,7 +31,8 @@
     pound:'lb',pounds:'lb',lb:'lb',lbs:'lb',
     clove:'clove',cloves:'clove',
     bulb:'bulb',bulbs:'bulb',head:'bulb',heads:'bulb',
-    whole:'whole',each:'whole',count:'whole',piece:'whole',pieces:'whole'
+    whole:'whole',each:'whole',count:'whole',piece:'whole',pieces:'whole',
+    small:'whole',medium:'whole',large:'whole'
   };
   /** @param {unknown} category @returns {import('./types.js').ShoppingCategory} */
   function shoppingCategory(category){return CATEGORY_MAP[String(category||'Other')]||'Misc'}
@@ -143,22 +144,30 @@
         if(!item.deleted)manual.push({...item,source:'manual',source_key:null,user_modified:true,deleted:false});
         continue;
       }
-      priorGenerated.set(grocerySourceKey(item),item);
+      const key=grocerySourceKey(item),group=priorGenerated.get(key)||[];
+      group.push(item);priorGenerated.set(key,group);
     }
     const activeKeys=new Set(generated.map(item=>item.source_key));
     for(const item of generated){
-      const prior=priorGenerated.get(item.source_key);
-      if(prior?.deleted){
-        carried.push({...prior,source:'generated',source_key:item.source_key,deleted:true});
-      }else if(prior?.user_modified){
-        carried.push({...prior,source:'generated',source_key:item.source_key,deleted:false});
+      const group=priorGenerated.get(item.source_key)||[];
+      const active=group.filter(prior=>!prior?.deleted);
+      const modified=active.filter(prior=>prior?.user_modified);
+      if(modified.length){
+        const [primary,...extras]=modified;
+        carried.push({...primary,source:'generated',source_key:item.source_key,deleted:false});
+        for(const extra of extras)manual.push({...extra,source:'manual',source_key:null,user_modified:true,deleted:false});
+      }else if(group.length&&active.length===0){
+        carried.push({...group[0],source:'generated',source_key:item.source_key,deleted:true});
       }else{
-        carried.push({...item,checked:!!prior?.checked,source:'generated',user_modified:false,deleted:false});
+        carried.push({...item,checked:active.length>0&&active.every(prior=>!!prior?.checked),source:'generated',user_modified:false,deleted:false});
       }
     }
-    for(const [key,item] of priorGenerated){
-      if(activeKeys.has(key)||!item?.user_modified||item?.deleted)continue;
-      manual.push({...item,source:'manual',source_key:null,user_modified:true,deleted:false});
+    for(const [key,group] of priorGenerated){
+      if(activeKeys.has(key))continue;
+      for(const item of group){
+        if(!item?.user_modified||item?.deleted)continue;
+        manual.push({...item,source:'manual',source_key:null,user_modified:true,deleted:false});
+      }
     }
     return [...carried,...manual].map(({id,weekly_plan_id,created_at,updated_at,...item})=>item);
   }

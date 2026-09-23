@@ -75,3 +75,64 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
     assert.deepEqual(errors,[]);
   }finally{await context.close();await browser.close()}
 });
+
+test('legacy generated rows repair once and remain consolidated after reload',async()=>{
+  const browser=await chromium.launch({headless:true,...(process.env.MEALZ_CHROME_PATH?{executablePath:process.env.MEALZ_CHROME_PATH}:{})});
+  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
+  page.setDefaultTimeout(5000);
+  const weekStart='2026-09-21';
+  let plan={id:'legacy-plan',week_start:weekStart,cooking_days:['Monday','Thursday'],use_up:null,notes:null};
+  const meals=[
+    {id:'meal-1',day:'Monday',title:'Diced onion dinner',ingredients:[{name:'Diced onions',quantity:1,unit:'large',category:'Produce',optional:false}],steps:['Dice the onion.']},
+    {id:'meal-2',day:'Thursday',title:'Sliced onion dinner',ingredients:[{name:'sliced onion',quantity:1,unit:'medium',category:'Produce',optional:false}],steps:['Slice the onion.']}
+  ];
+  const legacy=[
+    {id:'old-1',weekly_plan_id:plan.id,name:'Diced onions',quantity:1,unit:'large',category:'Produce',checked:true,source:'generated',source_key:null,user_modified:false,deleted:false},
+    {id:'old-2',weekly_plan_id:plan.id,name:'sliced onion',quantity:1,unit:'medium',category:'Produce',checked:false,source:'generated',source_key:null,user_modified:false,deleted:false}
+  ];
+  let groceryItems=legacy,repairRequests=0;
+  await page.route('**/*',async route=>{
+    const request=route.request(),url=new URL(request.url());
+    if(url.hostname==='cdn.jsdelivr.net')return route.fulfill({contentType:'text/javascript',body:sdk});
+    if(url.hostname==='fonts.googleapis.com')return route.fulfill({contentType:'text/css',body:''});
+    if(url.hostname==='fonts.gstatic.com')return route.fulfill({status:204,body:''});
+    assert.equal(url.hostname,'mealz.test');
+    if(url.pathname.startsWith('/api/')){
+      if(url.pathname==='/api/auth-config')return route.fulfill({json:{enabled:true,supabaseUrl:'https://auth.test',publishableKey:'public'}});
+      if(url.pathname==='/api/household')return route.fulfill({json:{linked:true,household:{id:'home-1',name:'Test home',role:'owner'},role:'owner'}});
+      if(url.pathname==='/api/profile')return route.fulfill({json:{profile:{adults:2,children:2,dietTags:[],equipment:[]}}});
+      if(url.pathname==='/api/pregenerated-ideas')return route.fulfill({json:{ideas:[]}});
+      if(url.pathname==='/api/weeks')return route.fulfill({json:{current:{weekStart,mealCount:2,meals},next:null,past:[]}});
+      if(url.pathname==='/api/plan'){
+        if(request.method()==='GET')return route.fulfill({json:{plan,meals,groceryItems}});
+        if(request.method()==='POST'){
+          const body=request.postDataJSON();repairRequests++;
+          assert.equal(body.weekStart,weekStart);
+          assert.deepEqual(body.meals.map(meal=>meal.ingredients[0].name),['Diced onions','sliced onion']);
+          plan={...plan,id:'repaired-plan'};
+          groceryItems=[{id:'new-1',weekly_plan_id:plan.id,name:'onion',quantity:2,unit:'whole',category:'Produce',checked:false,source:'generated',source_key:'onion::count',user_modified:false,deleted:false}];
+          return route.fulfill({json:{planId:plan.id,groceryItems}});
+        }
+      }
+      return route.fulfill({json:{}});
+    }
+    const file=url.pathname==='/'?'index.html':url.pathname.slice(1);
+    return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html',body:readFileSync(new URL('../../'+file,import.meta.url))});
+  });
+  try{
+    await page.goto('http://mealz.test');
+    await page.locator('[data-week-action="edit-profile"]').waitFor();
+    await page.evaluate(()=>view('groceries'));
+    await page.getByText('2 whole onion',{exact:true}).waitFor();
+    assert.equal(await page.locator('.grocery-item').count(),1);
+    assert.equal(repairRequests,1);
+    const stored=JSON.parse(await page.evaluate(()=>localStorage.getItem('mealz')));
+    assert.deepEqual(stored.meals.map(meal=>meal.ingredients[0].name),['Diced onions','sliced onion']);
+
+    await page.reload();
+    await page.locator('[data-week-action="edit-profile"]').waitFor();
+    await page.evaluate(()=>view('groceries'));
+    await page.getByText('2 whole onion',{exact:true}).waitFor();
+    assert.equal(repairRequests,1);
+  }finally{await context.close();await browser.close()}
+});
