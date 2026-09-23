@@ -126,7 +126,7 @@ test('legacy generated rows repair once and remain consolidated after reload',as
     await page.getByText('2 whole onion',{exact:true}).waitFor();
     assert.equal(await page.locator('.grocery-item').count(),1);
     assert.equal(repairRequests,1);
-    const stored=JSON.parse(await page.evaluate(()=>localStorage.getItem('mealz')));
+    const stored=JSON.parse(await page.evaluate(()=>localStorage.getItem(Object.keys(localStorage).find(key=>key.startsWith('mealz:shopper@test.com:')))));
     assert.deepEqual(stored.meals.map(meal=>meal.ingredients[0].name),['Diced onions','sliced onion']);
 
     await page.reload();
