@@ -1,3 +1,4 @@
+/// <reference types="../../types.d.ts" />
 /**
  * @param {string} endpoint
  * @param {TelemetryData} [meta]

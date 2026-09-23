@@ -1,19 +1,21 @@
 import {AuthError} from './auth.js';
 import {REQUIRED_TABLES,REQUIRED_COLUMNS} from '../../migrations/manifest.js';
+import type { DatabaseRequestOptions } from '../../types.js';
+
 const PUBLIC_KEY=()=>process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
 export function supabaseConfigured(){return !!(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY)}
-export const enc=value=>encodeURIComponent(String(value));
+export const enc=(value: unknown)=>encodeURIComponent(String(value));
 
-async function request(path,options={},headers={}){
-  const timeoutMs=options.timeoutMs||12000;
+async function request(path: string, options: DatabaseRequestOptions = {}, headers: Record<string, string> = {}){
+  const timeoutMs=Number(options.timeoutMs)||12000;
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
     const {timeoutMs:_,headers:optionHeaders,...rest}=options;
     const response=await fetch(`${process.env.SUPABASE_URL}/rest/v1/${path}`,{
-      ...rest,
+      ...(rest as any),
       signal:controller.signal,
-      headers:{'Content-Type':'application/json',...headers,...(optionHeaders||{})}
+      headers:{'Content-Type':'application/json',...headers,...((optionHeaders as Record<string, string>)||{})}
     });
     const text=await response.text();
     let data=null;
@@ -26,11 +28,11 @@ async function request(path,options={},headers={}){
   }finally{clearTimeout(timer)}
 }
 
-export async function sb(path,options={}){
-  return request(path,options,{apikey:process.env.SUPABASE_SECRET_KEY});
+export async function sb(path: string, options: DatabaseRequestOptions = {}){
+  return request(path,options,{apikey:process.env.SUPABASE_SECRET_KEY as string});
 }
 
-export async function sbAsUser(token,path,options={}){
+export async function sbAsUser(token: string, path: string, options: DatabaseRequestOptions = {}){
   const key=PUBLIC_KEY();
   if(!key||!token)throw new Error('Authenticated database access is not configured.');
   return request(path,options,{apikey:key,Authorization:`Bearer ${token}`});
@@ -65,9 +67,9 @@ export async function householdSchemaReady(){
   return householdCheck.value;
 }
 
-export async function dataDb(auth){
+export async function dataDb(auth: {id: string; token: string}){
   if(!auth?.id||!auth?.token)throw new AuthError();
-  const db=(path,options={})=>sbAsUser(auth.token,path,options);
+  const db=(path: string, options={})=>sbAsUser(auth.token,path,options);
   // Never retry a failed user-scoped query with the service key.
   const memberships=await db(`household_members?select=household_id,role&user_id=eq.${enc(auth.id)}&limit=1`);
   const membership=memberships?.[0];

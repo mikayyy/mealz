@@ -16,7 +16,7 @@ async function savePlan(body,{db,owned,userId,household=false,householdId=null})
   if(priorPlans?.length)priorGroceries=await db(`grocery_items?select=*&weekly_plan_id=eq.${enc(priorPlans[0].id)}&order=created_at.asc`);
   let newPlanId=null;
   try{
-    const planRow={week_start:weekStart,household_size:householdSize||5,cooking_days:days||[],equipment:equipment||[],use_up:useUp||null,notes:notes||null,status:'active'};
+    const planRow: Record<string, any>={week_start:weekStart,household_size:householdSize||5,cooking_days:days||[],equipment:equipment||[],use_up:useUp||null,notes:notes||null,status:'active'};
     if(household&&householdId){planRow.household_id=householdId;if(userId)planRow.owner_user_id=userId}
     else if(owned&&userId)planRow.owner_user_id=userId;
     const plans=await db('weekly_plans',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([planRow])});

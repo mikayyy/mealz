@@ -1,3 +1,4 @@
+/// <reference types="../../types.d.ts" />
 /** @param {unknown} tags @returns {string} */
 export function dietaryInstruction(tags){
   if(!Array.isArray(tags)||!tags.length)return 'No special dietary style is selected.';
