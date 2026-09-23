@@ -1,4 +1,3 @@
-/// <reference types="../../types.d.ts" />
 const DAYS=new Set(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']);
 /**
  * @param {unknown} days

@@ -4,11 +4,11 @@ import {readFileSync} from 'node:fs';
 
 const migration=readFileSync(new URL('../migrations/2026-09-15_households.sql',import.meta.url),'utf8');
 const compatibilityMigration=readFileSync(new URL('../migrations/2026-09-16_household_compatibility.sql',import.meta.url),'utf8');
-const supabase=readFileSync(new URL('../api/_lib/supabase.ts',import.meta.url),'utf8');
-const plan=readFileSync(new URL('../api/plan.ts',import.meta.url),'utf8');
-const profileStore=readFileSync(new URL('../api/_lib/profile-store.ts',import.meta.url),'utf8');
-const householdApi=readFileSync(new URL('../api/household.ts',import.meta.url),'utf8');
-const prep=readFileSync(new URL('../api/prep-next-week.ts',import.meta.url),'utf8');
+const supabase=readFileSync(new URL('../api/_lib/supabase.js',import.meta.url),'utf8');
+const plan=readFileSync(new URL('../api/plan.js',import.meta.url),'utf8');
+const profileStore=readFileSync(new URL('../api/_lib/profile-store.js',import.meta.url),'utf8');
+const householdApi=readFileSync(new URL('../api/household.js',import.meta.url),'utf8');
+const prep=readFileSync(new URL('../api/prep-next-week.js',import.meta.url),'utf8');
 
 test('household migration converts v0.16 user ownership without orphaning data',()=>{
   assert.match(migration,/create table if not exists households/);
