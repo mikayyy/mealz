@@ -111,5 +111,6 @@ Authentication is user-specific and meal data belongs to households. v0.17.0 req
 
 ## Future roadmap notes
 
+- **Next planned feature:** a collapsible grocery Sundries section for recipe-required staples, with week-specific purchase intent. See the [implementation plan](docs/sundries-section-plan.md).
 - **Admin dashboard:** owner-only operational view. Initial scope is seeing who has signed up; later versions may add debugging, account status, delivery/AI diagnostics, and other support tooling.
-- **Roadmap:** see the phased plan covering data integrity, deployment safety, retry safety, operational visibility, AI safety, client-state cleanup, and release hygiene.
+- **Roadmap:** see [docs/roadmap.md](docs/roadmap.md) for planned product work and operating priorities.
