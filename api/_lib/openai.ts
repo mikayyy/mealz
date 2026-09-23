@@ -46,8 +46,7 @@ export async function callOpenAIJson({
       input:prompt,
       store:false,
       max_output_tokens:maxOutputTokens,
-      reasoning:{effort:reasoningEffort},
-      stream:true
+      reasoning:{effort:reasoningEffort}
     };
     if(schema){
       body.text={format:{type:'json_schema',name:schemaName,strict:true,schema,...(schemaDescription?{description:schemaDescription}:{})}};
@@ -57,41 +56,7 @@ export async function callOpenAIJson({
       headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
-    
-    if(!response.ok){
-      const raw=await response.json().catch(()=>null);
-      throw new Error(raw?.error?.message||`OpenAI request failed (${response.status}).`);
-    }
-
-    let raw: any = {};
-    let text = '';
-
-    if (response.body) {
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      while (true) {
-        const {done, value} = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, {stream: true});
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (let line of lines) {
-          line = line.trim();
-          if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-            try {
-              const chunk = JSON.parse(line.slice(6));
-              raw = { ...raw, ...chunk };
-              if (chunk.usage) raw.usage = chunk.usage;
-              if (chunk.status) raw.status = chunk.status;
-              
-              const chunkText = outputText(chunk);
-              if (chunkText) text += chunkText;
-            } catch (e) {}
-          }
-        }
-      }
-    }
+    const raw=await response.json().catch(()=>null);
 
     telemetry?.event('openai_response',{
       model,
@@ -107,7 +72,9 @@ export async function callOpenAIJson({
       reasoning_effort:reasoningEffort,
       max_output_tokens:maxOutputTokens
     });
+    if(!response.ok)throw new Error(raw?.error?.message||`OpenAI request failed (${response.status}).`);
     if(raw?.status==='incomplete')throw new Error(raw?.incomplete_details?.reason==='max_output_tokens'?'openai-output-limit':'openai-incomplete');
+    const text=outputText(raw||{});
     if(!text)throw new Error('openai-empty-response');
     try{return JSON.parse(text)}catch(error){
       if(schema)throw new Error('structured-output-invalid');

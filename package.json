@@ -5,6 +5,7 @@
   "description": "mealz AI meal planning prototype",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
+    "runtime:smoke": "node scripts/vercel-runtime-smoke.js",
     "test": "node --import tsx --test tests/*.test.js",
     "test:browser": "node --import tsx --test tests/browser/*.test.js",
     "release:check": "node scripts/release-check.js",
