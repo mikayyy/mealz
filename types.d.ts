@@ -127,6 +127,7 @@ export interface GroceryItem {
   unit: string | null;
   category: GroceryCategory;
   checked: boolean;
+  needed_this_week: boolean;
   source: 'generated' | 'manual';
   source_key: string | null;
   user_modified: boolean;

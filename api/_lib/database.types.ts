@@ -22,6 +22,7 @@ export type Database = {
           deleted: boolean
           id: string
           name: string
+          needed_this_week: boolean
           quantity: number | null
           source: string
           source_key: string | null
@@ -37,6 +38,7 @@ export type Database = {
           deleted?: boolean
           id?: string
           name: string
+          needed_this_week?: boolean
           quantity?: number | null
           source?: string
           source_key?: string | null
@@ -52,6 +54,7 @@ export type Database = {
           deleted?: boolean
           id?: string
           name?: string
+          needed_this_week?: boolean
           quantity?: number | null
           source?: string
           source_key?: string | null

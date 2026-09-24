@@ -70,10 +70,52 @@ test('incompatible package units remain separate and unknown quantities do not u
   ]);
 });
 
-test('optional ingredients and salt or pepper staples stay off the grocery list',()=>{
-  assert.deepEqual(shopping.consolidateGroceries([{ingredients:[
+test('sundry classification is name-based and excludes ordinary pantry purchases',()=>{
+  for(const name of ['rice','white rice','brown rice','jasmine rice','basmati rice','long-grain rice','long-grain white rice','pearl couscous','Moroccan couscous','neutral cooking oil','olive oil','Kosher salt','black pepper','ground cumin','garlic powder','smoked paprika','red pepper flakes','oregano','cinnamon'])assert.equal(shopping.isSundry(name),true,name);
+  for(const name of ['black beans','pasta','canned tomatoes','broth','breadcrumbs','flour','honey','coconut milk','sesame oil','wild rice','rice vinegar'])assert.equal(shopping.isSundry(name),false,name);
+  assert.equal(shopping.isSundry('finely ground cumin'),true);
+});
+
+test('salt and pepper consolidate without mutating recipes; optional ingredients stay off the list',()=>{
+  /** @type {Array<{ingredients:Array<Partial<import('../types.js').Ingredient>>}>} */
+  const meals=[{ingredients:[
     {name:'kosher salt',quantity:1,unit:'tsp',category:'Pantry'},
     {name:'black pepper',quantity:1,unit:'tsp',category:'Pantry'},
+    {name:'parsley, chopped',quantity:1,unit:'bunch',category:'Produce',optional:true}
+  ]},{ingredients:[{name:'Kosher salt',quantity:1,unit:'tbsp',category:'Pantry'}]}];
+  const original=structuredClone(meals);
+  assert.deepEqual(shopping.consolidateGroceries(meals),[
+    {name:'kosher salt',quantity:1.33,unit:'tbsp',category:'Pantry',source_key:'kosher salt::volume'},
+    {name:'black pepper',quantity:1,unit:'tsp',category:'Pantry',source_key:'black pepper::volume'}
+  ]);
+  assert.deepEqual(meals,original);
+});
+
+test('a new generated sundry starts inactive while the same-week source key carries intent',()=>{
+  /** @type {Array<{ingredients:Array<Partial<import('../types.js').Ingredient>>}>} */
+  const meals=[{ingredients:[{name:'Olive oil',quantity:2,unit:'tbsp',category:'Pantry'}]}];
+  assert.equal(shopping.reconcileGroceries([],meals)[0].needed_this_week,false);
+  assert.deepEqual(shopping.reconcileGroceries([{name:'olive oil',quantity:1,unit:'tbsp',category:'Pantry',source:'generated',source_key:'olive oil::volume',checked:true,needed_this_week:true,user_modified:false,deleted:false}],meals),[
+    {name:'olive oil',quantity:2,unit:'tbsp',category:'Pantry',source_key:'olive oil::volume',checked:true,needed_this_week:true,source:'generated',user_modified:false,deleted:false}
+  ]);
+});
+
+test('modified rows, manual intent, and deleted generated sundries survive reconciliation',()=>{
+  /** @type {Array<Partial<import('../types.js').GroceryItem> & {source:'generated'|'manual',source_key:string|null,user_modified:boolean,deleted:boolean}>} */
+  const prior=[
+    {name:'oil for roast',quantity:4,unit:'tbsp',category:'Pantry',source:'generated',source_key:'olive oil::volume',checked:false,needed_this_week:true,user_modified:true,deleted:false},
+    {name:'black pepper',quantity:1,unit:'tsp',category:'Pantry',source:'generated',source_key:'black pepper::volume',checked:false,needed_this_week:false,user_modified:false,deleted:true},
+    {name:'cumin',quantity:1,unit:'jar',category:'Pantry',source:'manual',source_key:null,checked:true,needed_this_week:true,user_modified:true,deleted:false}
+  ];
+  /** @type {Array<{ingredients:Array<Partial<import('../types.js').Ingredient>>}>} */
+  const meals=[{ingredients:[{name:'olive oil',quantity:1,unit:'tbsp',category:'Pantry'},{name:'black pepper',quantity:2,unit:'tsp',category:'Pantry'}]}];
+  assert.deepEqual(shopping.reconcileGroceries(prior,meals),prior);
+});
+
+test('optional sundries stay off the grocery list',()=>{
+  assert.deepEqual(shopping.consolidateGroceries([{ingredients:[
+    {name:'kosher salt',quantity:1,unit:'tsp',category:'Pantry',optional:true},
+    {name:'black pepper',quantity:1,unit:'tsp',category:'Pantry',optional:true},
     {name:'parsley, chopped',quantity:1,unit:'bunch',category:'Produce',optional:true}
   ]}]),[]);
 });
@@ -85,7 +127,7 @@ test('plan rebuild refreshes generated amounts while preserving checked state',(
   }],[{ingredients:[{name:'Diced tomatoes',quantity:3,unit:'whole',category:'Produce'}]}]);
   assert.deepEqual(groceries,[{
     name:'tomato',quantity:3,unit:'whole',category:'Produce',source_key:'tomato::count',
-    checked:true,source:'generated',user_modified:false,deleted:false
+    checked:true,needed_this_week:false,source:'generated',user_modified:false,deleted:false
   }]);
 });
 
@@ -103,7 +145,7 @@ test('plan rebuild consolidates duplicate legacy rows with no source keys',()=>{
   ]}]);
   assert.deepEqual(groceries,[{
     name:'garlic',quantity:2,unit:'bulbs',category:'Produce',source_key:'garlic::garlic-count',
-    checked:false,source:'generated',user_modified:false,deleted:false
+    checked:false,needed_this_week:false,source:'generated',user_modified:false,deleted:false
   }]);
 });
 

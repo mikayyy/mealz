@@ -37,14 +37,19 @@ async function savePlan(body,{db,owned,userId,household=false,householdId=null})
   }catch(error){if(newPlanId){try{await db(`weekly_plans?id=eq.${enc(newPlanId)}`,{method:'DELETE',headers:{Prefer:'return=minimal'}})}catch{}}throw error}
 }
 async function updateGrocery(body,db){
-  const {planId,itemId}=body;if(!planId||!itemId)throw new Error('Missing grocery item information.');
-  const changes=body.action==='toggle'?{checked:!!body.checked,updated_at:new Date().toISOString()}:{...groceryFields(body),user_modified:true,deleted:false,updated_at:new Date().toISOString()};
+  const {planId,itemId}=body;if(typeof planId!=='string'||!planId.trim()||typeof itemId!=='string'||!itemId.trim())throw new Error('Missing grocery item information.');
+  if(body.action==='set_needed'&&typeof body.needed!=='boolean')throw new Error('Needed must be true or false.');
+  const changes=body.action==='set_needed'
+    ?{needed_this_week:body.needed,...(body.needed?{}:{checked:false}),updated_at:new Date().toISOString()}
+    :body.action==='toggle'?{checked:!!body.checked,updated_at:new Date().toISOString()}
+    :{...groceryFields(body),user_modified:true,deleted:false,updated_at:new Date().toISOString()};
   const rows=await db(`grocery_items?id=eq.${enc(itemId)}&weekly_plan_id=eq.${enc(planId)}&deleted=eq.false`,{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(changes)});
   if(!rows?.length)throw new Error('Grocery item was not found.');return {item:rows[0]};
 }
 async function addGrocery(body,db){
   const {planId}=body;if(!planId)throw new Error('Missing weekly plan information.');
-  const rows=await db('grocery_items',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{...groceryFields(body),weekly_plan_id:planId,checked:false,source:'manual',source_key:null,user_modified:true,deleted:false}])});
+  const fields=groceryFields(body);
+  const rows=await db('grocery_items',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify([{...fields,weekly_plan_id:planId,checked:false,needed_this_week:shopping.isSundry(fields.name),source:'manual',source_key:null,user_modified:true,deleted:false}])});
   return {item:rows[0]};
 }
 async function deleteGrocery(body,db){
@@ -65,7 +70,7 @@ export default async function handler(req,res){
       const data=await readPlan(weekStart,db);telemetry.finish(200,{week_start:weekStart||data?.plan?.week_start||null,explicit_week:!!weekStart,owned,household});return res.status(200).json(data||{plan:null,meals:[],groceryItems:[]});
     }
     if(req.method==='POST'){const result=await savePlan(req.body||{},{db,owned,userId:auth.id,household,householdId});telemetry.finish(200,{week_start:req.body?.weekStart||null,meal_count:req.body?.meals?.length||0,replace_strategy:'create_then_swap',owned,household});return res.status(200).json(result)}
-    if(req.method==='PATCH'){const result=await updateGrocery(req.body||{},db);telemetry.finish(200,{operation:req.body?.action==='toggle'?'grocery_checked':'grocery_updated',owned,household});return res.status(200).json(result)}
+    if(req.method==='PATCH'){const result=await updateGrocery(req.body||{},db);telemetry.finish(200,{operation:req.body?.action==='toggle'?'grocery_checked':req.body?.action==='set_needed'?'grocery_needed':'grocery_updated',owned,household});return res.status(200).json(result)}
     if(req.method==='PUT'){const result=await addGrocery(req.body||{},db);telemetry.finish(201,{operation:'grocery_added',owned,household});return res.status(201).json(result)}
     if(req.method==='DELETE'){const result=await deleteGrocery(req.body||{},db);telemetry.finish(200,{operation:'grocery_deleted',owned,household});return res.status(200).json(result)}
     telemetry.finish(405);return res.status(405).json({error:'Method not allowed'});

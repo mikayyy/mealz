@@ -1,6 +1,7 @@
 # mealz account rollout and trusted-device login
 
-Current baseline: **v0.21.1** (`a3007699`). Follow the steps below for a fresh
+Current production baseline: **v0.21.2** (`b0070b3`). v0.22.0 is a release
+candidate pending migration and deployment. Follow the steps below for a fresh
 installation or when applying new migrations to an existing deployment.
 
 ## Required deployment order
@@ -16,8 +17,9 @@ The application fails closed when required migrations are absent.
    4. `migrations/2026-09-16_household_compatibility.sql`
    5. `migrations/2026-09-17_account_security.sql`
    6. `migrations/2026-09-21_trusted_device_login.sql`
-   7. `migrations/20260921194345_supabase_hardening_v0202.sql`
-   8. `migrations/20260921212102_editable_groceries_v0210.sql`
+    7. `migrations/20260921194345_supabase_hardening_v0202.sql`
+    8. `migrations/20260921212102_editable_groceries_v0210.sql`
+    9. `migrations/20260924161500_sundry_intent_v0220.sql`
 2. Confirm Email authentication is enabled in Supabase. Keep email confirmation
    enabled. Set Site URL to `https://mealz-pink.vercel.app`, and allow that URL
    plus `https://mealz-pink.vercel.app/?reset=1` in Redirect URLs. If testing a
@@ -29,9 +31,9 @@ The application fails closed when required migrations are absent.
 4. After migration success and CI success (`pnpm migration:validate` green),
    deploy the application. Do not deploy without the migrations: AI and household
    writes deliberately return a temporary-unavailable error when the rate-limit
-   RPC is missing. A missing or incomplete schema fails closed: `householdSchemaReady()`
-   probes for required tables, columns, and the grocery editable-list additions
-   before any household data is accessed.
+    RPC is missing. `householdSchemaReady()` probes required tables and columns,
+    including `needed_this_week`, before scheduled household preparation. Grocery
+    requests fail if the required column is missing.
 5. Reopen mealz. Existing signed-in users go straight to their household. In
    **Account → Set or change password**, set a password for future sign-ins. A
    signed-out existing user can choose **Forgot or need a password?** using their
@@ -74,6 +76,7 @@ pnpm migration:validate     # schema preflight: applies all migrations to PGlite
 pnpm migration:live         # live preflight: probes required tables/columns in Supabase; skips if
                              # no SUPABASE_URL/SUPABASE_SECRET_KEY configured (exit 0)
 pnpm typecheck
+pnpm runtime:smoke
 pnpm test
 pnpm exec playwright install chromium
 pnpm test:browser
@@ -81,21 +84,26 @@ pnpm test:browser
 
 The `migration:validate` command (`node scripts/migrate-validate.js`) applies all
 migrations from `migrations/manifest.js` in order to an in-process PGlite
-database and checks 86 structural requirements. It requires no live credentials and
+database and checks 89 structural requirements. It requires no live credentials and
 runs before every unit test run in CI.
 
 The `migration:live` command (`node scripts/migrate-live.js`) probes the live
 Supabase database for every required table and column listed in the manifest.
 It is read-only (SELECT probes only). If `SUPABASE_URL` or `SUPABASE_SECRET_KEY`
 are absent it prints `skipped: no credentials` and exits 0 — it never fails a
-run just because secrets are missing. The `migration:apply` command
+run just because secrets are missing. Verify its output is not `skipped: no
+credentials`, and inspect the `needed_this_week` column and backfill in the
+Supabase SQL Editor. The `migration:apply` command
 (`node scripts/migrate-apply.js`) prints the ordered SQL to stdout for manual
 application in the Supabase SQL Editor; it does not execute SQL itself.
 
 Pre-deploy sequence:
 
-1. `pnpm migration:apply` — review and copy the ordered SQL
-2. Apply the SQL in the Supabase SQL Editor
+1. For an existing v0.21.2 production database, review and apply only
+   `migrations/20260924161500_sundry_intent_v0220.sql` in the Supabase SQL Editor.
+   `pnpm migration:apply` prints **all** migrations, not just the pending one.
+2. Confirm the column and missing active-plan salt/pepper backfill without
+   changing existing or deleted grocery rows; run security/performance advisors.
 3. `pnpm migration:live` — confirm all required objects are present
 4. Deploy the application
 
@@ -103,7 +111,7 @@ Database tests use embedded Postgres with fixtures for the Supabase roles/auth s
 
 Production smoke checks after deployment:
 
-1. Existing account: verify Profile, This Week/Past Weeks, recipes, groceries, edit/save, refresh persistence, and password setup.
+1. Existing account: verify Profile, This Week/Past Weeks, recipes, groceries, edit/save, refresh persistence, and password setup. Check Sundries states, a same-week rebuild, a different week, and mobile layout.
 2. New account: confirm email, create household, finish Profile, sign out/in, and confirm it reopens without repeating onboarding.
 3. Invited account: join with the code, confirm shared Profile/meals, save a harmless preference and verify it from the owner's account. A bad code should show an error while keeping the form usable.
 4. Separate household: confirm neither family's meals/Profile appear in the other. Sign out and change accounts in the same browser to check local state isolation.

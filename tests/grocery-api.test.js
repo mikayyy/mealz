@@ -25,3 +25,11 @@ test('saved grocery rows are authoritative and hidden deletion markers stay inte
   assert.match(source,/shopping\.reconcileGroceries\(priorGroceries,meals\)/);
   assert.doesNotMatch(source,/name=eq\.\$\{enc\(name\)\}/);
 });
+
+test('purchase intent uses the user-scoped grocery mutation and clears purchased state atomically',()=>{
+  assert.match(source,/action==='set_needed'&&typeof body\.needed!=='boolean'/);
+  assert.match(source,/needed_this_week:body\.needed,\.\.\.\(body\.needed\?\{\}:\{checked:false\}\)/);
+  assert.match(source,/grocery_items\?id=eq\.\$\{enc\(itemId\)\}&weekly_plan_id=eq\.\$\{enc\(planId\)\}&deleted=eq\.false/);
+  assert.match(source,/if\(!rows\?\.length\)throw new Error\('Grocery item was not found\.'\)/);
+  assert.match(source,/needed_this_week:shopping\.isSundry\(fields\.name\)/);
+});

@@ -6,6 +6,20 @@ branch on `https://github.com/mikayyy/mealz`.
 
 ---
 
+## v0.22.0 — pending deployment
+
+Grocery sundries and weekly purchase intent.
+
+- Adds a collapsible Sundries section for recipe-required rice, couscous, cooking oils, salt, pepper, and a conservative spice catalog without moving other pantry purchases.
+- Defaults sundries to "available at home" as an assumption rather than tracked inventory; marking "buy" reveals the purchased checkbox.
+- Preserves purchase intent across reload and same-week rebuilds while keeping different weeks and households separate.
+- Adds an idempotent migration that backfills only missing generated salt/pepper rows in active saved plans, preserving existing rows and recipe wording.
+- Adds migration, unit, database isolation, and browser regression coverage.
+
+**Before deploying:** apply `migrations/20260924161500_sundry_intent_v0220.sql` in Supabase and verify it against a credentialed live database.
+
+---
+
 ## v0.21.2 — 2026-09-23
 
 Grocery consolidation repair.

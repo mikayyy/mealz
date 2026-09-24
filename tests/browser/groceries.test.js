@@ -14,9 +14,14 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
   const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();
   page.setDefaultTimeout(5000);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
-  const weekStart='2026-09-21',plan={id:'plan-1',week_start:weekStart,cooking_days:['Monday'],use_up:null,notes:null};
-  const meals=[{id:'meal-1',day:'Monday',title:'Tomato pasta',description:'A fast pasta.',servings:4,total_minutes:20,difficulty:'Easy',tags:[],kid_note:null,ingredients:[{name:'Diced tomatoes',quantity:2,unit:'cans',category:'Pantry',optional:false}],steps:['Cook the pasta.']}];
-  let groceries=[{id:'g-1',weekly_plan_id:plan.id,name:'tomato',quantity:2,unit:'cans',category:'Pantry',checked:false,source:'generated',source_key:'tomato::cans',user_modified:false,deleted:false}];
+  const weekStart='2026-09-21';let plan={id:'plan-1',week_start:weekStart,cooking_days:['Monday'],use_up:null,notes:null};
+  const meals=[{id:'meal-1',day:'Monday',title:'Tomato pasta',description:'A fast pasta.',servings:4,total_minutes:20,difficulty:'Easy',tags:[],kid_note:null,ingredients:[{name:'Diced tomatoes',quantity:2,unit:'cans',category:'Pantry',optional:false},{name:'Long-grain white rice',quantity:1,unit:'cup',category:'Pantry',optional:false},{name:'Kosher salt',quantity:1,unit:'tsp',category:'Pantry',optional:false}],steps:['Cook the pasta.']}];
+  let groceries=[
+    {id:'g-1',weekly_plan_id:plan.id,name:'tomato',quantity:2,unit:'cans',category:'Pantry',checked:false,needed_this_week:false,source:'generated',source_key:'tomato::cans',user_modified:false,deleted:false},
+    {id:'g-rice',weekly_plan_id:plan.id,name:'long-grain white rice',quantity:1,unit:'cup',category:'Pantry',checked:false,needed_this_week:false,source:'generated',source_key:'long-grain white rice::volume',user_modified:false,deleted:false},
+    {id:'g-salt',weekly_plan_id:plan.id,name:'kosher salt',quantity:1,unit:'tsp',category:'Pantry',checked:false,needed_this_week:false,source:'generated',source_key:'kosher salt::volume',user_modified:false,deleted:false}
+  ];
+  let failNeeded=false;
   const requests=[];
   await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());
@@ -33,12 +38,20 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
       if(url.pathname==='/api/plan'){
         requests.push({method:request.method(),body:request.postDataJSON?.()});
         if(request.method()==='GET')return route.fulfill({json:{plan,meals,groceryItems:groceries.filter(item=>!item.deleted)}});
+        if(request.method()==='POST'){
+          assert.equal(request.postDataJSON().weekStart,weekStart);
+          assert.equal(request.postDataJSON().meals[0].ingredients[1].name,'Long-grain white rice');
+          plan={...plan,id:'plan-rebuilt'};
+          groceries=groceries.filter(item=>!item.deleted).map((item,index)=>({...item,id:`rebuilt-${index}`,weekly_plan_id:plan.id}));
+          return route.fulfill({json:{planId:plan.id,groceryItems:groceries}});
+        }
         const body=request.postDataJSON();
         if(request.method()==='PUT'){
-          const item={...body,id:'g-2',weekly_plan_id:plan.id,checked:false,source:'manual',source_key:null,user_modified:true,deleted:false};groceries.push(item);return route.fulfill({status:201,json:{item}});
+          const item={...body,id:`g-${groceries.length+1}`,weekly_plan_id:plan.id,checked:false,needed_this_week:body.name==='cumin',source:'manual',source_key:null,user_modified:true,deleted:false};groceries.push(item);return route.fulfill({status:201,json:{item}});
         }
         if(request.method()==='PATCH'){
-          const index=groceries.findIndex(item=>item.id===body.itemId);groceries[index]={...groceries[index],...(body.action==='toggle'?{checked:body.checked}:{name:body.name,quantity:body.quantity,unit:body.unit,category:body.category,user_modified:true})};return route.fulfill({json:{item:groceries[index]}});
+          if(body.action==='set_needed'&&failNeeded){failNeeded=false;return route.fulfill({status:500,json:{error:'Temporary sync failure'}})}
+          const index=groceries.findIndex(item=>item.id===body.itemId);groceries[index]={...groceries[index],...(body.action==='toggle'?{checked:body.checked}:body.action==='set_needed'?{needed_this_week:body.needed,...(body.needed?{}:{checked:false})}:{name:body.name,quantity:body.quantity,unit:body.unit,category:body.category,user_modified:true})};return route.fulfill({json:{item:groceries[index]}});
         }
         if(request.method()==='DELETE'){groceries.find(item=>item.id===body.itemId).deleted=true;return route.fulfill({json:{ok:true}})}
       }
@@ -53,9 +66,37 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
     catch(error){throw new Error(`mealz did not boot: ${JSON.stringify({errors,body:await page.locator('body').innerText(),html:await page.locator('#app').innerHTML()})}`,{cause:error})}
     await page.evaluate(()=>view('groceries'));
     await page.getByText('2 cans tomato',{exact:true}).waitFor();
-    await page.locator('[data-grocery-action="toggle"]').check();
+    const disclosure=page.locator('.grocery-sundries');
+    assert.equal(await disclosure.evaluate(el=>el instanceof HTMLDetailsElement&&el.open),false);
+    assert.match(await disclosure.locator('summary').innerText(),/2 used this week · 0 to buy/);
+    assert.equal(await page.locator('.category').first().evaluate(el=>el.classList.contains('grocery-sundries')),true);
+    await disclosure.locator('summary').click();
+    const rice=page.locator('.grocery-item').filter({hasText:'long-grain white rice'});
+    assert.equal(await rice.locator('input[type=checkbox]').count(),0);
+    assert.equal(await rice.locator('[data-grocery-action="set-needed"]').getAttribute('aria-pressed'),'false');
+    failNeeded=true;
+    await rice.locator('[data-grocery-action="set-needed"]').click();
+    await page.getByText('Temporary sync failure').waitFor();
+    assert.equal(await rice.locator('input[type=checkbox]').count(),0);
+    await rice.locator('[data-grocery-action="set-needed"]').click();
+    await rice.locator('input[type=checkbox]').waitFor();
+    assert.equal(await rice.locator('[data-grocery-action="set-needed"]').getAttribute('aria-pressed'),'true');
+    assert.match(await disclosure.locator('summary').innerText(),/2 used this week · 1 to buy/);
+    await rice.locator('input[type=checkbox]').check();
+    await page.waitForFunction(()=>document.querySelector('.grocery-sundries summary')?.textContent?.includes('0 to buy'));
+    await rice.locator('[data-grocery-action="set-needed"]').click();
+    await page.waitForFunction(()=>document.querySelector('.grocery-item [data-grocery-action="set-needed"]')?.getAttribute('aria-pressed')==='false');
+    assert.equal(groceries.find(item=>item.id==='g-rice').checked,false);
+    await rice.locator('[data-grocery-action="set-needed"]').click();
+    await rice.locator('input[type=checkbox]').waitFor();
+    await page.reload();
+    await page.locator('[data-week-action="edit-profile"]').waitFor();
+    await page.evaluate(()=>view('groceries'));
+    assert.equal(await page.locator('.grocery-sundries').evaluate(el=>el instanceof HTMLDetailsElement&&el.open),true);
+    assert.equal(await rice.locator('[data-grocery-action="set-needed"]').getAttribute('aria-pressed'),'true');
+    await page.getByRole('checkbox',{name:'purchased tomato'}).check();
     assert.equal(requests.at(-1).body.itemId,'g-1');
-    await page.locator('[data-grocery-action="edit"]').click();
+    await page.getByRole('button',{name:'edit tomato'}).click();
     await page.locator('.grocery-edit-form input[name="name"]').fill('tomatoes for salsa');
     await page.locator('.grocery-edit-form button[type="submit"]').click();
     await page.getByText('2 cans tomatoes for salsa',{exact:true}).waitFor();
@@ -66,12 +107,25 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
     await page.locator('.grocery-add-form select[name="category"]').selectOption({label:'Other'});
     await page.locator('.grocery-add-form button[type="submit"]').click();
     await page.getByText('2 packs sparkling water',{exact:true}).waitFor();
+    await page.locator('[data-grocery-action="show-add"]').click();
+    await page.locator('.grocery-add-form input[name="name"]').fill('cumin');
+    await page.locator('.grocery-add-form button[type="submit"]').click();
+    assert.equal(await page.locator('.grocery-sundries .grocery-item').filter({hasText:'cumin'}).locator('[data-grocery-action="set-needed"]').getAttribute('aria-pressed'),'true');
     page.once('dialog',dialog=>dialog.accept());
     await page.locator('.grocery-item').filter({hasText:'sparkling water'}).locator('[data-grocery-action="delete"]').click();
     await page.getByText('2 packs sparkling water',{exact:true}).waitFor({state:'detached'});
+    await page.evaluate(()=>syncPlan('2026-09-21'));
+    await page.evaluate(()=>view('groceries'));
+    assert.equal(await rice.locator('[data-grocery-action="set-needed"]').getAttribute('aria-pressed'),'true');
+    assert.equal(groceries.find(item=>item.name==='long-grain white rice').needed_this_week,true);
+    await page.evaluate(()=>{applyWeekData('2026-09-28',{plan:{id:'another-week',week_start:'2026-09-28',cooking_days:['Monday']},meals:s.meals,groceryItems:[{id:'other-rice',weekly_plan_id:'another-week',name:'long-grain white rice',quantity:1,unit:'cup',category:'Pantry',checked:false,needed_this_week:false,source:'generated',source_key:'long-grain white rice::volume',user_modified:false,deleted:false}]});view('groceries')});
+    assert.equal(await page.locator('.grocery-sundries').evaluate(el=>el instanceof HTMLDetailsElement&&el.open),false);
+    assert.match(await page.locator('.grocery-sundries summary').innerText(),/0 to buy/);
+    assert.equal(await page.locator('.grocery-sundries [data-grocery-action="set-needed"]').getAttribute('aria-pressed'),'false');
     await page.evaluate(()=>view('meals'));
     await page.locator('.view-recipe').click();
     assert.match(await page.locator('.recipe-list').textContent(),/2 cans Diced tomatoes/);
+    assert.match(await page.locator('.recipe-list').textContent(),/Long-grain white rice/);
     assert.deepEqual(errors,[]);
   }finally{await context.close();await browser.close()}
 });

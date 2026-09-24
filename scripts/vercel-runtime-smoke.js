@@ -21,7 +21,7 @@ async function main(){
       }
     };
     collectTypescript(join(projectRoot,'api'));
-    execFileSync(join(projectRoot,'node_modules','.bin','tsc'),[
+    execFileSync(process.execPath,[join(projectRoot,'node_modules','typescript','bin','tsc'),
       '--ignoreConfig',
       '--outDir',tempRoot,
       '--rootDir',projectRoot,
@@ -58,7 +58,7 @@ async function main(){
     assert.equal(response.headers['Cache-Control'],'no-store');
     assert.equal(typeof response.body?.enabled,'boolean');
 
-    for(const file of apiFiles.filter(file=>!file.includes('/_lib/'))){
+    for(const file of apiFiles.filter(file=>!file.split(/[\\/]/).includes('_lib'))){
       const runtimeFile=join(tempRoot,file.replace(/\.ts$/,'.js'));
       const route=(await import(pathToFileURL(runtimeFile).href)).default;
       assert.equal(typeof route,'function',`${file} did not export a function`);
