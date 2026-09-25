@@ -41,7 +41,7 @@ async function main() {
   const failures = [];
 
   for (const table of REQUIRED_TABLES) {
-    const status = await probe(`${table}?select=id&limit=0`);
+    const status = await probe(`${table}?select=*&limit=0`);
     if (status !== 200) failures.push(`table ${table} (HTTP ${status})`);
   }
 

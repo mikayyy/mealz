@@ -76,6 +76,17 @@ test('live schema gate fails on missing columns and invalid credentials', () => 
   assert.match(healthy.stdout,/All required schema objects present/);
 });
 
+test('live schema gate handles tables without an id column', () => {
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e',
+    `globalThis.fetch=async(url)=>{const target=new URL(url);return {status:['household_members','mealz_rate_limits'].some(table=>target.pathname.endsWith('/'+table))&&target.searchParams.get('select')==='id'?400:200}};await import('./scripts/migrate-live.js')`], {
+    cwd: root,
+    env: {...process.env, SUPABASE_URL:'https://schema-gate.invalid', SUPABASE_SECRET_KEY:'test-only-key'},
+    encoding:'utf8',
+  });
+  assert.equal(result.status,0,result.stderr);
+  assert.match(result.stdout,/All required schema objects present/);
+});
+
 test('migration manifest: all migrations apply in order without errors', async () => {
   const db = await makeDb();
   try {
