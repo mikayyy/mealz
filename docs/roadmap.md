@@ -1,21 +1,21 @@
 # Mealz roadmap
 
-**Last updated:** 2026-09-24
+**Last updated:** 2026-09-25
 
-This roadmap records release candidates and later product directions. Release
+This roadmap records recent releases and later product directions. Release
 numbers are proposed sequencing, not deployment promises.
 
 ## Current baseline
 
-The production baseline is v0.21.2. It includes household accounts, week-first
+The production baseline is v0.22.0. It includes household accounts, week-first
 planning, AI-generated meals and recipes, editable consolidated grocery lists,
-grocery normalization, and legacy grocery repair.
+grocery normalization, legacy grocery repair, and weekly sundry purchase intent.
 
-## Release candidate
+## Recent release
 
-### v0.22.0 — grocery sundries (pending production migration and deployment)
+### v0.22.0 — grocery sundries (deployed 2026-09-25)
 
-Add a collapsible Sundries section above the ordinary grocery list for
+Added a collapsible Sundries section above the ordinary grocery list for
 recipe-required staples such as rice, couscous, cooking oils, salt, pepper, and
 common spices.
 

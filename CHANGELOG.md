@@ -6,7 +6,7 @@ branch on `https://github.com/mikayyy/mealz`.
 
 ---
 
-## v0.22.0 — pending deployment
+## v0.22.0 — 2026-09-25 · `00bf47e`
 
 Grocery sundries and weekly purchase intent.
 
@@ -16,7 +16,7 @@ Grocery sundries and weekly purchase intent.
 - Adds an idempotent migration that backfills only missing generated salt/pepper rows in active saved plans, preserving existing rows and recipe wording.
 - Adds migration, unit, database isolation, and browser regression coverage.
 
-**Before deploying:** apply `migrations/20260924161500_sundry_intent_v0220.sql` in Supabase and verify it against a credentialed live database.
+The Supabase migration was applied and verified with the credentialed live schema gate before deployment. Vercel preview, CI, and authenticated production grocery flows passed.
 
 ---
 

@@ -1,8 +1,8 @@
 # Grocery sundries section plan
 
-**Status:** implemented locally; pending production migration and deployment
-**Proposed release:** v0.22.0  
-**Last reviewed:** 2026-09-24
+**Status:** deployed 2026-09-25
+**Release:** v0.22.0
+**Last reviewed:** 2026-09-25
 
 ## Objective
 
