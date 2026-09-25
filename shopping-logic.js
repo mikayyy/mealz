@@ -17,7 +17,14 @@
     'Other':'Misc',
     'Misc':'Misc'
   };
-  const PANTRY_STAPLES=new Set(['salt','table salt','kosher salt','sea salt','pepper','black pepper','ground black pepper']);
+  const SUNDRIES=new Set([
+    'rice','white rice','brown rice','jasmine rice','basmati rice','long-grain rice','long-grain white rice','long-grain brown rice',
+    'couscous','regular couscous','pearl couscous','moroccan couscous',
+    'olive oil','avocado oil','vegetable oil','canola oil','neutral cooking oil',
+    'salt','table salt','kosher salt','sea salt','pepper','black pepper','ground black pepper',
+    'garlic powder','onion powder','cumin','ground cumin','paprika','smoked paprika','chili powder',
+    'cayenne','cayenne pepper','red pepper flake','oregano','coriander','ground coriander','turmeric','cinnamon'
+  ]);
   const PREPARATION_WORDS=new Set([
     'chopped','diced','minced','sliced','grated','shredded','peeled','seeded',
     'cored','cubed','julienned','crushed','drained','rinsed','thawed','softened',
@@ -98,7 +105,7 @@
     return {quantity:rounded(quantity),unit:family==='unspecified'?null:family};
   }
   /** @param {unknown} name @returns {boolean} */
-  function isPantryStaple(name){return PANTRY_STAPLES.has(cleanGroceryName(name))}
+  function isSundry(name){return SUNDRIES.has(cleanGroceryName(name))}
   /** @param {Partial<import('./types.js').Ingredient> & {source_key?:string}} item @returns {string} */
   function grocerySourceKey(item){
     const name=cleanGroceryName(item?.name),unit=normalizeUnit(item?.unit),family=unitFamily(name,unit);
@@ -112,7 +119,7 @@
   function consolidateGroceries(meals){
     const map=new Map();
     for(const meal of meals||[])for(const ingredient of meal?.ingredients||[]){
-      if(ingredient?.optional||isPantryStaple(ingredient?.name))continue;
+      if(ingredient?.optional)continue;
       const name=cleanGroceryName(ingredient?.name);if(!name)continue;
       const unit=normalizeUnit(ingredient?.unit),family=unitFamily(name,unit),source_key=`${name}::${family}`;
       const rawQuantity=numericQuantity(ingredient?.quantity);
@@ -159,7 +166,7 @@
       }else if(group.length&&active.length===0){
         carried.push({...group[0],source:'generated',source_key:item.source_key,deleted:true});
       }else{
-        carried.push({...item,checked:active.length>0&&active.every(prior=>!!prior?.checked),source:'generated',user_modified:false,deleted:false});
+        carried.push({...item,checked:active.length>0&&active.every(prior=>!!prior?.checked),needed_this_week:active.some(prior=>!!prior?.needed_this_week),source:'generated',user_modified:false,deleted:false});
       }
     }
     for(const [key,group] of priorGenerated){
@@ -171,5 +178,5 @@
     }
     return [...carried,...manual].map(({id,weekly_plan_id,created_at,updated_at,...item})=>item);
   }
-  return {SHOPPING_CATEGORY_ORDER,shoppingCategory,categoryRank,normalizeUnit,cleanGroceryName,grocerySourceKey,consolidateGroceries,reconcileGroceries};
+  return {SHOPPING_CATEGORY_ORDER,shoppingCategory,categoryRank,normalizeUnit,cleanGroceryName,isSundry,grocerySourceKey,consolidateGroceries,reconcileGroceries};
 });

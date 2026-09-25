@@ -12,6 +12,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -55,6 +56,35 @@ test('migration manifest: manifest.js is a valid ES module with expected exports
   assert.ok(typeof mod.REQUIRED_COLUMNS === 'object');
   assert.ok(Array.isArray(mod.REQUIRED_INDEXES));
   assert.ok(Array.isArray(mod.REQUIRED_FUNCTIONS));
+});
+
+test('live schema gate fails on missing columns and invalid credentials', () => {
+  /** @param {number} status */
+  const run = (status) => spawnSync(process.execPath, ['--input-type=module', '-e',
+    `globalThis.fetch=async()=>({status:${status}});await import('./scripts/migrate-live.js')`], {
+    cwd: root,
+    env: {...process.env, SUPABASE_URL:'https://schema-gate.invalid', SUPABASE_SECRET_KEY:'test-only-key'},
+    encoding:'utf8',
+  });
+  for (const status of [400,401,404]) {
+    const result=run(status);
+    assert.equal(result.status,1,`HTTP ${status} must fail the live gate`);
+    assert.match(result.stderr,new RegExp(`HTTP ${status}`));
+  }
+  const healthy=run(200);
+  assert.equal(healthy.status,0);
+  assert.match(healthy.stdout,/All required schema objects present/);
+});
+
+test('live schema gate handles tables without an id column', () => {
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e',
+    `globalThis.fetch=async(url)=>{const target=new URL(url);return {status:['household_members','mealz_rate_limits'].some(table=>target.pathname.endsWith('/'+table))&&target.searchParams.get('select')==='id'?400:200}};await import('./scripts/migrate-live.js')`], {
+    cwd: root,
+    env: {...process.env, SUPABASE_URL:'https://schema-gate.invalid', SUPABASE_SECRET_KEY:'test-only-key'},
+    encoding:'utf8',
+  });
+  assert.equal(result.status,0,result.stderr);
+  assert.match(result.stdout,/All required schema objects present/);
 });
 
 test('migration manifest: all migrations apply in order without errors', async () => {
@@ -248,6 +278,7 @@ test('migration manifest: key migrations are idempotent', async () => {
       '2026-09-17_account_security.sql',
       '20260921194345_supabase_hardening_v0202.sql',
       '20260921212102_editable_groceries_v0210.sql',
+      '20260924161500_sundry_intent_v0220.sql',
     ];
     for (const filename of idempotent) {
       await assert.doesNotReject(

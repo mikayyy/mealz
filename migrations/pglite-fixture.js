@@ -52,7 +52,12 @@ export async function makeDb() {
     );
     create table if not exists public.ingredients (
       id uuid primary key default gen_random_uuid(),
-      meal_id uuid references public.meals(id) on delete cascade
+      meal_id uuid references public.meals(id) on delete cascade,
+      name text not null default '',
+      quantity numeric,
+      unit text,
+      category text default 'Other',
+      optional boolean not null default false
     );
     create table if not exists public.recipe_steps (
       id uuid primary key default gen_random_uuid(),

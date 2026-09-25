@@ -36,6 +36,9 @@ export const MIGRATIONS = [
 
   // v0.21.0 — editable grocery lists (source, source_key, deleted, user_modified)
   '20260921212102_editable_groceries_v0210.sql',
+
+  // v0.22.0 — explicit weekly sundry intent and legacy salt/pepper backfill
+  '20260924161500_sundry_intent_v0220.sql',
 ];
 
 /**
@@ -59,7 +62,7 @@ export const REQUIRED_COLUMNS = {
   profiles: ['id', 'household_id', 'profile_key', 'adults', 'children'],
   weekly_plans: ['id', 'household_id', 'week_start'],
   meals: ['id', 'weekly_plan_id'],
-  grocery_items: ['id', 'weekly_plan_id', 'source', 'source_key', 'deleted', 'user_modified'],
+  grocery_items: ['id', 'weekly_plan_id', 'source', 'source_key', 'deleted', 'user_modified', 'needed_this_week'],
   households: ['id', 'name', 'created_by', 'join_code_hash'],
   household_members: ['household_id', 'user_id', 'role'],
   mealz_trusted_devices: ['id', 'user_id', 'device_token_hash', 'pin_hash'],

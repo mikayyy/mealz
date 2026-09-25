@@ -219,6 +219,7 @@ async function checkIdempotency(db) {
     '2026-09-17_account_security.sql',
     '20260921194345_supabase_hardening_v0202.sql',
     '20260921212102_editable_groceries_v0210.sql',
+    '20260924161500_sundry_intent_v0220.sql',
   ];
   for (const filename of idempotentMigrations) {
     try {

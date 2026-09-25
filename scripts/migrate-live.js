@@ -38,34 +38,30 @@ async function probe(path) {
 }
 
 async function main() {
-  const missing = [];
+  const failures = [];
 
   for (const table of REQUIRED_TABLES) {
-    const status = await probe(`${table}?select=id&limit=0`);
-    if (status === 404) {
-      missing.push(`table ${table}`);
-    }
+    const status = await probe(`${table}?select=*&limit=0`);
+    if (status !== 200) failures.push(`table ${table} (HTTP ${status})`);
   }
 
   for (const [table, cols] of Object.entries(REQUIRED_COLUMNS)) {
     for (const col of cols) {
       const status = await probe(`${table}?select=${col}&limit=0`);
-      if (status === 404) {
-        missing.push(`column ${table}.${col}`);
-      }
+      if (status !== 200) failures.push(`column ${table}.${col} (HTTP ${status})`);
     }
   }
 
-  if (missing.length === 0) {
+  if (failures.length === 0) {
     console.log('All required schema objects present.');
     process.exit(0);
   } else {
-    console.error('Missing required schema objects:');
-    for (const m of missing) {
+    console.error('Live schema probes failed:');
+    for (const m of failures) {
       console.error(`  - ${m}`);
     }
     console.error('');
-    console.error('Apply the missing migration(s) in the Supabase SQL Editor, then re-run.');
+    console.error('Check credentials and apply any missing migrations in the Supabase SQL Editor, then re-run.');
     process.exit(1);
   }
 }
