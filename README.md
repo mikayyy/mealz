@@ -8,23 +8,23 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Current release
 
-**v0.22.0** (release candidate; production remains v0.21.2 until migration and deployment) — Grocery sundries.
+**v0.22.0** (deployed 2026-09-25) — Grocery sundries.
 
 - Separates recipe-required rice, couscous, oils, salt, pepper, and common spices into a collapsible Sundries section; ordinary pantry purchases remain on the main list.
 - Sundries default to "available at home" (an assumption, not inventory). Mark one "buy" to make it checkable; purchase intent persists within the same week only.
 - Backfills missing generated salt and pepper for existing active saved weeks without replacing plans or restoring deleted groceries.
 - Preserves recipe wording, edits, manual additions, deletion markers, and household isolation.
 
-**Before deploying v0.22.0:** apply `migrations/20260924161500_sundry_intent_v0220.sql` in Supabase and verify the live schema/backfill. Do not deploy code requiring `needed_this_week` before the migration. No new Vercel environment variables are required.
+The Supabase migration `migrations/20260924161500_sundry_intent_v0220.sql` was applied and verified with the credentialed live schema gate before deployment. CI, Vercel preview, and authenticated production grocery flows passed. No new Vercel environment variables were required.
 
 See [CHANGELOG.md](CHANGELOG.md) for the complete version history back to v0.1.0.
 
 ## Changelog (recent)
 
-### v0.22.0 — grocery sundries (release candidate)
+### v0.22.0 — grocery sundries (deployed 2026-09-25)
 - Adds weekly purchase intent and an accessible Sundries disclosure with a saved, checkable "buy" state.
 - Adds an idempotent active-plan salt/pepper backfill and household-scoped regression coverage.
-- Requires the v0.22.0 database migration before deploying the application.
+- Applied and verified the v0.22.0 database migration before deploying the application.
 
 ### v0.21.2 — grocery consolidation repair
 - Repairs legacy generated grocery rows once, then persists the consolidated list.
@@ -115,6 +115,6 @@ Authentication is user-specific and meal data belongs to households. v0.17.0 req
 
 ## Future roadmap notes
 
-- **Release candidate:** grocery Sundries with week-specific purchase intent; pending production migration and deployment. See the [implementation plan](docs/sundries-section-plan.md).
+- **Shipped in v0.22.0:** grocery Sundries with week-specific purchase intent. See the [implementation plan](docs/sundries-section-plan.md).
 - **Admin dashboard:** owner-only operational view. Initial scope is seeing who has signed up; later versions may add debugging, account status, delivery/AI diagnostics, and other support tooling.
 - **Roadmap:** see [docs/roadmap.md](docs/roadmap.md) for planned product work and operating priorities.
