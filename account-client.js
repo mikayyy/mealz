@@ -63,6 +63,13 @@
     storageKey=`mealz:${MealzAuth.user.id}:${home.household.id}`;
     localStorage.removeItem('mealz');
     s=structuredClone(DEFAULT_STATE);weeklyDraft={days:[],useUp:'',notes:''};readyIdeas=null;
+    // Restore only pending drafts for this already-verified user/household.
+    // Saved cloud data still hydrates normally; cached data never uploads itself.
+    try{
+      const cached=JSON.parse(localStorage.getItem(storageKey)||'null');
+      if(cached?.pendingPlanSave?.scope===storageKey)s.pendingPlanSave=cached.pendingPlanSave;
+      if(cached?.conflictedDraft?.scope===storageKey)s.conflictedDraft=cached.conflictedDraft;
+    }catch{}
     weeksOverview=null;weekCache.clear();cancelTransientNavigation();
     await boot();
     if(home.needsProfile)profile();

@@ -18,7 +18,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm release:check
       - run: pnpm migration:validate
-      - run: pnpm migration:live
+      # PR checks have no database secrets. Credentialed preflight is separate.
       - run: pnpm typecheck
       - run: pnpm runtime:smoke
       - run: pnpm test

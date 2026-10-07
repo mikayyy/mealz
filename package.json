@@ -1,6 +1,10 @@
 {
   "name": "mealz",
-  "version": "0.22.0",
+  "version": "0.23.0",
+  "release": {
+    "state": "candidate",
+    "productionBaseline": "0.22.0"
+  },
   "private": true,
   "description": "mealz AI meal planning prototype",
   "scripts": {
@@ -8,6 +12,7 @@
     "runtime:smoke": "node scripts/vercel-runtime-smoke.js",
     "test": "node --import tsx --test tests/*.test.js",
     "test:browser": "node --import tsx --test tests/browser/*.test.js",
+    "test:local-db": "node --import tsx scripts/verify-plan-concurrency.mjs",
     "release:check": "node scripts/release-check.js",
     "migration:validate": "node scripts/migrate-validate.js",
     "migration:live": "node scripts/migrate-live.js",

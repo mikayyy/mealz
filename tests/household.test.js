@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const migration=readFileSync(new URL('../migrations/2026-09-15_households.sql',import.meta.url),'utf8');
 const compatibilityMigration=readFileSync(new URL('../migrations/2026-09-16_household_compatibility.sql',import.meta.url),'utf8');
 const supabase=readFileSync(new URL('../api/_lib/supabase.ts',import.meta.url),'utf8');
-const plan=readFileSync(new URL('../api/plan.ts',import.meta.url),'utf8');
+const plan=readFileSync(new URL('../api/_lib/plan-save.ts',import.meta.url),'utf8');
 const profileStore=readFileSync(new URL('../api/_lib/profile-store.ts',import.meta.url),'utf8');
 const householdApi=readFileSync(new URL('../api/household.ts',import.meta.url),'utf8');
 const prep=readFileSync(new URL('../api/prep-next-week.ts',import.meta.url),'utf8');
@@ -39,12 +39,11 @@ test('authenticated data scope resolves the signed-in users household',()=>{
   assert.match(supabase,/householdId:membership\.household_id/);
 });
 
-test('new profile and plan writes carry household identity and tolerate pre-hotfix schema',()=>{
+test('profile and atomic plan writes carry verified household identity',()=>{
   assert.match(profileStore,/row\.household_id=householdId/);
   assert.match(profileStore,/row\.owner_user_id=userId/);
-  assert.match(plan,/planRow\.household_id=householdId/);
-  assert.match(plan,/planRow\.owner_user_id=userId/);
-  assert.match(plan,/not linked to a household yet/);
+  assert.match(plan,/p_household:householdId/);
+  assert.match(plan,/rpc\/mealz_save_week/);
 });
 
 test('household API creates secure human-friendly join codes and hashes them',()=>{

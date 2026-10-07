@@ -116,6 +116,8 @@ test('purchase intent writes remain scoped to the selected plan and authenticate
     /** @type {Array<[number,number,string]>} */
     const plans=[[5,3,'2026-09-21'],[6,3,'2026-09-28'],[7,4,'2026-09-21']];
     for(const [plan,home,week] of plans){
+      // Child writes now require the household actor, including privileged fixture setup.
+      await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id(home===3?1:2)]);
       await db.query("insert into weekly_plans(id,household_id,week_start,status) values($1,$2,$3,'active')",[id(plan),id(home),week]);
       await db.query("insert into grocery_items(id,weekly_plan_id,name,checked) values($1,$2,'rice',true)",[id(plan+10),id(plan)]);
     }
