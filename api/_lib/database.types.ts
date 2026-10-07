@@ -1,3 +1,5 @@
+// The transactional-save contracts below describe the pending local migration.
+// Regenerate from Supabase after the migration is applied in the target environment.
 export type Json =
   | string
   | number
@@ -14,6 +16,12 @@ export type Database = {
   }
   public: {
     Tables: {
+      mealz_plan_save_receipts: {
+        Row: { household_id: string; user_id: string; request_key: string; week_start: string; request_hash: string; plan_id: string; created_at: string }
+        Insert: { household_id: string; user_id: string; request_key: string; week_start: string; request_hash: string; plan_id: string; created_at?: string }
+        Update: { household_id?: string; user_id?: string; request_key?: string; week_start?: string; request_hash?: string; plan_id?: string; created_at?: string }
+        Relationships: []
+      }
       grocery_items: {
         Row: {
           category: string
@@ -376,6 +384,7 @@ export type Database = {
       }
       weekly_plans: {
         Row: {
+          revision: number
           cooking_days: string[] | null
           created_at: string
           equipment: string[] | null
@@ -391,6 +400,7 @@ export type Database = {
         }
         Insert: {
           cooking_days?: string[] | null
+          revision?: number
           created_at?: string
           equipment?: string[] | null
           household_id: string
@@ -405,6 +415,7 @@ export type Database = {
         }
         Update: {
           cooking_days?: string[] | null
+          revision?: number
           created_at?: string
           equipment?: string[] | null
           household_id?: string
@@ -432,6 +443,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      mealz_save_week: {
+        Args: { p_household: string; p_week: string; p_expected_revision: number; p_request_key: string; p_payload: Json }
+        Returns: Json
+      }
+      mealz_mutate_grocery: {
+        Args: { p_plan: string; p_item: string | null; p_expected_revision: number; p_action: string; p_fields: Json }
+        Returns: Json
+      }
+      mealz_week_result: {
+        Args: { p_plan: string; p_replayed: boolean }
+        Returns: Json
+      }
+      mealz_set_feedback: {
+        Args: { p_plan: string; p_meal_key: string; p_expected_revision: number; p_make_again: boolean }
+        Returns: Json
+      }
       mealz_manage_household: {
         Args: {
           p_action: string

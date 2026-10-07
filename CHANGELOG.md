@@ -6,6 +6,22 @@ branch on `https://github.com/mikayyy/mealz`.
 
 ---
 
+## v0.23.0 — release candidate (unreleased)
+
+- Shares read-only schema probes between runtime readiness and the live migration gate, including tables without an `id` column.
+- Saves complete weeks through a user-scoped database transaction with a household/week lock, revision conflicts, stable plan/grocery IDs, and idempotent retries. Failed recipe, grocery, or cache-cleanup writes roll back together.
+- Applies the same revision boundary to grocery changes and meal feedback, retaining manual purchases, edits, deletion markers, checks, and sundry intent.
+- Keeps pending drafts across reloads; retries saving existing recipes and offers load/review recovery when another member changes the week.
+- Adds executable save failure/recovery tests and runtime readiness tests against metadata from the full migrated local database, plus a scheduled-preparation route regression.
+- Bounds all on-demand generation routes to one 50-second request budget including authentication, database work, retries and response assembly. Retries one classified transient failure only when sufficient time remains and honors upstream retry delays.
+- Validates bounded generation inputs and complete recipe batches, retains the saved week on failure, cancels generation on navigation, and ignores late account/week results before saving or repainting.
+- Adds request correlation and stage/retry timing without logging household text, credentials or provider error messages.
+- Rejects duplicate normalized meal keys before saving, preventing ambiguous recipe feedback.
+
+These changes are local and unreleased. The migration has not been applied live and requires a coordinated write pause/code switch. Package and HTML versions identify the v0.23.0 candidate. Preview/live acceptance and measured generation timing remain release gates.
+
+---
+
 ## v0.22.0 — 2026-09-25 · `00bf47e`
 
 Grocery sundries and weekly purchase intent.

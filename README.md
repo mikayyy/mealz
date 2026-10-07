@@ -8,16 +8,19 @@ Current stack: Vercel, OpenAI Responses API, Supabase, and GitHub.
 
 ## Current release
 
-**v0.22.0** (deployed 2026-09-25) — Grocery sundries.
+**v0.23.0** (release candidate; unreleased) — Reliable weekly saving and bounded generation.
 
-- Separates recipe-required rice, couscous, oils, salt, pepper, and common spices into a collapsible Sundries section; ordinary pantry purchases remain on the main list.
-- Sundries default to "available at home" (an assumption, not inventory). Mark one "buy" to make it checkable; purchase intent persists within the same week only.
-- Backfills missing generated salt and pepper for existing active saved weeks without replacing plans or restoring deleted groceries.
-- Preserves recipe wording, edits, manual additions, deletion markers, and household isolation.
+- Saves recipes and groceries together, detects conflicting household edits, and safely retries lost responses.
+- Retains pending drafts across reloads and preserves saved weeks when generation fails.
+- Bounds on-demand generation to a 50-second server budget with one eligible transient retry.
 
-The Supabase migration `migrations/20260924161500_sundry_intent_v0220.sql` was applied and verified with the credentialed live schema gate before deployment. CI, Vercel preview, and authenticated production grocery flows passed. No new Vercel environment variables were required.
+Production baseline: **v0.22.0**. The v0.23.0 migration remains unapplied in production.
 
-See [CHANGELOG.md](CHANGELOG.md) for the complete version history back to v0.1.0.
+Before release, verify the candidate against an isolated preview database. The new active-week constraint conflicts with the old save code: use a coordinated write pause, migration/code switch, and browser reload. See [release preparation](docs/release-v0.23.0-stage-4.md) for checks and the preview acceptance journey.
+
+See [CHANGELOG.md](CHANGELOG.md) for the complete version history.
+
+Local acceptance and repeatable verification commands: [v0.23.0 local acceptance](docs/release-v0.23.0-local-acceptance.md).
 
 ## Changelog (recent)
 

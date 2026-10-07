@@ -220,6 +220,7 @@ async function checkIdempotency(db) {
     '20260921194345_supabase_hardening_v0202.sql',
     '20260921212102_editable_groceries_v0210.sql',
     '20260924161500_sundry_intent_v0220.sql',
+    '20261006015243_transactional_week_saves.sql',
   ];
   for (const filename of idempotentMigrations) {
     try {

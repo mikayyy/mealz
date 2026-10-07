@@ -32,8 +32,9 @@ test('authenticated API interception never waits indefinitely for a future login
 test('user-facing APIs require verified sessions when auth is configured',()=>{
   const files=['generate-ideas.js','expand-meals.js','swap-meal.js','plan.js','profile.js','weeks.js','pregenerated-ideas.js','feedback.js'];
   for(const file of files){
-    const source=readFileSync(new URL(`../api/${file.replace('.js', '.ts')}`,import.meta.url),'utf8');
-    assert.match(source,/requireUser\(req\)/,file);
+    const generation=['generate-ideas.js','expand-meals.js','swap-meal.js'].includes(file);
+    const source=readFileSync(new URL(generation?'../api/_lib/generation-routes.ts':file==='plan.js'?'../api/_lib/plan-handler.ts':`../api/${file.replace('.js', '.ts')}`,import.meta.url),'utf8');
+    assert.match(source,/requireUser\(req(?:,|\))/,file);
   }
 });
 

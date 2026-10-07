@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const supabase=readFileSync(new URL('../api/_lib/supabase.ts',import.meta.url),'utf8');
 const auth=readFileSync(new URL('../api/_lib/auth.ts',import.meta.url),'utf8');
-const plan=readFileSync(new URL('../api/plan.ts',import.meta.url),'utf8');
+const plan=readFileSync(new URL('../api/_lib/plan-handler.ts',import.meta.url),'utf8');
 const profile=readFileSync(new URL('../api/profile.ts',import.meta.url),'utf8');
 const weeks=readFileSync(new URL('../api/weeks.ts',import.meta.url),'utf8');
 const migration=readFileSync(new URL('../migrations/2026-09-15_user_ownership_rls.sql',import.meta.url),'utf8');
@@ -24,7 +24,7 @@ test('core user data APIs select an authenticated data scope',()=>{
   for(const [name,source] of [['plan',plan],['profile',profile],['weeks',weeks]]){
     assert.match(source,/dataDb\(auth\)/,name);
   }
-  assert.match(plan,/planRow\.owner_user_id=userId/);
+  assert.match(plan,/savePlan\(req.body\|\|\{\},\{db,householdId\}\)/);
 });
 
 test('ownership migration covers parent and child tables with RLS',()=>{

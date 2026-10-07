@@ -142,7 +142,7 @@
    * @param {Array<Partial<import('./types.js').GroceryItem> & {source?:string,source_key?:string,user_modified?:boolean,deleted?:boolean}> | null | undefined} previous
    * @param {Array<{ingredients?: Array<Partial<import('./types.js').Ingredient>>}> | null | undefined} meals
    */
-  function reconcileGroceries(previous,meals){
+  function reconcileGroceries(previous,meals,{preserveIds=false}={}){
     const generated=consolidateGroceries(meals);
     const priorGenerated=new Map();
     const carried=[],manual=[];
@@ -166,7 +166,7 @@
       }else if(group.length&&active.length===0){
         carried.push({...group[0],source:'generated',source_key:item.source_key,deleted:true});
       }else{
-        carried.push({...item,checked:active.length>0&&active.every(prior=>!!prior?.checked),needed_this_week:active.some(prior=>!!prior?.needed_this_week),source:'generated',user_modified:false,deleted:false});
+        carried.push({...item,id:active[0]?.id,checked:active.length>0&&active.every(prior=>!!prior?.checked),needed_this_week:active.some(prior=>!!prior?.needed_this_week),source:'generated',user_modified:false,deleted:false});
       }
     }
     for(const [key,group] of priorGenerated){
@@ -176,7 +176,7 @@
         manual.push({...item,source:'manual',source_key:null,user_modified:true,deleted:false});
       }
     }
-    return [...carried,...manual].map(({id,weekly_plan_id,created_at,updated_at,...item})=>item);
+    return [...carried,...manual].map(({id,weekly_plan_id,created_at,updated_at,...item})=>preserveIds&&id?{...item,id}:item);
   }
   return {SHOPPING_CATEGORY_ORDER,shoppingCategory,categoryRank,normalizeUnit,cleanGroceryName,isSundry,grocerySourceKey,consolidateGroceries,reconcileGroceries};
 });

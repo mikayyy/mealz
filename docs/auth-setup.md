@@ -1,12 +1,10 @@
 # mealz account rollout and trusted-device login
 
-Current production baseline: **v0.21.2** (`b0070b3`). v0.22.0 is a release
-candidate pending migration and deployment. Follow the steps below for a fresh
-installation or when applying new migrations to an existing deployment.
+Current production baseline: **v0.22.0**, verified from the public application on 2026-10-06. **v0.23.0 is an unreleased candidate.** See [release preparation](release-v0.23.0-stage-4.md) for its isolated preview and coordinated production switch.
 
 ## Required deployment order
 
-Database migrations must be applied **before** deploying the application.
+For v0.23.0, pause writes before applying its migration and switching application code; the old save code is incompatible with the new active-week constraint. Existing browser tabs must reload.
 The application fails closed when required migrations are absent.
 
 1. In Supabase SQL Editor, apply all migrations in this order (each is idempotent
@@ -20,6 +18,7 @@ The application fails closed when required migrations are absent.
     7. `migrations/20260921194345_supabase_hardening_v0202.sql`
     8. `migrations/20260921212102_editable_groceries_v0210.sql`
     9. `migrations/20260924161500_sundry_intent_v0220.sql`
+    10. `migrations/20261006015243_transactional_week_saves.sql` (v0.23.0 candidate only)
 2. Confirm Email authentication is enabled in Supabase. Keep email confirmation
    enabled. Set Site URL to `https://mealz-pink.vercel.app`, and allow that URL
    plus `https://mealz-pink.vercel.app/?reset=1` in Redirect URLs. If testing a
