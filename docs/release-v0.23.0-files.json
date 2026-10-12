@@ -118,7 +118,7 @@
     },
     {
       "path": "docs/release-v0.23.0-live-ai-test.md",
-      "sha256": "7d24253537bfed8328752db309b2a63809aa7d14687efd0b999575ffc54e21e7"
+      "sha256": "68fb62ef6ec6fadc210a87d421a8f2e65eac0b147116ac393c6ac6eee55620c6"
     },
     {
       "path": "docs/release-v0.23.0-local-acceptance.md",
@@ -214,7 +214,7 @@
     },
     {
       "path": "scripts/verify-live-recipe.mjs",
-      "sha256": "51cfbe8fe656f980c730c73f7fb76a6c64fdc38affede47b807b1de1936e3e67"
+      "sha256": "6f2fbe2528ad5e7f51219d7120e81d9bb8759d7de3d52735e6e7cac3725e3d50"
     },
     {
       "path": "scripts/verify-local-plan-api.mjs",

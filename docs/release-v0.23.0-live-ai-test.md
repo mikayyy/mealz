@@ -1,6 +1,6 @@
-# v0.23.0 real AI recipe smoke test
+# v0.23.0 real AI generation checks
 
-Verified 2026-10-11 against the local candidate, real local Supabase Auth/PostgREST, and the real OpenAI Responses API. This is one recipe-generation check; it is not deployed Vercel or full-week timing evidence.
+Verified 2026-10-11 against the local candidate, real local Supabase Auth/PostgREST, and the real OpenAI Responses API. The checks cover one recipe and a seven-day expansion. They invoke the actual API handlers locally; they are not deployed Vercel timing evidence.
 
 - Result: HTTP 200; all recipe validations passed.
 - Generation duration: 8,936 ms, within the 50,000 ms request budget.
@@ -20,4 +20,19 @@ Verified 2026-10-11 against the local candidate, real local Supabase Auth/PostgR
 
 Vercel's saved sensitive variable did not return a readable key. The user supplied a test key locally after approving temporary secret handling. Earlier credential preparation attempts made zero OpenAI requests; the successful run above made one.
 
-This one result does not establish consistent recipe quality, dietary/allergen safety, culinary results, successful seven-recipe fan-out, swap/ideas performance, a live retry or timeout response, or deployed Vercel timing. Those relevant release checks remain open. Keep PR #22 draft until the remaining acceptance and coordinated production rollout are reviewed.
+These results do not establish consistent recipe quality, dietary/allergen safety, culinary results, swap/ideas performance, a live retry or timeout response, or deployed Vercel timing. Those relevant release checks remain open. Keep PR #22 draft until the remaining acceptance and coordinated production rollout are reviewed.
+
+## Seven-day expansion — 2026-10-11
+
+- Result: HTTP 200; all seven complete recipes validated, one per Monday through Sunday, with unique IDs and four servings each.
+- Generation duration: 8,444 ms under the shared 50,000 ms deadline, including local authentication, membership and rate-limit checks.
+- Provider attempts: seven, one per recipe; no retry. The runner enforces two attempts per assigned day, fourteen total, and 3,500 output tokens per attempt. A separate one-use marker protects this test without resetting the previous single-recipe marker.
+- Model: `gpt-5.6-luna`.
+- Request ID: `0e1bac8e-5192-4ded-8c8c-4bf03115c39e`.
+- Recipes: chicken rice bowls, turkey and bean skillet, lemon fish with couscous, tofu noodle stir fry, red lentil curry, egg fried rice, and chickpea pasta. Each has 10–16 ingredients and 5–7 steps. No beef, pork, bacon, ham or mushrooms appeared in ingredient names.
+- Provider usage: 3,007 input tokens and 4,829 output tokens; estimated standard token cost $0.0063962 (about 0.64 cents), not an invoice. Rates and source are linked above.
+- Saved test week: identical before and after generation. No save request was submitted.
+- Temporary key file: deleted; absence independently checked. Local account credentials, key, raw result and rendered recipes remain excluded from source control.
+- Production unchanged. The ordinary local application remains AI-disabled.
+
+Run `node --import tsx scripts/verify-live-recipe.mjs --week` for a no-charge readiness check, or add `--run` for an explicitly authorized paid test with a fresh temporary credential. Successful output does not constitute permission to repeat the paid test or remove its one-use marker.
