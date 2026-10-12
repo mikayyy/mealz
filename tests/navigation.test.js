@@ -24,10 +24,10 @@ test('dashboard actions use one delegated handler that survives child rerenders'
 });
 
 test('all durable sub-screens have a route back toward Weeks',()=>{
-  assert.match(weeks,/profile=function\(\)\{baseProfileView\(\);addProfileBack\(\)\}/);
-  assert.match(weeks,/ideaPicker=function\(\)\{baseIdeaPicker\(\);addWeekContext\(\)\}/);
-  assert.match(weeks,/meals=function\(\)\{activeSwapEpoch=null;baseMealsView\(\);addWeekContext\(\)\}/);
-  assert.match(weeks,/groceries=function\(\)\{activeSwapEpoch=null;baseGroceriesView\(\);addWeekContext\(\)\}/);
+  assert.match(weeks,/profile=function\(\)\{cancelGeneration\(\);baseProfileView\(\);addProfileBack\(\)\}/);
+  assert.match(weeks,/ideaPicker=function\(\)\{cancelGeneration\(\);baseIdeaPicker\(\);addWeekContext\(\)\}/);
+  assert.match(weeks,/meals=function\(\)\{cancelGeneration\(\);activeSwapEpoch=null;baseMealsView\(\);addWeekContext\(\)\}/);
+  assert.match(weeks,/groceries=function\(\)\{cancelGeneration\(\);activeSwapEpoch=null;baseGroceriesView\(\);addWeekContext\(\)\}/);
   assert.match(weeks,/recipe=function\(id\).*addWeekContext\(\)/);
 });
 

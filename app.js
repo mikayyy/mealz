@@ -10,7 +10,7 @@ const DIET_GROUPS={
   'General':['No Dietary Restrictions']
 };
 const GROCERY_STAPLES=new Set(['salt','table salt','kosher salt','sea salt','pepper','black pepper','ground black pepper']);
-const DEFAULT_STATE={size:5,adults:3,children:2,eq:[],dietTags:[],meals:[],groceryItems:[],ideas:[],selectedIdeas:[],checked:{},planId:null,syncError:null,error:null,days:[],useUp:'',notes:''};
+const DEFAULT_STATE={size:5,adults:3,children:2,eq:[],dietTags:[],meals:[],groceryItems:[],ideas:[],selectedIdeas:[],checked:{},planId:null,weekRevisions:{},pendingPlanSave:null,conflictedDraft:null,syncError:null,error:null,days:[],useUp:'',notes:''};
 const TEST_WEEK=[
 {id:'test-turkey-bowls',day:'Monday',title:'Ginger-Sesame Turkey Bowls',description:'Savory turkey, crisp vegetables, edamame, and rice.',servings:5,total_minutes:25,difficulty:'Easy',tags:['Test meal','Kid friendly'],kid_note:'Serve sauce on the side.',ingredients:[{name:'ground turkey',quantity:1.5,unit:'lb',category:'Meat & Seafood'},{name:'shredded cabbage',quantity:1,unit:'bag',category:'Produce'},{name:'edamame',quantity:1,unit:'bag',category:'Frozen'},{name:'jasmine rice',quantity:2,unit:'packs',category:'Frozen'}],steps:['Cook or heat the rice.','Brown the turkey.','Add vegetables and sauce.','Serve over rice.']},
 {id:'test-moroccan-chicken',day:'Thursday',title:'Moroccan Chicken & Couscous',description:'Spiced chicken, roasted vegetables, couscous, and lemon yogurt.',servings:5,total_minutes:35,difficulty:'Easy',tags:['Test meal'],ingredients:[{name:'chicken thighs',quantity:1.75,unit:'lb',category:'Meat & Seafood'},{name:'zucchini',quantity:2,unit:'whole',category:'Produce'},{name:'Moroccan couscous',quantity:1,unit:'box',category:'Pantry'}],steps:['Roast chicken and vegetables.','Prepare couscous.','Serve together.']},
@@ -39,16 +39,45 @@ function captureWeeklyDraft(){const u=document.querySelector('#useUp'),n=documen
 function hasWeeklyOverrides(){return !!String(weeklyDraft.useUp||'').trim()||!!String(weeklyDraft.notes||'').trim()}
 function preparedIdeasAvailable(count){return Array.isArray(readyIdeas?.ideas)&&readyIdeas.ideas.length>=count}
 function canUsePreparedIdeas(count){return preparedIdeasAvailable(count)&&!hasWeeklyOverrides()}
-function cloudNote(){if(DEV)return '<p class=small>developer test mode is active. test data stays on this device only.</p>';if(s.syncError)return `<div class="status status--error"><b>Cloud sync delayed.</b><br><span class="small">${esc(friendlyClientError(s.syncError))} Your plan remains saved on this device.</span></div>`;if(s.planId)return '<div class="status status--success"><span class=small>saved.</span></div>';return ''}
+function cloudNote(){
+  if(DEV)return '<p class=small>developer test mode is active. test data stays on this device only.</p>';
+  if(s.conflictedDraft)return `<div class="status status--error" role="status"><b>This week changed.</b><p>Your draft is kept on this device. ${s.conflictedDraft.reviewReady?'Review it before saving against the newer week.':'Load the saved week to see the latest household changes.'}</p><button class="secondary" data-save-action="${s.conflictedDraft.reviewReady?'review':'reload'}">${s.conflictedDraft.reviewReady?'review your draft':'load saved week'}</button></div>`;
+  if(s.pendingPlanSave)return `<div class="status status--error" role="status"><b>Draft awaiting confirmation.</b><p>${esc(s.syncError||'Your draft is kept on this device.')} Retry saving without generating recipes again.</p><button class="secondary" data-save-action="retry">save draft</button></div>`;
+  if(s.syncError)return `<div class="status status--error"><b>Cloud sync delayed.</b><br><span class="small">${esc(friendlyClientError(s.syncError))}</span>${s.planId?'<button class="secondary" data-save-action="reload">load saved week</button>':''}</div>`;
+  if(s.planId)return '<div class="status status--success"><span class=small>saved.</span></div>';
+  return '';
+}
 function view(v){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===v));if(v==='meals')meals();else if(v==='groceries')groceries();else plan()}
 
-async function apiJson(url,options){const r=await fetch(url,options);const text=await r.text();let d={};if(text){try{d=JSON.parse(text)}catch{d={error:text}}}if(!r.ok)throw new Error(d.error||`Request failed (${r.status}).`);return d}
+async function apiJson(url,options){const r=await fetch(url,options);const text=await r.text();let d={};if(text){try{d=JSON.parse(text)}catch{d={error:text}}}if(!r.ok){const error=new Error(d.error||`Request failed (${r.status}).`);error.status=r.status;error.code=d.code;throw error}return d}
 async function loadProfile(){if(DEV)return;try{const d=await apiJson('/api/profile');if(d.profile){const p=d.profile;s.adults=Math.max(0,Number(p.adults||0));s.children=Math.max(0,Number(p.children||0));s.dietTags=Array.isArray(p.dietTags)?p.dietTags:[];s.eq=Array.isArray(p.equipment)?p.equipment.filter(x=>PROFILE_EQUIPMENT.includes(x)):[];s.size=householdTotal()}clearSyncError();save()}catch(e){throw new Error('Could not load your Profile. Please try again.')}}
 async function saveProfileCloud(){if(DEV)return;await apiJson('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(profilePayload())});readyIdeas=null;clearSyncError();save()}
 function hasLegacyGeneratedGroceries(items){return (items||[]).some(item=>item?.source==='generated'&&!item?.source_key&&!item?.user_modified)}
-async function loadActivePlan(){if(DEV)return;try{const d=await apiJson('/api/plan');if(d.plan){s.meals=sortMealsByDay(d.meals||[]);s.groceryItems=d.groceryItems||[];s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of s.groceryItems)s.checked[i.id||groceryKey(i)]=!!i.checked;if(hasLegacyGeneratedGroceries(s.groceryItems))await syncPlan(d.plan.week_start)}clearSyncError();save()}catch(e){s.syncError=e.message;save()}}
+async function loadActivePlan(){if(DEV)return;try{const d=await apiJson('/api/plan');if(d.plan){rememberWeekRevision(d.plan.week_start,d);s.viewWeekStart=d.plan.week_start;s.meals=sortMealsByDay(d.meals||[]);s.groceryItems=d.groceryItems||[];s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of s.groceryItems)s.checked[i.id||groceryKey(i)]=!!i.checked;if(hasLegacyGeneratedGroceries(s.groceryItems)&&!s.pendingPlanSave&&!s.conflictedDraft)await syncPlan(d.plan.week_start)}clearSyncError();save()}catch(e){s.syncError=e.message;save()}}
 async function loadReadyIdeas(){if(DEV)return;try{const d=await apiJson(`/api/pregenerated-ideas?week_start=${encodeURIComponent(planningWeekStart())}`);readyIdeas=Array.isArray(d.ideas)&&d.ideas.length?d:null}catch(e){console.warn('Prepared ideas unavailable',e);readyIdeas=null}}
-async function syncPlan(weekStart=planningWeekStart()){try{const d=await apiJson('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({weekStart,householdSize:householdTotal(),days:sortDays(s.days),equipment:s.eq||[],useUp:s.useUp,notes:s.notes,meals:sortMealsByDay(s.meals)})});s.planId=d.planId;s.groceryItems=d.groceryItems||[];s.checked={};for(const i of s.groceryItems)s.checked[i.id||groceryKey(i)]=!!i.checked;s.syncError=null;save()}catch(e){throw new Error(friendlyClientError(e.message))}}
+function rememberWeekRevision(start,data){const revision=data?.revision??data?.plan?.revision;if(Number.isSafeInteger(revision)&&revision>=0){s.weekRevisions=s.weekRevisions||{};s.weekRevisions[start]=revision}}
+async function syncPlan(weekStart=planningWeekStart(),retryPayload=null){
+  const scope=storageKey,userId=globalThis.MealzAuth?.user?.id,selection=planningWeekStart();
+  const payload=retryPayload||{weekStart,householdSize:householdTotal(),days:sortDays(s.days),equipment:s.eq||[],useUp:s.useUp,notes:s.notes,meals:sortMealsByDay(s.meals)};
+  const fingerprint=JSON.stringify(payload),existing=s.pendingPlanSave;
+  // Persist one key for an unchanged draft, including a retry after reload or a
+  // lost response. Never adopt the latest revision just to force a stale save.
+  const pending=existing?.scope===scope&&existing.fingerprint===fingerprint?existing:{scope,weekStart,fingerprint,payload,expectedRevision:s.weekRevisions?.[weekStart]||0,requestKey:crypto.randomUUID()};
+  s.pendingPlanSave=pending;save();
+  try{
+    const data=await apiJson('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...pending.payload,expectedRevision:pending.expectedRevision,requestKey:pending.requestKey})});
+    if(storageKey!==scope||globalThis.MealzAuth?.user?.id!==userId||planningWeekStart()!==selection)return {ignored:true};
+    s.planId=data.planId;s.groceryItems=data.groceryItems||[];
+    if(data.meals)s.meals=sortMealsByDay(data.meals);
+    rememberWeekRevision(weekStart,data);
+    s.checked={};for(const item of s.groceryItems)s.checked[item.id||groceryKey(item)]=!!item.checked;
+    s.pendingPlanSave=null;s.conflictedDraft=null;s.syncError=null;save();return data;
+  }catch(error){
+    if(storageKey!==scope||globalThis.MealzAuth?.user?.id!==userId||planningWeekStart()!==selection)return {ignored:true};
+    if(error.code==='WEEK_CONFLICT')s.conflictedDraft=pending;
+    s.syncError=friendlyClientError(error.message);save();throw error;
+  }
+}
 
 function devTools(){return DEV?`<div class="section card"><h2>developer tools</h2><p class=small>visible only when mealz is opened with <b>?dev=true</b>.</p><button id=loadWeek class=secondary style="width:100%;margin-bottom:8px">load sample week</button><button id=loadGroceries class=secondary style="width:100%;margin-bottom:8px">load grocery test list</button><button id=resetData class=secondary style="width:100%">reset app data</button></div>`:''}
 function wireDevTools(){if(!DEV)return;document.querySelector('#loadWeek').onclick=()=>{s.meals=structuredClone(TEST_WEEK);s.groceryItems=[];s.checked={};s.planId=null;save();view('meals')};document.querySelector('#loadGroceries').onclick=()=>{s.meals=[{id:'grocery-ux-test',day:'Test',title:'Grocery UX Test',description:'Temporary test data for grocery-list interactions.',servings:householdTotal(),total_minutes:0,difficulty:'Test',tags:['Developer'],ingredients:structuredClone(GROCERY_TEST),steps:[]}];s.groceryItems=[];s.checked={};s.planId=null;save();view('groceries')};document.querySelector('#resetData').onclick=()=>{localStorage.removeItem('mealz');s={...DEFAULT_STATE};weeklyDraft={days:[],useUp:'',notes:''};plan()}}
@@ -83,28 +112,108 @@ function profile(){
   };
 }
 
+let activeGeneration=null;
+function cancelGeneration(){
+  if(!activeGeneration)return;
+  activeGeneration.controller.abort();clearTimeout(activeGeneration.timer);activeGeneration=null;
+}
+function beginGeneration(){
+  cancelGeneration();
+  const scope=storageKey,userId=globalThis.MealzAuth?.user?.id,weekStart=planningWeekStart(),controller=new AbortController();
+  const action={controller,weekStart,timer:setTimeout(()=>controller.abort(new DOMException('Generation took too long. Your selections are still here. Please try again.','TimeoutError')),55000),current(){return activeGeneration===action&&storageKey===scope&&globalThis.MealzAuth?.user?.id===userId&&planningWeekStart()===weekStart}};
+  activeGeneration=action;return action;
+}
+function finishGeneration(action){clearTimeout(action.timer);if(activeGeneration===action)activeGeneration=null}
+
 async function generateIdeas(){
   captureWeeklyDraft();s.error=null;s.syncError=null;weeklyDraft.days=sortDays(weeklyDraft.days);s.size=householdTotal();save();
   if(!weeklyDraft.days.length){s.error='Choose at least one cooking day.';return plan()}
   const count=ideaCountForDays(weeklyDraft.days.length);
   if(canUsePreparedIdeas(count)){s.ideas=readyIdeas.ideas.slice(0,count);s.selectedIdeas=[];save();return ideaPicker()}
   const btn=document.querySelector('#go');btn.disabled=true;btn.textContent=`Finding ${count} good options…`;
-  try{const d=await apiJson('/api/generate-ideas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:weeklyDraft.days,ideaCount:count,...profilePayload(),useUp:weeklyDraft.useUp,notes:weeklyDraft.notes})});s.ideas=(d.ideas||[]).slice(0,count);s.selectedIdeas=[];save();ideaPicker()}catch(e){s.error=friendlyClientError(e.message);save();plan()}
+  const action=beginGeneration();
+  try{const d=await apiJson('/api/generate-ideas',{method:'POST',signal:action.controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({days:weeklyDraft.days,ideaCount:count,...profilePayload(),useUp:weeklyDraft.useUp,notes:weeklyDraft.notes})});if(!action.current())return;s.ideas=(d.ideas||[]).slice(0,count);s.selectedIdeas=[];save();ideaPicker()}catch(e){if(!action.current())return;s.error=friendlyClientError(e.message);save();plan()}finally{finishGeneration(action)}
 }
 function selectionNumber(id){const i=s.selectedIdeas.indexOf(id);return i<0?'':String(i+1)}
 function toggleIdea(id){const i=s.selectedIdeas.indexOf(id),limit=weeklyDraft.days.length;if(i>=0)s.selectedIdeas.splice(i,1);else if(s.selectedIdeas.length<limit)s.selectedIdeas.push(id);else return;save();ideaPicker()}
 function ideaPicker(){weeklyDraft.days=sortDays(weeklyDraft.days);const needed=weeklyDraft.days.length,chosen=s.selectedIdeas.length,count=ideaCountForDays(needed);app.innerHTML=`<button class=secondary id=editPlan>← edit plan</button><h1>pick ${needed} dinner${needed===1?'':'s'}</h1><p class=subtle>choose from ${count} ideas. recipes and groceries are built after you decide.</p><div class="selection-status ${chosen===needed?'ready':''}"><b>${chosen} of ${needed} selected</b>${chosen?`<div class=small>${s.selectedIdeas.map((id,i)=>`${i+1} → ${esc(weeklyDraft.days[i]||'')}`).join(' · ')}</div>`:''}</div><div class=idea-grid>${(s.ideas||[]).map(x=>{const n=selectionNumber(x.id);return `<button class="idea-card ${n?'selected-idea':''}" data-id="${esc(x.id)}"><div class=idea-top>${n?`<span class=pick-number>${n}</span>`:''}</div><div class=idea-title>${esc(x.title)}</div><p>${esc(x.description)}</p><div><span class=pill>${x.total_minutes||30} min</span>${x.protein?`<span class=pill>${esc(x.protein)}</span>`:''}${(x.tags||[]).slice(0,2).map(t=>`<span class=pill>${esc(t)}</span>`).join('')}</div></button>`}).join('')}</div><div class=picker-actions><button class=secondary id=refreshIdeas>show ${count} different ideas</button><button class=primary id=buildWeek ${chosen===needed?'':'disabled'}>${chosen===needed?'build my week →':`pick ${needed-chosen} more`}</button></div>`;document.querySelector('#editPlan').onclick=plan;document.querySelectorAll('.idea-card').forEach(b=>b.onclick=()=>toggleIdea(b.dataset.id));document.querySelector('#refreshIdeas').onclick=refreshMealIdeas;document.querySelector('#buildWeek').onclick=()=>{if(s.selectedIdeas.length===needed)buildSelectedWeek()}}
-async function refreshMealIdeas(){const count=ideaCountForDays(weeklyDraft.days.length);app.innerHTML=`<h1>finding different ideas…</h1><div class="status status--loading swap-loading">loading ${count} dinner ideas…</div>`;try{const d=await apiJson('/api/generate-ideas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:weeklyDraft.days,ideaCount:count,...profilePayload(),useUp:weeklyDraft.useUp,notes:`${weeklyDraft.notes||''}\nGive a substantially different set from these previous ideas: ${(s.ideas||[]).map(x=>x.title).join(', ')}`})});s.ideas=(d.ideas||[]).slice(0,count);s.selectedIdeas=[];save();ideaPicker()}catch(e){s.error=friendlyClientError(e.message);save();plan()}}
-async function buildSelectedWeek(){const picked=s.selectedIdeas.map(id=>s.ideas.find(x=>x.id===id)).filter(Boolean);weeklyDraft.days=sortDays(weeklyDraft.days);if(picked.length!==weeklyDraft.days.length)return ideaPicker();s.days=weeklyDraft.days;s.useUp=weeklyDraft.useUp.trim();s.notes=weeklyDraft.notes.trim();s.size=householdTotal();save();app.innerHTML=`<h1>building your week…</h1><p class=subtle>mealz is creating recipes for the dinners you picked.</p><div class="status status--loading swap-loading">writing recipes and assembling groceries…</div>`;try{const d=await apiJson('/api/expand-meals',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({days:s.days,selectedIdeas:picked,...profilePayload(),useUp:s.useUp,notes:s.notes})});s.meals=sortMealsByDay(d.meals||[]);s.groceryItems=[];s.checked={};s.planId=null;s.syncError=null;s.error=null;save();if(!DEV){try{await syncPlan()}catch(e){s.syncError=e.message;save()}}view('meals')}catch(e){app.innerHTML=`<button class=secondary id=backIdeas>← back to ideas</button><h1>Could not build this week</h1><div class="status error">${esc(friendlyClientError(e.message))}</div><button class=primary id=retryBuild>try again</button>`;document.querySelector('#backIdeas').onclick=ideaPicker;document.querySelector('#retryBuild').onclick=buildSelectedWeek}}
+async function refreshMealIdeas(){
+  const count=ideaCountForDays(weeklyDraft.days.length),action=beginGeneration();
+  app.innerHTML=`<h1>finding different ideas…</h1><div class="status status--loading swap-loading">loading ${count} dinner ideas…</div>`;
+  try{
+    const d=await apiJson('/api/generate-ideas',{method:'POST',signal:action.controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({days:weeklyDraft.days,ideaCount:count,...profilePayload(),useUp:weeklyDraft.useUp,notes:weeklyDraft.notes,previousIdeas:(s.ideas||[]).map(x=>x.title)})});
+    if(!action.current())return;s.ideas=(d.ideas||[]).slice(0,count);s.selectedIdeas=[];save();ideaPicker();
+  }catch(e){if(!action.current())return;s.error=friendlyClientError(e.message);save();plan()}
+  finally{finishGeneration(action)}
+}
+async function buildSelectedWeek(){
+  if(activeGeneration)return;
+  const picked=s.selectedIdeas.map(id=>s.ideas.find(x=>x.id===id)).filter(Boolean),days=sortDays(weeklyDraft.days);
+  if(picked.length!==days.length)return ideaPicker();
+  const action=beginGeneration(),payload={days,selectedIdeas:picked,...profilePayload(),useUp:weeklyDraft.useUp.trim(),notes:weeklyDraft.notes.trim()};
+  app.innerHTML=`<button class=secondary id=cancelBuild>← back to ideas</button><h1>building your week…</h1><p class=subtle>mealz is creating recipes for the dinners you picked.</p><div class="status status--loading swap-loading">writing recipes and assembling groceries…</div>`;
+  document.querySelector('#cancelBuild').onclick=()=>{cancelGeneration();ideaPicker()};
+  try{
+    const d=await apiJson('/api/expand-meals',{method:'POST',signal:action.controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!action.current())return;
+    if(!Array.isArray(d.meals)||d.meals.length!==days.length)throw new Error('The recipes came back incomplete. Your saved week is unchanged. Please try again.');
+    clearTimeout(action.timer);
+    s.days=days;s.useUp=payload.useUp;s.notes=payload.notes;s.size=payload.householdSize;
+    s.meals=sortMealsByDay(d.meals);s.groceryItems=[];s.checked={};s.planId=null;s.syncError=null;s.error=null;save();
+    if(!DEV){try{const result=await syncPlan(action.weekStart);if(result?.ignored||!action.current())return}catch(e){if(!action.current())return;s.syncError=e.message;save()}}
+    if(action.current())view('meals');
+  }catch(e){
+    if(!action.current())return;
+    app.innerHTML=`<button class=secondary id=backIdeas>← back to ideas</button><h1>Could not build this week</h1><div class="status error">${esc(friendlyClientError(e.message))}</div><button class=primary id=retryBuild>try again</button>`;
+    document.querySelector('#backIdeas').onclick=ideaPicker;document.querySelector('#retryBuild').onclick=buildSelectedWeek;
+  }finally{finishGeneration(action)}
+}
 
 function isMakeAgain(m){return Array.isArray(m.tags)&&m.tags.includes('Make again')}
 function mealCard(m){const liked=isMakeAgain(m);return `<div class="card meal-card" data-id="${esc(m.id)}"><div class=meal-day>${esc(m.day).toLowerCase()}</div><div class=meal-title>${esc(m.title)}</div><p>${esc(m.description)}</p><div><span class=pill>${m.total_minutes||30} min</span>${(m.tags||[]).filter(t=>t!=='Make again').map(t=>`<span class=pill>${esc(t)}</span>`).join('')}</div><div class=meal-actions><button class="secondary view-recipe" data-id="${esc(m.id)}">view recipe</button><button class="secondary swap-meal" data-id="${esc(m.id)}">swap meal</button></div><button class="make-again ${liked?'liked':''}" data-id="${esc(m.id)}" aria-pressed="${liked?'true':'false'}">${liked?'made again':'make again'}</button></div>`}
 function meals(){s.meals=sortMealsByDay(s.meals);if(!s.meals.length){app.innerHTML='<h1>your meal plan</h1><div class="status status--info">no generated plan yet.</div>';return}app.innerHTML=`<h1>your meal plan</h1><p class=subtle>${s.meals.length} meals · ${householdTotal()} people</p>${cloudNote()}<p class="small learning-note">mark meals to make again and mealz will use those choices to shape future ideas.</p>${s.meals.map(mealCard).join('')}`;document.querySelectorAll('.view-recipe').forEach(b=>b.onclick=e=>{e.stopPropagation();recipe(b.dataset.id)});document.querySelectorAll('.swap-meal').forEach(b=>b.onclick=e=>{e.stopPropagation();swapMeal(b.dataset.id)});document.querySelectorAll('.make-again').forEach(b=>b.onclick=e=>{e.stopPropagation();toggleMakeAgain(b.dataset.id)})}
 function recipe(id){const m=s.meals.find(x=>x.id===id);if(!m)return;app.innerHTML=`<button class=secondary id=back>← back</button><h1>${esc(m.title)}</h1><p>${esc(m.description)}</p><span class=pill>${m.servings||householdTotal()} servings</span><span class=pill>${m.total_minutes||30} min</span><div class=section><h2>ingredients</h2><ul class=recipe-list>${(m.ingredients||[]).map(i=>`<li><input type=checkbox><span>${esc(fmt(i))}</span></li>`).join('')}</ul></div><div class=section><h2>instructions</h2><ol>${(m.steps||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ol></div>${m.kid_note?`<div class=status><b>kid option:</b> ${esc(m.kid_note)}</div>`:''}`;document.querySelector('#back').onclick=meals}
-async function toggleMakeAgain(id){const m=s.meals.find(x=>x.id===id);if(!m)return;const next=!isMakeAgain(m);m.tags=Array.isArray(m.tags)?m.tags.filter(t=>t!=='Make again'):[];if(next)m.tags.push('Make again');save();meals();if(DEV||!s.planId)return;try{await apiJson('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({planId:s.planId,mealId:id,makeAgain:next})});clearSyncError();save();meals()}catch(e){s.syncError=e.message;save();meals()}}
-async function swapMeal(id){const original=s.meals.find(m=>m.id===id);if(!original)return;app.innerHTML=`<button class=secondary id=cancelSwap>← back</button><h1>swap ${esc(original.day)}</h1><p class=subtle>Finding two alternatives for ${esc(original.title)}…</p><div class="status status--loading swap-loading">finding alternatives…</div>`;document.querySelector('#cancelSwap').onclick=meals;try{const d=await apiJson('/api/swap-meal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({meal:original,otherMeals:s.meals.filter(m=>m.id!==id).map(m=>({title:m.title,day:m.day})),...profilePayload(),useUp:s.useUp,notes:s.notes})});showSwapChoices(original,d.alternatives||[])}catch(e){app.innerHTML=`<button class=secondary id=backSwapError>← back</button><h1>swap ${esc(original.day)}</h1><div class="status error">${esc(e.message)}</div><button class=primary id=retrySwap>try again</button>`;document.querySelector('#backSwapError').onclick=meals;document.querySelector('#retrySwap').onclick=()=>swapMeal(id)}}
+const pendingFeedback=new Set();
+async function toggleMakeAgain(id){
+  const m=s.meals.find(x=>x.id===id),scope=storageKey,planId=s.planId,start=s.viewWeekStart||planningWeekStart();
+  const key=`${scope}:${planId}:${id}`;
+  if(!m||pendingFeedback.has(key))return;
+  const previous=[...(m.tags||[])],next=!isMakeAgain(m);
+  m.tags=previous.filter(t=>t!=='Make again');if(next)m.tags.push('Make again');save();meals();
+  if(DEV||!planId)return;
+  pendingFeedback.add(key);
+  try{
+    const result=await apiJson('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({planId,mealId:id,makeAgain:next,expectedRevision:s.weekRevisions?.[start]})});
+    if(storageKey!==scope||s.planId!==planId||s.viewWeekStart!==start)return;
+    m.tags=result.tags||m.tags;rememberWeekRevision(start,result);clearSyncError();save();meals();
+  }catch(e){
+    if(storageKey!==scope||s.planId!==planId||s.viewWeekStart!==start)return;
+    m.tags=previous;s.syncError=friendlyClientError(e.message);save();meals();
+  }finally{pendingFeedback.delete(key)}
+}
+async function swapMeal(id){
+  const original=s.meals.find(m=>m.id===id);if(!original)return;
+  const action=beginGeneration();
+  app.innerHTML=`<button class=secondary id=cancelSwap>← back</button><h1>swap ${esc(original.day)}</h1><p class=subtle>Finding two alternatives for ${esc(original.title)}…</p><div class="status status--loading swap-loading">finding alternatives…</div>`;
+  document.querySelector('#cancelSwap').onclick=()=>{cancelGeneration();meals()};
+  try{
+    const d=await apiJson('/api/swap-meal',{method:'POST',signal:action.controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({meal:original,otherMeals:s.meals.filter(m=>m.id!==id).map(m=>({title:m.title,day:m.day})),...profilePayload(),useUp:s.useUp,notes:s.notes})});
+    if(!action.current())return;showSwapChoices(original,d.alternatives||[]);
+  }catch(e){
+    if(!action.current())return;
+    app.innerHTML=`<button class=secondary id=backSwapError>← back</button><h1>swap ${esc(original.day)}</h1><div class="status error">${esc(friendlyClientError(e.message))}</div><button class=primary id=retrySwap>try again</button>`;
+    document.querySelector('#backSwapError').onclick=meals;document.querySelector('#retrySwap').onclick=()=>swapMeal(id);
+  }finally{finishGeneration(action)}
+}
 function showSwapChoices(original,alts){app.innerHTML=`<button class=secondary id=cancelChoices>← keep current meal</button><h1>pick a replacement</h1><p class=subtle>Here are two different directions for ${esc(original.day)}.</p>${alts.map((m,i)=>`<div class="card swap-choice"><div class=meal-day>option ${i+1}</div><div class=meal-title>${esc(m.title)}</div><p>${esc(m.description)}</p><span class=pill>${m.total_minutes||30} min</span>${(m.tags||[]).map(t=>`<span class=pill>${esc(t)}</span>`).join('')}<button class="primary choose-swap" data-i="${i}">choose this meal</button></div>`).join('')}`;document.querySelector('#cancelChoices').onclick=meals;document.querySelectorAll('.choose-swap').forEach(b=>b.onclick=()=>applySwap(original.id,alts[Number(b.dataset.i)]))}
-async function applySwap(originalId,replacement){const old=s.meals.find(m=>m.id===originalId);if(!old||!replacement)return;replacement={...replacement,day:old.day};s.meals=s.meals.map(m=>m.id===originalId?replacement:m);s.syncError=null;save();app.innerHTML='<h1>updating your week…</h1><div class="status status--loading">rebuilding groceries and saving the swap…</div>';if(!DEV){try{await syncPlan()}catch(e){s.syncError=e.message;save()}}meals()}
+async function applySwap(originalId,replacement){
+  const old=s.meals.find(m=>m.id===originalId),scope=storageKey,start=planningWeekStart();
+  if(!old||!replacement)return;
+  replacement={...replacement,day:old.day};s.meals=s.meals.map(m=>m.id===originalId?replacement:m);s.syncError=null;save();
+  app.innerHTML='<h1>updating your week…</h1><div class="status status--loading">rebuilding groceries and saving the swap…</div>';
+  if(!DEV){try{const result=await syncPlan(start);if(result?.ignored)return}catch(e){if(storageKey!==scope||planningWeekStart()!==start)return;s.syncError=e.message;save()}}
+  if(storageKey===scope&&planningWeekStart()===start)meals();
+}
 
 function groceryData(){if(s.planId&&Array.isArray(s.groceryItems))return s.groceryItems.map(i=>({key:i.id||groceryKey(i),...i}));const rows=globalThis.MealzShopping?.consolidateGroceries(s.meals)||[];return rows.map(i=>({key:i.source_key||groceryKey(i),...i,checked:false,source:'generated',user_modified:false}))}
 async function syncGrocery(item,checked){if(DEV||!s.planId||!item.id)return;try{const d=await apiJson('/api/plan',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'toggle',planId:s.planId,itemId:item.id,checked})});if(d.item)Object.assign(item,d.item);s.syncError=null;save()}catch(e){s.syncError=e.message;save()}}

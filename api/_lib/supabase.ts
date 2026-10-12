@@ -1,31 +1,38 @@
 import {AuthError} from './auth.js';
-import {REQUIRED_TABLES,REQUIRED_COLUMNS} from '../../migrations/manifest.js';
+import {SCHEMA_PROBES} from '../../migrations/manifest.js';
 import type { DatabaseRequestOptions } from '../../types.js';
+import {abortable,requestTimeout} from './deadline.js';
 
 const PUBLIC_KEY=()=>process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
+export class DatabaseError extends Error{
+  status: number;
+  code: string;
+  constructor(message: string,status: number,code=''){super(message);this.name='DatabaseError';this.status=status;this.code=code}
+}
 export function supabaseConfigured(){return !!(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY)}
 export const enc=(value: unknown)=>encodeURIComponent(String(value));
 
 async function request(path: string, options: DatabaseRequestOptions = {}, headers: Record<string, string> = {}){
   const timeoutMs=Number(options.timeoutMs)||12000;
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),timeoutMs);
+  const timeout=requestTimeout(timeoutMs,options.signal);
   try{
     const {timeoutMs:_,headers:optionHeaders,...rest}=options;
-    const response=await fetch(`${process.env.SUPABASE_URL}/rest/v1/${path}`,{
+    timeout.signal.throwIfAborted();
+    const response=await abortable(fetch(`${process.env.SUPABASE_URL}/rest/v1/${path}`,{
       ...(rest as any),
-      signal:controller.signal,
+      signal:timeout.signal,
       headers:{'Content-Type':'application/json',...headers,...((optionHeaders as Record<string, string>)||{})}
-    });
-    const text=await response.text();
+    }),timeout.signal);
+    const text=await abortable(response.text(),timeout.signal);
     let data=null;
     if(text){try{data=JSON.parse(text)}catch{data=text}}
-    if(!response.ok)throw new Error(typeof data==='object'?(data.message||data.hint||JSON.stringify(data)):data||`Supabase request failed (${response.status})`);
+    if(!response.ok)throw new DatabaseError(typeof data==='object'?(data?.message||data?.hint||JSON.stringify(data)):data||`Supabase request failed (${response.status})`,response.status,data?.code||'');
     return data;
   }catch(error){
+    if(options.signal?.aborted)throw options.signal.reason;
     if(error?.name==='AbortError')throw new Error('Cloud database request timed out.');
     throw error;
-  }finally{clearTimeout(timer)}
+  }finally{timeout.dispose()}
 }
 
 export async function sb(path: string, options: DatabaseRequestOptions = {}){
@@ -52,14 +59,7 @@ export async function householdSchemaReady(){
   const now=Date.now();
   if(now-householdCheck.checkedAt<30000)return householdCheck.value;
   try{
-    for (const table of REQUIRED_TABLES) {
-      await sb(`${table}?select=id&limit=0`);
-    }
-    for (const [table, cols] of Object.entries(REQUIRED_COLUMNS)) {
-      for (const col of cols) {
-        await sb(`${table}?select=${col}&limit=0`);
-      }
-    }
+    for (const {path} of SCHEMA_PROBES) await sb(path);
     householdCheck={value:true,checkedAt:now};
   }catch{
     householdCheck={value:false,checkedAt:now};
@@ -67,9 +67,9 @@ export async function householdSchemaReady(){
   return householdCheck.value;
 }
 
-export async function dataDb(auth: {id: string; token: string}){
+export async function dataDb(auth: {id: string; token: string},{signal}: {signal?: AbortSignal}={}){
   if(!auth?.id||!auth?.token)throw new AuthError();
-  const db=(path: string, options={})=>sbAsUser(auth.token,path,options);
+  const db=(path: string, options: DatabaseRequestOptions={})=>sbAsUser(auth.token,path,{...options,signal:signal&&options.signal?AbortSignal.any([signal,options.signal]):signal||options.signal});
   // Never retry a failed user-scoped query with the service key.
   const memberships=await db(`household_members?select=household_id,role&user_id=eq.${enc(auth.id)}&limit=1`);
   const membership=memberships?.[0];

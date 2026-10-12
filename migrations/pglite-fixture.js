@@ -15,10 +15,7 @@ export function adaptForPGlite(sql) {
     .replace(/perform pg_advisory_xact_lock\([^)]+\)\s*;/gi, '-- pg_advisory_xact_lock omitted');
 }
 
-export async function makeDb() {
-  const { PGlite } = await import('@electric-sql/pglite');
-  const db = new PGlite();
-  await db.exec(`
+export const BOOTSTRAP_SQL = `
     create role anon;
     create role authenticated;
     create role service_role bypassrls;
@@ -44,11 +41,18 @@ export async function makeDb() {
       notes text,
       household_size integer,
       equipment text[],
+      cooking_days text[],
+      use_up text,
+      updated_at timestamptz not null default now(),
       created_at timestamptz not null default now()
     );
     create table if not exists public.meals (
       id uuid primary key default gen_random_uuid(),
-      weekly_plan_id uuid references public.weekly_plans(id) on delete cascade
+      weekly_plan_id uuid references public.weekly_plans(id) on delete cascade,
+      meal_key text, day text, title text not null default '', description text,
+      emoji text, servings integer, total_minutes integer, difficulty text,
+      tags text[], kid_note text, sort_order integer,
+      created_at timestamptz not null default now()
     );
     create table if not exists public.ingredients (
       id uuid primary key default gen_random_uuid(),
@@ -61,7 +65,8 @@ export async function makeDb() {
     );
     create table if not exists public.recipe_steps (
       id uuid primary key default gen_random_uuid(),
-      meal_id uuid references public.meals(id) on delete cascade
+      meal_id uuid references public.meals(id) on delete cascade,
+      step_number integer, instruction text not null default ''
     );
     create table if not exists public.grocery_items (
       id uuid primary key default gen_random_uuid(),
@@ -73,6 +78,11 @@ export async function makeDb() {
       checked boolean not null default false,
       created_at timestamptz not null default now()
     );
-  `);
+  `;
+
+export async function makeDb() {
+  const { PGlite } = await import('@electric-sql/pglite');
+  const db = new PGlite();
+  await db.exec(BOOTSTRAP_SQL);
   return db;
 }

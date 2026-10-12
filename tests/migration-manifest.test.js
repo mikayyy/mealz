@@ -73,7 +73,7 @@ test('live schema gate fails on missing columns and invalid credentials', () => 
   }
   const healthy=run(200);
   assert.equal(healthy.status,0);
-  assert.match(healthy.stdout,/All required schema objects present/);
+  assert.match(healthy.stdout,/Required table\/column probes passed/);
 });
 
 test('live schema gate handles tables without an id column', () => {
@@ -84,7 +84,7 @@ test('live schema gate handles tables without an id column', () => {
     encoding:'utf8',
   });
   assert.equal(result.status,0,result.stderr);
-  assert.match(result.stdout,/All required schema objects present/);
+  assert.match(result.stdout,/Required table\/column probes passed/);
 });
 
 test('migration manifest: all migrations apply in order without errors', async () => {

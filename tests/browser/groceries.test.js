@@ -61,7 +61,7 @@ test('saved grocery list supports toggle, add, edit, and delete without changing
     return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html',body:readFileSync(new URL('../../'+file,import.meta.url))});
   });
   try{
-    await page.goto('http://mealz.test');
+    await page.goto('https://mealz.test');
     try{await page.locator('[data-week-action="edit-profile"]').waitFor()}
     catch(error){throw new Error(`mealz did not boot: ${JSON.stringify({errors,body:await page.locator('body').innerText(),html:await page.locator('#app').innerHTML()})}`,{cause:error})}
     await page.evaluate(()=>view('groceries'));
@@ -174,7 +174,7 @@ test('legacy generated rows repair once and remain consolidated after reload',as
     return route.fulfill({contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html',body:readFileSync(new URL('../../'+file,import.meta.url))});
   });
   try{
-    await page.goto('http://mealz.test');
+    await page.goto('https://mealz.test');
     await page.locator('[data-week-action="edit-profile"]').waitFor();
     await page.evaluate(()=>view('groceries'));
     await page.getByText('2 whole onion',{exact:true}).waitFor();

@@ -1,0 +1,337 @@
+{
+  "version": "0.23.0",
+  "state": "candidate",
+  "preparedOn": "2026-10-11",
+  "baseCommit": "382263d85c4bc0f614cf83189f41c38b304dc392",
+  "files": [
+    {
+      "path": ".github/workflows/preview-preflight.yml",
+      "sha256": "d31a326410ce4af95c44324650453a223e07fed0816bff7882ac335a1eb6325f"
+    },
+    {
+      "path": ".github/workflows/test.yml",
+      "sha256": "b9a8e152fb5d39e594e9f0b0aa7c7c0c8ed18c9b0ba84cbfc18697e182ec5862"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "77d552d0768fe95baf83ed9cbb0659cd885261ebd7f94b19656e28a81af4072f"
+    },
+    {
+      "path": "account-client.js",
+      "sha256": "4c8590691569b94d0afed9cf9c8a6c8ddf36cfc3cfc9e717109485413559fc32"
+    },
+    {
+      "path": "api/_lib/auth.ts",
+      "sha256": "de0180ba2143498485e3c0d62b33e14503423ed0d62bed75ac403912c6048d9d"
+    },
+    {
+      "path": "api/_lib/database.types.ts",
+      "sha256": "3b8cf2d2ff038141c6a59d716eb7fe48524e45d6c97006b6fa907d65274b6b99"
+    },
+    {
+      "path": "api/_lib/deadline.ts",
+      "sha256": "9d60c51ff6306b2e7e9658735783e2a360495f46524747da3f09770213e70d87"
+    },
+    {
+      "path": "api/_lib/generation-handler.ts",
+      "sha256": "d052fb40195d7422e1b136bdfbff5aa2b96267451a2359d4041451e53b17163b"
+    },
+    {
+      "path": "api/_lib/generation-routes.ts",
+      "sha256": "3ae7f94cf990564428773a2ec7513a063f88caf79bc7454c6e01f547c8d992ee"
+    },
+    {
+      "path": "api/_lib/generation-validation.ts",
+      "sha256": "637c7659c756ad694ea9297c449b3d9b26e7f684692e2d166d052277d76454f9"
+    },
+    {
+      "path": "api/_lib/openai.ts",
+      "sha256": "7b4a021e3dc4f15488e99086124b7710453e4e1bb6ed0c95f0069a7abc13325d"
+    },
+    {
+      "path": "api/_lib/plan-handler.ts",
+      "sha256": "665b52aa3edfd4b17f6a879d2591b7cb5ed626e733e54181f33160209b269726"
+    },
+    {
+      "path": "api/_lib/plan-save.ts",
+      "sha256": "243d2fba691f33147c6c2b44d4fd989b06df2bbf0e1d7b577b58d78b8ca0b261"
+    },
+    {
+      "path": "api/_lib/rate-limit.ts",
+      "sha256": "f781f58280e198d0a74bf7a3b9677dd0b088536ee8cf009339dd08873ce1d009"
+    },
+    {
+      "path": "api/_lib/supabase.ts",
+      "sha256": "e2d181ab27e202102c58e89b90fa3a8f801ed42e255c57062184b76554b1fb16"
+    },
+    {
+      "path": "api/expand-meals.ts",
+      "sha256": "a5a887b86836a34a1fc3ae8e48c0b5879ce15831277166f2965b1feba8b8ca6e"
+    },
+    {
+      "path": "api/feedback.ts",
+      "sha256": "782651ac072edc9918b6fdd6a451ee4efb51298bf3bfe2c64ccd2ac5c33fe27b"
+    },
+    {
+      "path": "api/generate-ideas.ts",
+      "sha256": "674272fb7916f9d6705ca2c83172ab977bae8e691713602a6476806907471002"
+    },
+    {
+      "path": "api/plan.ts",
+      "sha256": "531426860725b5f335878df3428f5917fb42cc21bdeaf25969e6753e315e8531"
+    },
+    {
+      "path": "api/swap-meal.ts",
+      "sha256": "d466bf9671eaa8ac9fce1152c84b49ec09dbd7edadc6fbdd2a41f8eaec18a793"
+    },
+    {
+      "path": "app.js",
+      "sha256": "f50dafc2ead05bbb7d97f2000ee59c2a3afe9683d695bd789a0a4a9f941063fe"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "51b054f6352d11f142a613342a735cbbc16c5ec7fb78879110e10381ae8b5828"
+    },
+    {
+      "path": "docs/architecture.md",
+      "sha256": "f5606398a333dd405a56064099959bbf4d4e5cbc70c180a0023bf54eac00b09f"
+    },
+    {
+      "path": "docs/auth-setup.md",
+      "sha256": "83e4c06d864a3e4499b0b326b59356265c7b06c972044dd73d8679e2ce438215"
+    },
+    {
+      "path": "docs/code-review-2026-10-05.md",
+      "sha256": "92c0170450c39f79778978360b7c4344b215d444c6c60066ac4bdbc9e9413ae6"
+    },
+    {
+      "path": "docs/local-supabase.md",
+      "sha256": "6febcbf3f0cf3f7f646342cf57c1dc37b316a35d6619598550c927edcae43fc6"
+    },
+    {
+      "path": "docs/preview-cost-policy.md",
+      "sha256": "2ea7c2aba89a96065502248a68ae02c35f1bc4cf58d24693f08713425f1090c1"
+    },
+    {
+      "path": "docs/release-v0.23.0-handoff.md",
+      "sha256": "a5d77bea4d1157f4798608cb1ad083c7ce0550eea83cfcffb203baa369401cf9"
+    },
+    {
+      "path": "docs/release-v0.23.0-live-ai-test.md",
+      "sha256": "68fb62ef6ec6fadc210a87d421a8f2e65eac0b147116ac393c6ac6eee55620c6"
+    },
+    {
+      "path": "docs/release-v0.23.0-local-acceptance.md",
+      "sha256": "1de9851f16bdedb44bd9f9572bd4405a5ea14a1c0f697945bff63d2d2c7f1a95"
+    },
+    {
+      "path": "docs/release-v0.23.0-plan.md",
+      "sha256": "91577026dbd7971b15646aacadb6660e08a408b830d30c4f5e161e78da13a3c7"
+    },
+    {
+      "path": "docs/release-v0.23.0-stage-1.md",
+      "sha256": "3d6f242de2f73b6259dd6421d1a1d3300ac8bfb94f7d40af5364fb0cf992aeb8"
+    },
+    {
+      "path": "docs/release-v0.23.0-stage-2.md",
+      "sha256": "e831b256e2bfd18f686e317f17783aeeac64446774ad70c2fa42972616262861"
+    },
+    {
+      "path": "docs/release-v0.23.0-stage-3.md",
+      "sha256": "465d32c54a456c72e397ce4cd50133bf049033b84a261e8fc0047b4c44b38890"
+    },
+    {
+      "path": "docs/release-v0.23.0-stage-4.md",
+      "sha256": "ddaf43ae4d1f9ddf39e0d39081fb4a82ba81ab2d504ec0b8f787a8f474631fef"
+    },
+    {
+      "path": "docs/roadmap.md",
+      "sha256": "172c8646c4355e1afc837fbc8c23a0b0e6f8e654e74fd4fb99fd83f108144b0f"
+    },
+    {
+      "path": "grocery-order.js",
+      "sha256": "b562815cb9184c04344da2b88e2d50f4bd071c0a03932bd989b7eda4a7597019"
+    },
+    {
+      "path": "index.html",
+      "sha256": "468e886df9497a83f20860b55d105ef4133e0d5f02b9086f4fa0147f296aa988"
+    },
+    {
+      "path": "migrations/20261006015243_transactional_week_saves.sql",
+      "sha256": "7de51bb3fe635347dc929d0af83d9ee0c276be4e55f35d82cf06eef9095aba72"
+    },
+    {
+      "path": "migrations/manifest.js",
+      "sha256": "b27662872c913563422f1fb48e5dc632fc1eb618fec20d8d6055ce5110b0e331"
+    },
+    {
+      "path": "migrations/pglite-fixture.js",
+      "sha256": "34f480fa6e58b7d26ad74998cf2c175f044ab1905c73f61aa8ff089441f502e2"
+    },
+    {
+      "path": "package.json",
+      "sha256": "aebe6c8204c28e3eac7408c2bd888d9f30066ba14645cc437aaed2b507793979"
+    },
+    {
+      "path": "README.md",
+      "sha256": "e570404b55784327c71239cca914304596172609ba6fd978cf8aac17fed91e51"
+    },
+    {
+      "path": "scripts/local-server.mjs",
+      "sha256": "c492ef59ea876f5a98f3f44e7e1ef29f42419e76c8bcb07b1d666a20e3a72946"
+    },
+    {
+      "path": "scripts/local-stack.mjs",
+      "sha256": "b7a4188bd749ebadf9ee359d79fc3191c8502566ebe3e4c4ccddf634fff92249"
+    },
+    {
+      "path": "scripts/local-supabase-apply.mjs",
+      "sha256": "91518ebca8740a4967c58b78b0d0399a9b542d32a0748f53f5d74056dea558be"
+    },
+    {
+      "path": "scripts/local-supabase-init.mjs",
+      "sha256": "c51589f0ea526b03482901743a2590820007f8a402422d6ceb4fa23494116d28"
+    },
+    {
+      "path": "scripts/local-supabase-lib.mjs",
+      "sha256": "510785e0ab238d2e6366eb12fbc5c1136fb1269c315a444e26c11dc8cd21a1cc"
+    },
+    {
+      "path": "scripts/migrate-live.js",
+      "sha256": "86439b660adb1394aa1f9dbcce1ac20de4db32f7ca219a4e240520f6f0c9e4b5"
+    },
+    {
+      "path": "scripts/migrate-validate.js",
+      "sha256": "ad627cb4052c18ff42b6099c91c4a06eb8c1af7e0183dce4e24e4b74957989bf"
+    },
+    {
+      "path": "scripts/release-check.js",
+      "sha256": "4a64c8622ac58a1d1cafb63f409ea034c5f5fc1fb65417c4cfb8f83a456b156f"
+    },
+    {
+      "path": "scripts/release-contract.js",
+      "sha256": "18928ee62929be8e1991fa702d35b12b4f901f4a5409d11dc86a069d0cf91692"
+    },
+    {
+      "path": "scripts/verify-live-recipe.mjs",
+      "sha256": "6f2fbe2528ad5e7f51219d7120e81d9bb8759d7de3d52735e6e7cac3725e3d50"
+    },
+    {
+      "path": "scripts/verify-local-plan-api.mjs",
+      "sha256": "bb4b21b073b6093bf0ec4728149709d7b17f364b5ba5a47d7788b2059b958638"
+    },
+    {
+      "path": "scripts/verify-local-supabase.mjs",
+      "sha256": "4196129ca00bcd4feb88df7c63e652cf86cedae2e28cfc40e7dfcf8516966089"
+    },
+    {
+      "path": "scripts/verify-plan-concurrency.mjs",
+      "sha256": "5e33d0f55e855e4cbf185710b390822baad8f8b5c677b59900f4574af1490b11"
+    },
+    {
+      "path": "shopping-logic.js",
+      "sha256": "371c2a50a0fdaded2740dbd8103e96ec28362fc6df19218b6d43532d1844bf40"
+    },
+    {
+      "path": "supabase/.gitignore",
+      "sha256": "507699eb91144818edf61d3a079212cacf31d8db520eae428e3b48fcf0d6919c"
+    },
+    {
+      "path": "supabase/config.toml",
+      "sha256": "1044eb2d8d7351bcf80ea4b967dac8023137a9e21b246417b4caee5c0da7866c"
+    },
+    {
+      "path": "supabase/migrations/20261011231741_local_prototype_baseline.sql",
+      "sha256": "1a96df74380476ac4897fc3c865ccea790c3c38386b2d224091a7d7ff74fc753"
+    },
+    {
+      "path": "tests/auth.test.js",
+      "sha256": "09daef2e834918fba1db76858edb397369673f8ea04de2bedd6d73267ee62eac"
+    },
+    {
+      "path": "tests/browser/groceries.test.js",
+      "sha256": "a87b580193a3c7b10a092503321b2d50e6ddc525faf9f17b3db00187227720e9"
+    },
+    {
+      "path": "tests/browser/plan-recovery.test.js",
+      "sha256": "41a552bdd76fa0541fd43cbd9ed9b9328ea9d8c562adbb64aac5a689d1dc69fe"
+    },
+    {
+      "path": "tests/generation.test.js",
+      "sha256": "ab537c657255272d5db6e4cfec36bca2bf195508f4e11c90d0e831836a02c464"
+    },
+    {
+      "path": "tests/grocery-api.test.js",
+      "sha256": "7c93f64b457bc45c3c80dccc5ec454f89549c2f1dc488468ebd0e92c4411f987"
+    },
+    {
+      "path": "tests/household.test.js",
+      "sha256": "1e009e9de88ba5e042a941c735ee73acf1f04c6f880ab8b0a99453768ff4c21a"
+    },
+    {
+      "path": "tests/live-preflight.test.js",
+      "sha256": "74e0d21b7ee1b2713ff7914f734380eb75ba01d2903f8f29ac7912b9027967c1"
+    },
+    {
+      "path": "tests/local-setup.test.js",
+      "sha256": "feb4eca51b8cf03ca564ecb33de2aa1374bef57fedcfcccd8c329462a2da1580"
+    },
+    {
+      "path": "tests/migration-manifest.test.js",
+      "sha256": "dcd4fd9c5f1d01dbbed9ea56226118c9c42fd69a3af02e6afb84bd7c01c4b168"
+    },
+    {
+      "path": "tests/navigation.test.js",
+      "sha256": "6fa13f795f2f752992854980f983924afa1d109a3b321279d3b571542bb3c1a9"
+    },
+    {
+      "path": "tests/ownership.test.js",
+      "sha256": "5c7dd45751de02e52c542db30f7d7a1de3605139aa9dcaa6c4fbca4dbca9729c"
+    },
+    {
+      "path": "tests/plan-save.test.js",
+      "sha256": "7834c23e7acbe775e58600b577f848c7b1ce462671212dc63e8086b9b9597ec2"
+    },
+    {
+      "path": "tests/release-contract.test.js",
+      "sha256": "d97b319d6454767f14c2f66009de7293bd0b2e5cb10bba209384a01195f405e9"
+    },
+    {
+      "path": "tests/schema-readiness.test.js",
+      "sha256": "e9aaae67bb841865b4d2cfba35211a3e7e3a0b52a0d9af154f305ac8018efb8a"
+    },
+    {
+      "path": "tests/sundry-migration.test.js",
+      "sha256": "71d83ae6faffc1029b423c2672585feb45c81087df774099da778e05ddd98d69"
+    },
+    {
+      "path": "tests/transactional-plan.test.js",
+      "sha256": "480ef44deba0fcc73ac4791976c0c4020d8cac0e3815912767d78e164a0baa29"
+    },
+    {
+      "path": "types.d.ts",
+      "sha256": "bd607fa33e85dc064b9510071cdea807ca4166e28a510f3124f545bf1f4c3eb7"
+    },
+    {
+      "path": "vercel.json",
+      "sha256": "0c4c84871c6379d22fcfaf51cb7933863eda358c363c73b6371b3a0827344d91"
+    },
+    {
+      "path": "weeks.js",
+      "sha256": "85c7234c2935e1b26ed057fb4d4dceafd29fa52d104b65fea1520ce56b1201f8"
+    },
+    {
+      "path": "scripts/deploy-isolated-preview.mjs",
+      "sha256": "34b2ee06e98429e148f50a416a09d34c0bd0cb1072e73ed5071b8af6e8de1fce"
+    }
+  ],
+  "excluded": [
+    ".kilo/plans/*",
+    "docs/roadmap.md.bk",
+    "tsc-baseline-live.txt",
+    "docs/preview-session.json",
+    ".env*",
+    ".vercel/*"
+  ],
+  "note": "Source upload and draft PR authorized 2026-10-07; deployment remains separate."
+}

@@ -106,6 +106,7 @@ export interface HouseholdMutationResult {
 }
 
 export interface WeeklyPlan {
+  revision: number;
   id: string;
   week_start: string;
   household_id: string;

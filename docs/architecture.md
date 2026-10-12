@@ -45,7 +45,19 @@ New API endpoints should use these helpers rather than duplicating request code.
 
 ## Plan replacement
 
-Plan replacement now follows a create-then-swap strategy. Mealz builds the new active plan and all child records first. Only after that succeeds does it delete the prior active plan and stale prepared ideas. If the new save fails, Mealz attempts to delete the incomplete replacement and leaves the prior plan intact.
+Local v0.23.0 work replaces independent REST writes with `mealz_save_week`, a user-scoped `SECURITY INVOKER` transaction. `api/_lib/plan-save.ts` validates the draft and reconciles authoritative groceries with `shopping-logic.js`. The RPC locks the household/week, checks the caller and reconciliation snapshot revisions, updates the stable plan and child graph, and records a household/user request receipt atomically. Failed writes, including prepared-ideas cleanup, roll back together. A receipt replay returns the current complete graph for that plan without repeating writes.
+
+Grocery and meal-feedback RPCs use the same lock/revision boundary. Child-write triggers advance revisions for direct REST changes too. A partial unique index enforces one active plan per household/week. Stale writers get HTTP 409. `mealz_week_result` returns the graph and revision from one SQL snapshot. Missing infrastructure fails closed; there is no legacy save fallback or service-key retry.
+
+Browser pending drafts use the authenticated household/account cache key. Reload does not auto-upload cached plans. Explicit retry reuses the request key; conflict recovery loads the current week, retains the draft, and requires review before issuing a new key. Late save/mutation responses are ignored after account/week changes.
+
+The migration is local and unapplied live. Its unique rule is incompatible with the old save implementation. See [stage 2](release-v0.23.0-stage-2.md) for the deployment window and verification evidence.
+
+## On-demand generation
+
+The local v0.23.0 generation routes delegate to `api/_lib/generation-routes.ts`. A response wrapper owns one 50-second budget covering authentication, membership, rate limiting, preferences, model calls/retries, validation and response assembly. Signals propagate through auth/database/AI helpers; promise races prevent a late response if a transport ignores abort. Only complete batches are returned, and generation never writes saved-plan data.
+
+AI attempts receive at most 35 seconds within the remaining request time. One transient retry is allowed only when its delay, eight seconds of generation and a one-second response reserve fit. Provider quota/invalid/output errors are not retried. Browser generation uses a 55-second delivery allowance, preserves saved state on failure, cancels on navigation, and ignores stale account/week responses before saving. Request IDs and fixed timing/outcome fields support diagnostics without household text or provider error messages. See [stage 3](release-v0.23.0-stage-3.md) for tests, limitations and preview gates.
 
 ## Quick-login privileged access
 
@@ -59,10 +71,7 @@ read by authenticated or anonymous browser roles.
 
 ## Known technical debt
 
-- **Plan replacement is not transactional.** The create-then-swap strategy is safer
-  than delete-then-create, but a partial failure can leave an incomplete replacement
-  plan. A server-side SQL transaction or security-definer RPC is the correct fix
-  (roadmap Phase 2). Do not approximate transactions with parallel REST calls.
+- **Live generation timing and Friday preparation.** On-demand generation is bounded locally; preview performance and the separate multi-household cron's resumability/scaling remain unverified.
 - **Implicit week fallback.** The legacy boot hydration can still read the newest
   active plan without an explicit `week_start`. New code should always pass an
   explicit `week_start`; the fallback should be removed once all callers are
@@ -90,6 +99,8 @@ The canonical order is:
 6. `migrations/2026-09-21_trusted_device_login.sql`
 7. `migrations/20260921194345_supabase_hardening_v0202.sql`
 8. `migrations/20260921212102_editable_groceries_v0210.sql`
+9. `migrations/20260924161500_sundry_intent_v0220.sql`
+10. `migrations/20261006015243_transactional_week_saves.sql` — pending locally; coordinated deployment required
 
 ### Migration verification
 

@@ -9,11 +9,12 @@ import {AuthError} from './auth.js';
  * @param {number} [windowSeconds]
  * @returns {Promise<void>}
  */
-export async function enforceRateLimit(key,limit,windowSeconds=900){
+export async function enforceRateLimit(key,limit,windowSeconds=900,{signal}: {signal?: AbortSignal}={}){
   let result;
   try{
-    result=await sb('rpc/mealz_take_rate_limit',{method:'POST',body:JSON.stringify({p_key:key,p_limit:limit,p_window_seconds:windowSeconds})});
+    result=await sb('rpc/mealz_take_rate_limit',{method:'POST',signal,body:JSON.stringify({p_key:key,p_limit:limit,p_window_seconds:windowSeconds})});
   }catch{
+    if(signal?.aborted)throw signal.reason;
     throw new AuthError('This action is temporarily unavailable. Please try again later.',503);
   }
   if(!result?.allowed){

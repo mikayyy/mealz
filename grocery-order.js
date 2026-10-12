@@ -50,38 +50,48 @@
     const data=new FormData(form),raw=data.get('quantity');
     return {name:String(data.get('name')||'').trim(),quantity:raw===''?null:Number(raw),unit:String(data.get('unit')||'').trim()||null,category:String(data.get('category')||'Other')};
   }
-  async function mutate(method,payload){return apiJson('/api/plan',{method,headers:{'Content-Type':'application/json'},body:JSON.stringify({planId:s.planId,...payload})})}
+  let mutationQueue=Promise.resolve();
+  async function mutate(method,payload){
+    const scope=storageKey,planId=s.planId,start=s.viewWeekStart||planningWeekStart();
+    const task=mutationQueue.then(async()=>{
+      if(storageKey!==scope||s.planId!==planId)return {ignored:true};
+      const result=await apiJson('/api/plan',{method,headers:{'Content-Type':'application/json'},body:JSON.stringify({planId,expectedRevision:s.weekRevisions?.[start],...payload})});
+      if(storageKey!==scope||s.planId!==planId)return {ignored:true};
+      rememberWeekRevision(start,result);return result;
+    }).catch(error=>{if(storageKey!==scope||s.planId!==planId)return {ignored:true};throw error});
+    mutationQueue=task.catch(()=>{});return task;
+  }
   async function toggle(item,checked){
     if(pending.has(item.key))return;
     if((DEV||!s.planId)&&!item.id){const key=item.key;localizeDerivedItems();item=currentItems().find(row=>row.source_key===key||row.key===key)||item}
     pending.add(item.key);
     const index=(s.groceryItems||[]).findIndex(row=>row.id===item.id);
-    const before=index>=0?!!s.groceryItems[index].checked:!!item.checked,planId=s.planId;
+    const before=index>=0?!!s.groceryItems[index].checked:!!item.checked,planId=s.planId,scope=storageKey;
     if(index>=0)s.groceryItems[index].checked=checked;
     item.checked=checked;s.checked[item.key]=checked;save();render(item.key);
     try{
-      if(!DEV&&s.planId&&item.id){const result=await mutate('PATCH',{action:'toggle',itemId:item.id,checked});if(s.planId===planId&&index>=0&&result.item)s.groceryItems[index]=result.item}
-      if(s.planId===planId)s.syncError=null;
-    }catch(error){if(s.planId===planId){if(index>=0)s.groceryItems[index].checked=before;s.checked[item.key]=before;s.syncError=friendlyClientError(error.message)}}
-    finally{pending.delete(item.key);if(s.planId===planId){save();if(app.querySelector('.grocery-toolbar'))render()}}
+      if(!DEV&&s.planId&&item.id){const result=await mutate('PATCH',{action:'toggle',itemId:item.id,checked});if(result.ignored)return;if(storageKey===scope&&s.planId===planId&&index>=0&&result.item)s.groceryItems[index]=result.item}
+      if(storageKey===scope&&s.planId===planId)s.syncError=null;
+    }catch(error){if(storageKey===scope&&s.planId===planId){if(index>=0)s.groceryItems[index].checked=before;s.checked[item.key]=before;s.syncError=friendlyClientError(error.message)}}
+    finally{pending.delete(item.key);if(storageKey===scope&&s.planId===planId){save();if(app.querySelector('.grocery-toolbar'))render()}}
   }
   async function setNeeded(item,needed){
     if(pending.has(item.key))return;
     if((DEV||!s.planId)&&!item.id){const key=item.key;localizeDerivedItems();item=currentItems().find(row=>row.source_key===key||row.key===key)||item}
     pending.add(item.key);
-    const index=(s.groceryItems||[]).findIndex(row=>row.id===item.id),planId=s.planId;
+    const index=(s.groceryItems||[]).findIndex(row=>row.id===item.id),planId=s.planId,scope=storageKey;
     const before=index>=0?{...s.groceryItems[index]}:{...item};
     if(index>=0){s.groceryItems[index].needed_this_week=needed;if(!needed)s.groceryItems[index].checked=false}
     if(!needed)s.checked[item.key]=false;
     save();render();
     try{
-      if(!DEV&&s.planId&&item.id){const result=await mutate('PATCH',{action:'set_needed',itemId:item.id,needed});if(s.planId===planId&&index>=0&&result.item)s.groceryItems[index]=result.item}
-      if(s.planId===planId)s.syncError=null;
-    }catch(error){if(s.planId===planId){if(index>=0)s.groceryItems[index]=before;s.checked[item.key]=!!before.checked;s.syncError=friendlyClientError(error.message)}}
-    finally{pending.delete(item.key);if(s.planId===planId){save();if(app.querySelector('.grocery-toolbar'))render()}}
+      if(!DEV&&s.planId&&item.id){const result=await mutate('PATCH',{action:'set_needed',itemId:item.id,needed});if(result.ignored)return;if(storageKey===scope&&s.planId===planId&&index>=0&&result.item)s.groceryItems[index]=result.item}
+      if(storageKey===scope&&s.planId===planId)s.syncError=null;
+    }catch(error){if(storageKey===scope&&s.planId===planId){if(index>=0)s.groceryItems[index]=before;s.checked[item.key]=!!before.checked;s.syncError=friendlyClientError(error.message)}}
+    finally{pending.delete(item.key);if(storageKey===scope&&s.planId===planId){save();if(app.querySelector('.grocery-toolbar'))render()}}
   }
   async function submit(form){
-    const values=formPayload(form),id=form.dataset.id;
+    const values=formPayload(form),id=form.dataset.id,scope=storageKey;
     groceryUiError='';
     try{
       if(DEV||!s.planId){
@@ -89,21 +99,22 @@
         if(id){const index=s.groceryItems.findIndex(item=>item.id===id);if(index>=0)s.groceryItems[index]={...s.groceryItems[index],...values,user_modified:true}}
         else s.groceryItems.push({...values,id:`local-manual-${Date.now()}`,checked:false,needed_this_week:shopping.isSundry(values.name),source:'manual',source_key:null,user_modified:true,deleted:false});
       }else if(id){
-        const result=await mutate('PATCH',{itemId:id,...values});const index=s.groceryItems.findIndex(item=>item.id===id);if(index>=0)s.groceryItems[index]=result.item;
+        const result=await mutate('PATCH',{itemId:id,...values});if(result.ignored||storageKey!==scope)return;const index=s.groceryItems.findIndex(item=>item.id===id);if(index>=0)s.groceryItems[index]=result.item;
       }else{
-        const result=await mutate('PUT',values);s.groceryItems.push(result.item);
+        const result=await mutate('PUT',values);if(result.ignored||storageKey!==scope)return;s.groceryItems.push(result.item);
       }
       editingId=null;showAdd=false;s.syncError=null;save();render();
-    }catch(error){groceryUiError=friendlyClientError(error.message);render()}
+    }catch(error){if(storageKey!==scope)return;groceryUiError=friendlyClientError(error.message);render()}
   }
   async function remove(item){
+    const scope=storageKey;
     groceryUiError='';
     if((DEV||!s.planId)&&!item.id){const key=item.key;localizeDerivedItems();item=currentItems().find(row=>row.source_key===key||row.key===key)||item}
     if(!confirm(`Delete ${item.name} from this grocery list?`))return;
     try{
-      if(!DEV&&s.planId&&item.id)await mutate('DELETE',{itemId:item.id});
+      if(!DEV&&s.planId&&item.id){const result=await mutate('DELETE',{itemId:item.id});if(result.ignored||storageKey!==scope)return}
       s.groceryItems=(s.groceryItems||[]).filter(row=>row.id!==item.id);delete s.checked[item.key];s.syncError=null;save();render();
-    }catch(error){groceryUiError=friendlyClientError(error.message);render()}
+    }catch(error){if(storageKey!==scope)return;groceryUiError=friendlyClientError(error.message);render()}
   }
   function wire(){
     app.querySelectorAll('[data-grocery-action]').forEach(control=>{

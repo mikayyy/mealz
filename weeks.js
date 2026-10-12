@@ -37,8 +37,8 @@ function profileCard(){
   return `<div class="card household-summary"><div><h2>profile</h2><p>${s.adults} adult${s.adults===1?'':'s'} · ${s.children} child${s.children===1?'':'ren'} · ${esc(diet)}</p></div><button class=secondary data-week-action="edit-profile">edit</button></div>`;
 }
 async function loadWeeksOverview(force=false){if(DEV){weeksOverview={current:null,next:null,past:[]};return weeksOverview}if(weeksOverview&&!force)return weeksOverview;if(weeksOverviewPromise&&!force)return weeksOverviewPromise;const pending=apiJson(`/api/weeks?current_start=${encodeURIComponent(currentWeekStart())}&next_start=${encodeURIComponent(nextWeekStart())}`).then(result=>{weeksOverview=result;clearSyncError();save();return result}).catch(e=>{s.syncError=e.message;save();weeksOverview={current:null,next:null,past:[]};return weeksOverview}).finally(()=>{if(weeksOverviewPromise===pending)weeksOverviewPromise=null});weeksOverviewPromise=pending;return pending}
-function applyWeekData(start,d){if(!d?.plan)return false;selectedWeekStart=start;s.viewWeekStart=start;s.meals=sortMealsByDay(d.meals||[]);s.groceryItems=d.groceryItems||[];s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of s.groceryItems)s.checked[i.id||groceryKey(i)]=!!i.checked;clearSyncError();save();return true}
-function cacheCurrentState(start){if(!start||!s.planId)return;weekCache.set(start,{plan:{id:s.planId,cooking_days:s.days||[],use_up:s.useUp||'',notes:s.notes||''},meals:sortMealsByDay(s.meals||[]),groceryItems:(s.groceryItems||[]).map(i=>({...i}))})}
+function applyWeekData(start,d){if(!d?.plan)return false;selectedWeekStart=start;s.viewWeekStart=start;rememberWeekRevision(start,d);s.meals=sortMealsByDay(d.meals||[]);s.groceryItems=d.groceryItems||[];s.planId=d.plan.id;s.days=d.plan.cooking_days||[];s.useUp=d.plan.use_up||'';s.notes=d.plan.notes||'';s.checked={};for(const i of s.groceryItems)s.checked[i.id||groceryKey(i)]=!!i.checked;clearSyncError();save();return true}
+function cacheCurrentState(start){if(!start||!s.planId)return;weekCache.set(start,{plan:{id:s.planId,revision:s.weekRevisions?.[start],cooking_days:s.days||[],use_up:s.useUp||'',notes:s.notes||''},meals:sortMealsByDay(s.meals||[]),groceryItems:(s.groceryItems||[]).map(i=>({...i}))})}
 async function hydrateWeek(start,{force=false}={}){
   if(!start)return false;
   // The selected week is navigation state, even when the data is already hydrated.
@@ -67,7 +67,7 @@ function scheduleDashboardPrefetch(o){
   const run=()=>starts.forEach(prefetchWeek);
   if('requestIdleCallback'in window)requestIdleCallback(run,{timeout:1200});else setTimeout(run,0);
 }
-function cancelTransientNavigation(){activeSwapEpoch=null;navigationEpoch++}
+function cancelTransientNavigation(){cancelGeneration();activeSwapEpoch=null;navigationEpoch++}
 function backToWeeks(){cancelTransientNavigation();weekScreenMode='dashboard';selectedWeekStart=null;dashboard()}
 function addWeekContext(){
   if(!selectedWeekStart||app.querySelector('.week-context'))return;
@@ -133,12 +133,12 @@ function renderDashboard(o){
 }
 
 planningWeekStart=function(){return selectedWeekStart||nextWeekStart()};
-plan=function(){if(weekScreenMode==='editor'){basePlanEditor();addEditorBack();return}return dashboard()};
-profile=function(){baseProfileView();addProfileBack()};
-ideaPicker=function(){baseIdeaPicker();addWeekContext()};
-meals=function(){activeSwapEpoch=null;baseMealsView();addWeekContext()};
-groceries=function(){activeSwapEpoch=null;baseGroceriesView();addWeekContext()};
-recipe=function(id){baseRecipeView(id);if(selectedWeekStart){const back=app.querySelector('#back');if(back)back.textContent='← Meals';addWeekContext()}};
+plan=function(){cancelGeneration();if(weekScreenMode==='editor'){basePlanEditor();addEditorBack();return}return dashboard()};
+profile=function(){cancelGeneration();baseProfileView();addProfileBack()};
+ideaPicker=function(){cancelGeneration();baseIdeaPicker();addWeekContext()};
+meals=function(){cancelGeneration();activeSwapEpoch=null;baseMealsView();addWeekContext()};
+groceries=function(){cancelGeneration();activeSwapEpoch=null;baseGroceriesView();addWeekContext()};
+recipe=function(id){cancelGeneration();baseRecipeView(id);if(selectedWeekStart){const back=app.querySelector('#back');if(back)back.textContent='← Meals';addWeekContext()}};
 buildSelectedWeek=async function(){const result=await baseBuildSelectedWeek();addWeekContext();return result};
 swapMeal=async function(id){
   const epoch=++navigationEpoch;
@@ -153,7 +153,32 @@ swapMeal=async function(id){
   return result;
 };
 showSwapChoices=function(original,alts){if(activeSwapEpoch==null)return;baseShowSwapChoices(original,alts);addWeekContext()};
-syncPlan=async function(weekStart=planningWeekStart()){const result=await baseSyncPlan(weekStart);weeksOverview=null;weekCache.delete(weekStart);cacheCurrentState(weekStart);return result};
+syncPlan=async function(weekStart=planningWeekStart(),retryPayload=null){const result=await baseSyncPlan(weekStart,retryPayload);if(result?.ignored)return result;weeksOverview=null;weekCache.delete(weekStart);cacheCurrentState(weekStart);return result};
+
+app.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-save-action]');
+  if(!button||button.disabled)return;
+  const scope=storageKey,selection=planningWeekStart(),draft=s.conflictedDraft||s.pendingPlanSave;
+  const start=draft?.weekStart||s.viewWeekStart||planningWeekStart();
+  button.disabled=true;button.setAttribute('aria-busy','true');
+  try{
+    if(button.dataset.saveAction==='reload'){
+      const data=await apiJson(`/api/plan?week_start=${encodeURIComponent(start)}`);
+      if(storageKey!==scope||planningWeekStart()!==selection)return;
+      if(!data.plan)throw new Error('There is no saved week to reload yet.');
+      applyWeekData(start,data);weekCache.set(start,data);weeksOverview=null;
+      if(s.conflictedDraft){s.conflictedDraft.reviewReady=true;s.pendingPlanSave=null}
+      save();view('meals');
+    }else if(button.dataset.saveAction==='review'&&draft){
+      selectedWeekStart=start;s.viewWeekStart=start;s.meals=sortMealsByDay(draft.payload.meals);s.days=draft.payload.days;s.useUp=draft.payload.useUp;s.notes=draft.payload.notes;
+      s.pendingPlanSave={...draft,expectedRevision:s.weekRevisions?.[start]||0,requestKey:crypto.randomUUID()};s.conflictedDraft=null;s.syncError=null;save();view('meals');
+    }else if(button.dataset.saveAction==='retry'&&draft){
+      selectedWeekStart=start;s.viewWeekStart=start;
+      const result=await syncPlan(start,draft.payload);if(!result?.ignored)view('meals');
+    }
+  }catch(error){if(storageKey===scope){s.syncError=friendlyClientError(error.message);save();view('meals')}}
+  finally{if(button.isConnected){button.disabled=false;button.removeAttribute('aria-busy')}}
+});
 
 // The wordmark is a persistent escape hatch back to the week dashboard on every screen.
 const brandHome=document.querySelector('.brand');

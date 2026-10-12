@@ -1,3 +1,4 @@
+import {abortable,requestTimeout} from './deadline.js';
 const PUBLIC_KEY=()=>process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
 
 export class AuthError extends Error{
@@ -13,28 +14,29 @@ export function bearerToken(req: any){
   return match?.[1]?.trim()||'';
 }
 
-export async function requireUser(req: any){
+export async function requireUser(req: any,{signal}: {signal?: AbortSignal}={}){
   if(!authConfigured()){
     throw new AuthError('Authentication is not configured.',503);
   }
   const token=bearerToken(req);
   if(!token)throw new AuthError();
-  const controller=new AbortController();
-  const timer=setTimeout(()=>controller.abort(),8000);
+  const timeout=requestTimeout(8000,signal);
   try{
-    const response=await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`,{
-      signal:controller.signal,
+    timeout.signal.throwIfAborted();
+    const response=await abortable(fetch(`${process.env.SUPABASE_URL}/auth/v1/user`,{
+      signal:timeout.signal,
       headers:{apikey:PUBLIC_KEY(),Authorization:`Bearer ${token}`}
-    });
+    }),timeout.signal);
     if(!response.ok)throw new AuthError('Your session has expired. Please sign in again.',401);
-    const user=await response.json();
+    const user=await abortable(response.json(),timeout.signal);
     if(!user?.id)throw new AuthError();
     return {id:user.id,email:user.email||null,token,mode:'authenticated'};
   }catch(error){
+    if(signal?.aborted)throw signal.reason;
     if(error instanceof AuthError)throw error;
     if(error?.name==='AbortError')throw new AuthError('Authentication check timed out. Please try again.',503);
     throw new AuthError('Could not verify your session. Please try again.',503);
-  }finally{clearTimeout(timer)}
+  }finally{timeout.dispose()}
 }
 
 export function respondAuthError(res: any, error: any){

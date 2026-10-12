@@ -1,6 +1,6 @@
 # Mealz roadmap
 
-**Last updated:** 2026-09-25
+**Last updated:** 2026-10-06
 
 This roadmap records recent releases and later product directions. Release
 numbers are proposed sequencing, not deployment promises.
@@ -31,6 +31,36 @@ Key outcomes:
 
 See [Grocery sundries section plan](sundries-section-plan.md) for the complete
 implementation, data model, tests, release sequence, and acceptance criteria.
+
+## Proposed next release
+
+v0.23.0 is now a local unreleased candidate. See [release preparation](release-v0.23.0-stage-4.md) for verification, live baseline evidence, isolated preview setup and remaining acceptance gates.
+
+Cloud branch provisioning is blocked by the Supabase plan requirement. Local acceptance now includes the real save API against PostgreSQL, populated upgrade, concurrency, rollback and household isolation. See [local acceptance](release-v0.23.0-local-acceptance.md); hosted Auth/AI and deployed timing remain release gates.
+
+### v0.23.0 — reliable week planning (in progress locally; unreleased)
+
+Outcome: households can build or rebuild a week without losing their saved
+plan or silently overwriting another member's changes.
+
+- Make plan replacement atomic, with conflict detection and safe save retries.
+- Correct runtime schema checks that assume every table has an `id` column.
+- Bound recipe generation and retries within the function's execution budget.
+- Preserve grocery edits, deletion markers, checked state, and sundry intent.
+- Add executable failure/concurrency tests and reconcile release documentation.
+
+This selects the operational-hardening opportunity based on the
+[2026-10-05 code review and SWOT](code-review-2026-10-05.md).
+See the [proposed release plan](release-v0.23.0-plan.md) for scope, implementation
+order, acceptance criteria, and deployment gates. No release date is committed.
+
+[Stage 1](release-v0.23.0-stage-1.md) adds failure-path regression coverage,
+shared schema checks, and an interim save-cleanup fix. [Stage 2](release-v0.23.0-stage-2.md)
+replaces the interim save path with a transaction, concurrent-edit protection,
+and draft retry/conflict recovery. [Stage 3](release-v0.23.0-stage-3.md) adds a shared
+generation deadline, classified retries and cancellation of stale browser work.
+Release preparation and preview/live verification remain outstanding. All changes
+are local and unreleased.
 
 ## Later opportunities
 

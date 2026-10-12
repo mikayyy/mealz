@@ -1,35 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
 
-let source;
-test.before(async () => {
-  source = await readFile(new URL('../api/plan.ts',import.meta.url),'utf8');
+test('plan route exports the atomic handler under the application runtime',async()=>{
+  const module=await import('../api/plan.ts');assert.equal(typeof module.default,'function');
 });
-
-test('plan handler loads without import.meta in the CommonJS Vercel runtime path',async()=>{
-  assert.doesNotMatch(source,/import\.meta|createRequire/);
-  const module=await import('../api/plan.ts');
-  assert.equal(typeof module.default,'function');
-});
-
-test('grocery mutations are scoped by both item and weekly plan IDs',()=>{
-  assert.match(source,/grocery_items\?id=eq\.\$\{enc\(itemId\)\}&weekly_plan_id=eq\.\$\{enc\(planId\)\}/);
-  assert.match(source,/action==='toggle'/);
-  assert.match(source,/user_modified:true/);
-  assert.match(source,/deleted:true/);
-});
-
-test('saved grocery rows are authoritative and hidden deletion markers stay internal',()=>{
-  assert.match(source,/deleted=eq\.false/);
-  assert.match(source,/shopping\.reconcileGroceries\(priorGroceries,meals\)/);
-  assert.doesNotMatch(source,/name=eq\.\$\{enc\(name\)\}/);
-});
-
-test('purchase intent uses the user-scoped grocery mutation and clears purchased state atomically',()=>{
-  assert.match(source,/action==='set_needed'&&typeof body\.needed!=='boolean'/);
-  assert.match(source,/needed_this_week:body\.needed,\.\.\.\(body\.needed\?\{\}:\{checked:false\}\)/);
-  assert.match(source,/grocery_items\?id=eq\.\$\{enc\(itemId\)\}&weekly_plan_id=eq\.\$\{enc\(planId\)\}&deleted=eq\.false/);
-  assert.match(source,/if\(!rows\?\.length\)throw new Error\('Grocery item was not found\.'\)/);
-  assert.match(source,/needed_this_week:shopping\.isSundry\(fields\.name\)/);
-});
+// Mutation behavior is exercised by plan-save.test.js and the real Postgres
+// functions in transactional-plan.test.js rather than source-pattern checks.
