@@ -114,7 +114,11 @@
     },
     {
       "path": "docs/release-v0.23.0-handoff.md",
-      "sha256": "a1e1809da4c0c1e71b49092f50dc7fe687781989b97aef6379b0d93cada22b51"
+      "sha256": "f71054c8de4a3c9b9b8d170d105c9bab2011954747126e254ce6bf7cfe1749b0"
+    },
+    {
+      "path": "docs/release-v0.23.0-live-ai-test.md",
+      "sha256": "7d24253537bfed8328752db309b2a63809aa7d14687efd0b999575ffc54e21e7"
     },
     {
       "path": "docs/release-v0.23.0-local-acceptance.md",
@@ -207,6 +211,10 @@
     {
       "path": "scripts/release-contract.js",
       "sha256": "18928ee62929be8e1991fa702d35b12b4f901f4a5409d11dc86a069d0cf91692"
+    },
+    {
+      "path": "scripts/verify-live-recipe.mjs",
+      "sha256": "51cfbe8fe656f980c730c73f7fb76a6c64fdc38affede47b807b1de1936e3e67"
     },
     {
       "path": "scripts/verify-local-plan-api.mjs",

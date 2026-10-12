@@ -45,3 +45,8 @@ Update 2026-10-11: [real local Supabase acceptance](local-supabase.md) now cover
 5. Verify saving and recovery before resuming writes. If verification fails, retain the write pause and committed data and prefer a forward fix. The old save implementation is not an automatically safe rollback.
 
 Nothing has been committed, pushed, deployed or migrated in production by this handoff step. The cloud cleanup automation remains paused because no preview branch exists.
+
+
+## Real AI smoke-test evidence
+
+One real four-serving recipe completed in 8.9 seconds on the first provider attempt, with the saved week unchanged and temporary credentials removed. See [real AI evidence](release-v0.23.0-live-ai-test.md). Seven-day fan-out and deployed Vercel timing remain open; this does not authorize merging or production deployment.
