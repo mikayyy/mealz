@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync,mkdtempSync,unlinkSync,existsSync} from 'node:fs';
-import {execFileSync} from 'node:child_process';
+import {execFileSync,spawnSync} from 'node:child_process';
 import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -28,6 +28,7 @@ writeFileSync(join(source,'vercel.json'),JSON.stringify(vercelConfig,null,2));
 if(!process.argv.includes('--deploy')) {
   console.log(JSON.stringify({prepared:true,commit:sha,target:'preview',projectId:'prj_QQnJmrE0Jmhu8pgtfIXOCkqucrqx',database:lease.projectRef,aiEnabled:false,credentialsUploaded:false}));
 } else {
+  assert.ok(!existsSync(join(local,'hosted-preview-deployment.json')),'A preview is already recorded; inspect it before authorizing a replacement');
   assert.ok(Date.parse(lease.expiresAt)>Date.now(),'Session expired; renew authorization first');
   assert.equal(lease.status,'active_ready_for_deployment','Resume and verify the exact preview before deploying');
   const config=JSON.parse(readFileSync(configPath,'utf8'));
@@ -46,8 +47,10 @@ if(!process.argv.includes('--deploy')) {
   execFileSync(process.execPath,[join(source,'scripts/migrate-live.js'),'--require-credentials'],{env:environment,stdio:'pipe',timeout:90000});
     const npxCli=join(dirname(process.execPath),'node_modules/npm/bin/npx-cli.js');
     assert.ok(existsSync(npxCli),'Cannot locate npm CLI beside Node.js');
-    const output=execFileSync(process.execPath,[npxCli,...args],{encoding:'utf8',timeout:120000,stdio:'pipe'});
-    const url=output.trim().split(/\s+/).find(value=>/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(value));
+    const result=spawnSync(process.execPath,[npxCli,...args],{encoding:'utf8',timeout:120000,stdio:'pipe'});
+    assert.equal(result.status,0,'Vercel CLI submission failed; inspect deployment state before repeating');
+    const output=(result.stdout||'')+' '+(result.stderr||'');
+    const url=output.match(/https:\/\/[a-z0-9-]+\.vercel\.app/i)?.[0];
     assert.ok(url,'Deployment URL missing; inspect Vercel before repeating');
     writeFileSync(join(local,'hosted-preview-deployment.json'),JSON.stringify({url,commit:sha,target:'preview',database:lease.projectRef,aiEnabled:false},null,2));
     console.log(JSON.stringify({submitted:true,url,commit:sha,aiEnabled:false}));

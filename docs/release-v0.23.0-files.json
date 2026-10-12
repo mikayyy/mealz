@@ -114,7 +114,7 @@
     },
     {
       "path": "docs/release-v0.23.0-handoff.md",
-      "sha256": "ac2d70ab397985cb7b4656d43c8e8dc11252056112683b71df89ced4ed6d3b8f"
+      "sha256": "a5d77bea4d1157f4798608cb1ad083c7ce0550eea83cfcffb203baa369401cf9"
     },
     {
       "path": "docs/release-v0.23.0-live-ai-test.md",
@@ -322,7 +322,7 @@
     },
     {
       "path": "scripts/deploy-isolated-preview.mjs",
-      "sha256": "bfc7bf8a58ace7c0908e9044a6e324d76d0d70b2e47968e384206831b6559ae3"
+      "sha256": "34b2ee06e98429e148f50a416a09d34c0bd0cb1072e73ed5071b8af6e8de1fce"
     }
   ],
   "excluded": [
