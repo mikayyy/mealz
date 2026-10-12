@@ -36,6 +36,8 @@ The adjacent `release-v0.23.0-files.json` records intended changed/new source fi
 
 ## Remaining release gates
 
+Update 2026-10-11: [real local Supabase acceptance](local-supabase.md) now covers Auth, confirmation email delivery to a local inbox, PostgREST, PostgreSQL 17 and mobile browser persistence. All 12 service checks and 196 unit/API/database tests passed. Hosted configuration, outbound email and deployed AI timing remain open; the draft PR is not ready for production merging.
+
 1. Authorize uploading the reviewed candidate to a feature branch and draft PR; verify repository CI. Review the Vercel Git integration before pushing so an automatic preview cannot inherit production database configuration.
 2. Obtain a complete isolated Supabase environment for real Auth/PostgREST acceptance. Windows lacks the checked container runtimes; cloud branches require a plan upgrade whose additional cost has not been approved. Local PostgreSQL 18.4 does not establish hosted PostgreSQL 17 behavior.
 3. Verify authenticated two-household/member journeys, actual seven-day AI generation, retry/error handling and deployed function timing. Record results instead of treating mocked tests as live evidence.

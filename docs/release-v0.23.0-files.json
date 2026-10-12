@@ -1,7 +1,7 @@
 {
   "version": "0.23.0",
   "state": "candidate",
-  "preparedOn": "2026-10-07",
+  "preparedOn": "2026-10-11",
   "baseCommit": "382263d85c4bc0f614cf83189f41c38b304dc392",
   "files": [
     {
@@ -11,6 +11,10 @@
     {
       "path": ".github/workflows/test.yml",
       "sha256": "b9a8e152fb5d39e594e9f0b0aa7c7c0c8ed18c9b0ba84cbfc18697e182ec5862"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "77d552d0768fe95baf83ed9cbb0659cd885261ebd7f94b19656e28a81af4072f"
     },
     {
       "path": "account-client.js",
@@ -101,12 +105,16 @@
       "sha256": "92c0170450c39f79778978360b7c4344b215d444c6c60066ac4bdbc9e9413ae6"
     },
     {
+      "path": "docs/local-supabase.md",
+      "sha256": "6febcbf3f0cf3f7f646342cf57c1dc37b316a35d6619598550c927edcae43fc6"
+    },
+    {
       "path": "docs/preview-cost-policy.md",
       "sha256": "1e9fc1545fe817907b722e5e5dee611e5f79788e2d8532d7f22688ec4b1e36e2"
     },
     {
       "path": "docs/release-v0.23.0-handoff.md",
-      "sha256": "7bc4b5dfe5745ab4b1d3fc86fad20b53d112e08ad3d950fd91ccf2171f964ec5"
+      "sha256": "a1e1809da4c0c1e71b49092f50dc7fe687781989b97aef6379b0d93cada22b51"
     },
     {
       "path": "docs/release-v0.23.0-local-acceptance.md",
@@ -158,11 +166,31 @@
     },
     {
       "path": "package.json",
-      "sha256": "e4e9056025beb392ce6b3e8e76556897262a46550a09328f556ce6af8e626b7f"
+      "sha256": "aebe6c8204c28e3eac7408c2bd888d9f30066ba14645cc437aaed2b507793979"
     },
     {
       "path": "README.md",
-      "sha256": "f7ba7cefe5960ab907f34fa6b225242cc513dc747c7024ec8add3abe626aede6"
+      "sha256": "e570404b55784327c71239cca914304596172609ba6fd978cf8aac17fed91e51"
+    },
+    {
+      "path": "scripts/local-server.mjs",
+      "sha256": "c492ef59ea876f5a98f3f44e7e1ef29f42419e76c8bcb07b1d666a20e3a72946"
+    },
+    {
+      "path": "scripts/local-stack.mjs",
+      "sha256": "b7a4188bd749ebadf9ee359d79fc3191c8502566ebe3e4c4ccddf634fff92249"
+    },
+    {
+      "path": "scripts/local-supabase-apply.mjs",
+      "sha256": "91518ebca8740a4967c58b78b0d0399a9b542d32a0748f53f5d74056dea558be"
+    },
+    {
+      "path": "scripts/local-supabase-init.mjs",
+      "sha256": "c51589f0ea526b03482901743a2590820007f8a402422d6ceb4fa23494116d28"
+    },
+    {
+      "path": "scripts/local-supabase-lib.mjs",
+      "sha256": "510785e0ab238d2e6366eb12fbc5c1136fb1269c315a444e26c11dc8cd21a1cc"
     },
     {
       "path": "scripts/migrate-live.js",
@@ -185,12 +213,28 @@
       "sha256": "bb4b21b073b6093bf0ec4728149709d7b17f364b5ba5a47d7788b2059b958638"
     },
     {
+      "path": "scripts/verify-local-supabase.mjs",
+      "sha256": "4196129ca00bcd4feb88df7c63e652cf86cedae2e28cfc40e7dfcf8516966089"
+    },
+    {
       "path": "scripts/verify-plan-concurrency.mjs",
       "sha256": "5e33d0f55e855e4cbf185710b390822baad8f8b5c677b59900f4574af1490b11"
     },
     {
       "path": "shopping-logic.js",
       "sha256": "371c2a50a0fdaded2740dbd8103e96ec28362fc6df19218b6d43532d1844bf40"
+    },
+    {
+      "path": "supabase/.gitignore",
+      "sha256": "507699eb91144818edf61d3a079212cacf31d8db520eae428e3b48fcf0d6919c"
+    },
+    {
+      "path": "supabase/config.toml",
+      "sha256": "1044eb2d8d7351bcf80ea4b967dac8023137a9e21b246417b4caee5c0da7866c"
+    },
+    {
+      "path": "supabase/migrations/20261011231741_local_prototype_baseline.sql",
+      "sha256": "1a96df74380476ac4897fc3c865ccea790c3c38386b2d224091a7d7ff74fc753"
     },
     {
       "path": "tests/auth.test.js",
@@ -219,6 +263,10 @@
     {
       "path": "tests/live-preflight.test.js",
       "sha256": "74e0d21b7ee1b2713ff7914f734380eb75ba01d2903f8f29ac7912b9027967c1"
+    },
+    {
+      "path": "tests/local-setup.test.js",
+      "sha256": "feb4eca51b8cf03ca564ecb33de2aa1374bef57fedcfcccd8c329462a2da1580"
     },
     {
       "path": "tests/migration-manifest.test.js",

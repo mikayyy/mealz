@@ -22,6 +22,8 @@ See [CHANGELOG.md](CHANGELOG.md) for the complete version history.
 
 Local acceptance and repeatable verification commands: [v0.23.0 local acceptance](docs/release-v0.23.0-local-acceptance.md).
 
+Full local account and database setup: [Docker/Supabase startup, sign-in and shutdown](docs/local-supabase.md).
+
 ## Changelog (recent)
 
 ### v0.22.0 — grocery sundries (deployed 2026-09-25)

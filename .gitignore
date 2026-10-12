@@ -3,3 +3,4 @@ node_modules/
 .vercel/
 test-results/
 .kilo/worktrees/
+.local/
