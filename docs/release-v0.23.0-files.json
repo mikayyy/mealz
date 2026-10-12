@@ -110,11 +110,11 @@
     },
     {
       "path": "docs/preview-cost-policy.md",
-      "sha256": "1e9fc1545fe817907b722e5e5dee611e5f79788e2d8532d7f22688ec4b1e36e2"
+      "sha256": "2ea7c2aba89a96065502248a68ae02c35f1bc4cf58d24693f08713425f1090c1"
     },
     {
       "path": "docs/release-v0.23.0-handoff.md",
-      "sha256": "f71054c8de4a3c9b9b8d170d105c9bab2011954747126e254ce6bf7cfe1749b0"
+      "sha256": "ac2d70ab397985cb7b4656d43c8e8dc11252056112683b71df89ced4ed6d3b8f"
     },
     {
       "path": "docs/release-v0.23.0-live-ai-test.md",
@@ -319,6 +319,10 @@
     {
       "path": "weeks.js",
       "sha256": "85c7234c2935e1b26ed057fb4d4dceafd29fa52d104b65fea1520ce56b1201f8"
+    },
+    {
+      "path": "scripts/deploy-isolated-preview.mjs",
+      "sha256": "bfc7bf8a58ace7c0908e9044a6e324d76d0d70b2e47968e384206831b6559ae3"
     }
   ],
   "excluded": [
