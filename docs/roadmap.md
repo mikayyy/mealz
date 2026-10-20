@@ -1,6 +1,6 @@
 # Mealz roadmap
 
-**Last updated:** 2026-09-25
+**Last updated:** 2026-10-19
 
 This roadmap records recent releases and later product directions. Release
 numbers are proposed sequencing, not deployment promises.
@@ -31,6 +31,18 @@ Key outcomes:
 
 See [Grocery sundries section plan](sundries-section-plan.md) for the complete
 implementation, data model, tests, release sequence, and acceptance criteria.
+
+## React + TypeScript rebuild investigation
+
+A separate frontend rebuild is being investigated to support learning React,
+improve mobile UX and loading, and consider offline household shopping while
+preserving current features and infrastructure. Production remains on the existing
+app until a working replacement and transition plan are accepted.
+
+See the [living rebuild plan](react-typescript-rebuild-plan.md) for confirmed
+requirements, source findings, feature parity, decision options with pros/cons,
+validation, and the session log. Update that plan after each substantive rebuild
+turn. Initial implementation choices remain pending; no release date is promised.
 
 ## Later opportunities
 
