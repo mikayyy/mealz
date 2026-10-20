@@ -1,1 +1,22 @@
-{"functions":{"api/**/*.{js,ts}":{"maxDuration":60}},"crons":[{"path":"/api/prep-next-week","schedule":"0 23 * * 5"}]}
+{
+  "framework": null,
+  "installCommand": "pnpm install --frozen-lockfile && pnpm --dir frontend install --frozen-lockfile",
+  "buildCommand": "pnpm --dir frontend build",
+  "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/**/*.{js,ts}": {
+      "maxDuration": 60
+    }
+  },
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        }
+      ]
+    }
+  ]
+}
