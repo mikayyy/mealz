@@ -28,7 +28,9 @@ export async function json(
   const response = await fetch(path, {
     ...init,
     headers,
-    credentials: "omit",
+    // Same-origin deployment protection uses a cookie in addition to the
+    // application's Bearer token. Never send that cookie across origins.
+    credentials: "same-origin",
     cache: "no-store",
     signal: AbortSignal.timeout(12000),
   });

@@ -53,10 +53,21 @@ test("authenticated reads, offline reload, read-only controls, and sign-out cach
 }) => {
   const mutations: string[] = [];
   let current = "";
+  // Model a protected preview: its APIs require the deployment access cookie
+  // even before a Mealz user has signed in.
+  await context.addCookies([{
+    name: "preview-access",
+    value: "synthetic-test-access",
+    url: "http://127.0.0.1:4173",
+    httpOnly: true,
+    sameSite: "Lax",
+  }]);
   await page.route("**/api/**", async (route) => {
     const request = route.request(),
       url = new URL(request.url());
     if (request.method() !== "GET") mutations.push(request.method());
+    if (!request.headers().cookie?.includes("preview-access=synthetic-test-access"))
+      return route.fulfill({ status: 401, json: { error: "Preview access required" } });
     if (url.pathname === "/api/auth-config")
       return route.fulfill({
         json: {

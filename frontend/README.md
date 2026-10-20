@@ -53,10 +53,15 @@ The implementation PR and main retain the legacy Vercel configuration. Preview
 configuration must be reapplied when updating the preview branch from the latest
 implementation commit. Do not promote this deployment or point production at it.
 
-Vercel reported the first preview deployment successful. It requires Vercel sign-in;
-current connector access to the owning team/project is insufficient for hosted
-inspection. The existing isolated Supabase preview project is paused; no new
-project was created and it has not been resumed for this rebuild.
+Vercel access was restored on 2026-10-20. The hosted sample flow and reload
+persistence have been checked. Preview auth configuration currently points to
+the production Supabase project; this is not an isolated backend. Connected mode
+remains read-only. The existing isolated Supabase preview project is paused; no
+new project was created and it has not been resumed for this rebuild.
+
+Same-origin API requests retain deployment-protection cookies as well as the
+Mealz Bearer token. The browser test models a cookie-protected API. Hosted
+sign-in and household acceptance remain pending; see the living rebuild plan.
 
 ## React/data structure
 
