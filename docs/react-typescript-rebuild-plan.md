@@ -1,0 +1,187 @@
+# Mealz React + TypeScript rebuild — living plan
+
+Last updated: 2026-10-19 (America/New_York)
+Status: discovery started; initial source review complete; architecture choices pending.
+Owner: Mike Munoz, with Codex as implementation collaborator.
+
+## Working agreement
+
+This is the authoritative working plan for the rebuild. Read the current version at the start of subsequent Mealz rebuild turns. Update it before each substantive response about the rebuild, including findings, decisions, completed work, validation, open questions, and the next step. For a short clarification, a brief session-log entry is enough. If an update fails, say so; never imply it was saved.
+
+Present meaningful decision points with at least two viable options, their pros and cons, a recommendation, and a status. Distinguish Mike's confirmed decisions from provisional recommendations. Do not silently turn proposals into requirements. Keep explanations accessible and connect React concepts to actual Mealz features.
+
+Mike wants active participation, with small reviewable increments and opportunities to learn. Routine implementation details can proceed within agreed scope; product, architecture, and data-behavior choices should be surfaced. This agreement applies to Mealz rebuild work, not unrelated conversations.
+
+## Confirmed goals and constraints
+
+- Personal project for Mike and friends/family; no current commercial objective.
+- Primary motivations: learn React and improve the interface. Reliability, loading time, and ongoing maintainability also matter.
+- Preserve the current product closely, with deliberate improvements and continued evolution after the rebuild.
+- Preserve recipes, meal plans, groceries, accounts, household sharing, and remembered-device quick login.
+- Retain existing infrastructure as much as practical: GitHub, Vercel, Supabase, and existing server-side AI integrations.
+- Primarily phone use; household members coordinate through shared data.
+- Consider poor connectivity and no connectivity from the start.
+- Build a separate version and transition only when ready.
+- Identify small UX wins while protecting feature parity.
+- Maintain this plan and show options with pros and cons at decision points.
+
+## Evidence and current baseline
+
+Reviewed source on the default branch on 2026-10-19. These are source findings, not a live production audit. README/package report v0.22.0; deployment health has not been independently verified this session.
+
+| Finding | Evidence | Implication |
+| --- | --- | --- |
+| Backend routes are already TypeScript | api/plan.ts, api/_lib/auth.ts; migration-baseline Phase 2 notes | Rebuild scope can focus on the browser; TypeScript does not itself imply strict typing |
+| Browser uses classic ordered scripts and globals | index.html; app.js; weeks.js; grocery-order.js | Replace browser composition with explicit modules/components rather than translating wrappers line by line |
+| Important browser files defer checks | @ts-nocheck headers; tsconfig described in prior review | Use a separate strict frontend configuration; do not force backend strictness into the first milestone |
+| Startup waits for several stages | auth-client.js init; account-client.js start; app.js boot | Measure authentication/config, membership, profile, active-plan, prepared-ideas, and dashboard requests separately |
+| boot awaits profile, active plan, prepared ideas, then dashboard | app.js boot; weeks.js plan override | Candidate opportunity: render essential week data sooner and defer unrelated requests; measure before changing |
+| Startup resets in-memory state | account-client.js start | Writing local storage is not proof of a working offline reload path; design and verify cache hydration explicitly |
+| Grocery check-off and sundry intent roll back on request failure | grocery-order.js toggle and setNeeded | Current optimistic UI is not a durable offline outbox |
+| Pure domain logic is shared with server/tests | shared-logic.js, shopping-logic.js, api/plan.ts import | Preserve behavior and tests; adapt packaging deliberately |
+| Existing browser tests read source files directly | tests/browser/accounts.test.js and groceries.test.js | New React tests must exercise built/served output; legacy tests should continue while legacy app remains |
+| CI already includes release, migration, type, runtime, unit, and browser gates | .github/workflows/test.yml | Add frontend checks without silently replacing current coverage |
+| Saved-plan replacement can replace grocery row identities | api/plan.ts savePlan; docs/architecture.md | Offline operations targeting an old plan/item must not be blindly replayed |
+| Plan replacement is documented as nontransactional | docs/architecture.md | Track as existing backend debt; React will not resolve it |
+
+Existing architecture notes sometimes retain .js backend paths even though backend source is now .ts. Resolve discrepancies against current source rather than treating historical notes as current inventory.
+
+### Feature parity checklist
+
+- [ ] Password sign-in, signup/confirmation, password recovery/change, sign-out.
+- [ ] Remembered accounts, trusted-device PIN setup/unlock/update/revoke; sensitive-action reauthentication.
+- [ ] Household create/join, owner invitation rotation, member/owner controls.
+- [ ] Shared profile: household size, dietary preferences, equipment; conflict warnings.
+- [ ] Monday–Sunday week dashboard, current/next/past week access, explicit week_start.
+- [ ] Session draft capture across profile/planning navigation.
+- [ ] Prepared ideas, generated ideas, selection counts, refresh, recipe expansion.
+- [ ] Saved meals, recipe wording/quantities/instructions, kid options, recipe checkboxes.
+- [ ] Meal swapping, cancellation behavior, make-again feedback.
+- [ ] Consolidated groceries; add/edit/delete/check-off; preserved manual changes and deletion choices.
+- [ ] Sundries disclosure, week-specific purchase intent, checked state.
+- [ ] Loading, empty, error, retry, expired-session, and account-switch behavior.
+- [ ] Mobile navigation, focus, keyboard access, reduced motion, and scroll behavior.
+- [ ] New offline behavior as separately agreed below.
+
+Unchecked means not verified in the rebuild; it does not mean missing from the current app.
+
+## Decision register
+
+### D1 — React application setup
+Status: awaiting Mike's choice. Recommendation: A, subject to a small deployment proof.
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| A. React + TypeScript with Vite, client-side app | Focuses learning on React; fits an existing API backend; explicit browser architecture | Routing, server-data caching, and offline persistence need deliberate integration |
+| B. React + TypeScript with Next.js | Integrated routing and server rendering options; room for future server features | Introduces another server/client model and overlaps with current API architecture |
+
+Rationale for A is project fit, not a claim that Vite guarantees a faster app. React's official guidance generally favors frameworks, while also documenting build-tool setups for learning or existing constraints. Before implementation, choose exact supported dependency versions and confirm the available runtime satisfies them. Initial library candidates: React Router for navigation; evaluate a server-data cache library after defining cache ownership. Do not add a global state library by default.
+
+References:
+- https://react.dev/learn/build-a-react-app-from-scratch
+- https://vite.dev/guide/
+
+### D2 — Where the separate version lives
+Status: awaiting Mike's choice. Recommendation: A.
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| A. New frontend directory in the existing repository, with a separate preview deployment | Keeps API/domain logic/tests and planning together; easier compatibility tracking | Requires deliberate Vercel build/output/routing setup so legacy production still works |
+| B. Separate repository and preview deployment | Clear project separation; simpler standalone frontend layout | API contracts and shared logic can drift or require a shared package; cross-origin API/auth routing needs planning |
+
+A separate version does not require a separate repository. Proposed directory name: frontend/ (not created yet). Use a feature branch for implementation; verify preview routes and API reachability before changing any production build settings. Offline service workers must have scopes/caches that cannot intercept the legacy app accidentally.
+
+### D3 — Offline release scope
+Status: awaiting Mike's choice. Recommendation: B for the rebuild's usable shopping milestone, implemented in steps.
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| A. Read previously downloaded recipes and groceries offline | Smallest scope; useful in stores/kitchens; simpler conflict handling | Shopping check-offs cannot be reliably saved offline |
+| B. Offline reading plus queued grocery check-offs and sundry purchase intent | Supports the core shopping flow; immediate feedback with pending/saved distinction | Requires persistent queue, reconciliation, account/household scoping, and stale-item handling |
+| C. Broad offline editing, including grocery additions/edits/deletes and planning drafts | Most flexibility | Substantially larger identity/conflict/recovery scope; delays parity |
+
+AI generation, signup, quick-login verification, and membership changes require connectivity. Offline access must be limited to an explicitly designed previously authenticated local experience; it must not pretend to validate a new session offline. Cache expiration, sign-out, and account/household switching rules need review. Persisted data must be scoped to environment, user, household, and week.
+
+For B: use absolute desired states rather than replaying toggle commands. Define behavior when two people set the same field differently, a plan has been replaced, an item is deleted, or membership/session validation fails. Pending changes must survive reloads and must never replay under another account. API compatibility and server support must be proven before promising automatic conflict resolution.
+
+### D4 — Development data
+Status: provisional recommendation; confirm setup during implementation planning.
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| A. Fixtures first, then isolated staging/test household before deliberate real-household testing | Repeatable development; protects current meal plans; no initial production migration needed | Requires preparing test accounts/data and choosing staging configuration |
+| B. Connect the preview to the real household immediately | Realistic data right away | Preview writes can change or replace current meals/groceries; harder to test destructive flows |
+
+Recommendation: A. A separate frontend URL does not isolate data. Prefer fixtures for initial UI work, an isolated backend environment where practical, or a dedicated test household with verified household isolation. The latter still shares infrastructure and is not equivalent to a separate backend. Verify redirect URLs, API origin/routing, and device-token/session behavior on the preview domain.
+
+### D5 — Visual direction
+Status: deferred until architecture choices and baseline are recorded.
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| A. Refine the existing Mealz identity and navigation | Familiar; easier parity review; bounded scope | Less freedom to address structural UX issues |
+| B. Redesign navigation and visual identity alongside the rewrite | More freedom and a stronger visual change | More product decisions; harder to isolate behavioral regressions |
+
+Recommendation: A initially, with small navigation improvements discussed through phone-sized examples.
+
+## Investigation and delivery sequence
+
+### Stage 1 — Baseline and architecture
+Completed: source review above; working agreement; decision options; initial parity checklist.
+Remaining:
+- Resolve D1–D3 and provisionally settle D4.
+- Map API request/response contracts and reusable types/logic in detail.
+- Record current mobile flows and measure cold/warm startup, repeat navigation, and AI calls separately.
+- Define an honest performance comparison: same device/network/account/data, with actual request timings and visible-loading milestones.
+- Capture existing sync and multi-member behavior; do not assume realtime updates exist.
+Exit: agreed architecture, initial data/testing setup, parity scope, and measurable baseline.
+
+### Stage 2 — Foundation and first complete flow
+- Create isolated implementation branch and chosen frontend layout.
+- Add strict frontend TypeScript checks without rewriting backend configuration.
+- Establish route, auth, API, cache, and component boundaries.
+- Prove build/deployment routing using a separate preview; keep legacy production entry point available.
+- Build saved week → meals → recipe → grocery list using fixtures, then test-household data.
+- Add grocery mutations and offline support to agreed scope in bounded increments.
+Exit: phone-usable flow with clear loading/pending/error states, repeat navigation, and compatible grocery behavior.
+
+### Stage 3 — Feature parity
+- Add planning/generation/refresh/swap/feedback, profile and household/account flows.
+- Reuse domain behavior; preserve week and grocery rules.
+- Port behavioral tests to the new served build. Keep legacy tests until cutover.
+Exit: parity checklist verified and household/auth separation proven.
+
+### Stage 4 — Polish and transition
+- Tune loading paths using measured evidence.
+- Refine motion, focus, scroll restoration, touch targets, and accessible status feedback.
+- Validate network loss/reconnect/reload, simultaneous household activity, sign-out, account switch, and stale queued actions.
+- Compare legacy/rebuild behavior and performance on phones.
+- Prepare concrete cutover and rollback steps; preserve database compatibility with both clients during transition.
+Exit: Mike accepts the working preview and transition plan; production cutover follows that agreed plan.
+
+## Quick-win candidates (not promised scope)
+
+| Candidate | Benefit | Investigation needed |
+| --- | --- | --- |
+| Defer prepared ideas until needed | Earlier useful dashboard | Request dependency/timing measurements |
+| Explicit week loading instead of legacy newest-plan hydration | Less redundant work; clearer state ownership | Verify onboarding and all week routes |
+| Preserve scroll and focus on grocery mutations and return from recipes | Smoother phone use | Define navigation versus same-screen behavior |
+| Consistent pending/saved/offline status | Makes persistence understandable | Durable queue and reconciliation contract |
+| Larger touch targets and stable row identity | Easier shopping; smoother animation | Mobile layout/accessibility review |
+| Undo deletion | Faster recovery from mistakes | Existing deletion markers/API restoration semantics; may require backend work |
+
+## Validation and boundaries
+
+This turn changed planning documentation only. No runtime code, dependencies, database schema, auth settings, or deployment configuration have been changed. No app tests or live performance measurements were run; documentation-only verification is read-back and link/content inspection.
+
+Existing backend transaction debt and strictness gaps should be tracked separately. Do not expand the rebuild into an unbounded backend rewrite. Any required API change needs its own scoped compatibility and migration plan.
+
+## Session log
+
+### 2026-10-19 — Discovery kickoff and planning agreement
+- Mike authorized moving ahead, requested maintained planning documentation and explicit multi-option decisions.
+- Reviewed browser startup/state/navigation/grocery logic, backend examples, architecture/migration notes, package configuration, CI, and browser tests.
+- Confirmed serial browser startup stages and failed-mutation rollback as investigation leads, not measured production diagnoses.
+- Created this living plan and linked it from the roadmap.
+- Presented D1–D3 for Mike's choice; D4 and D5 have stated recommendations and remain provisional.
+- Next: incorporate Mike's decisions, finish contract/performance baseline, and prepare the isolated first-flow implementation.
