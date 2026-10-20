@@ -108,3 +108,18 @@ Vercel CLI authentication available. Hosted API/auth verification remains blocke
 The inactive Supabase project mealz-v0230-preview is associated with separate PR #22
 acceptance work. It was not resumed or modified. Coordinate its eventual test session
 and schema compatibility rather than silently changing that workstream.
+
+
+## Conflict review decision — accepted 2026-10-19
+
+D6 now uses explicit user review. QueueConflict can carry the affected operation,
+reason, and latest week. resolveShoppingConflict applies a user's choice to a
+snapshot while keeping unrelated queued changes. Keep-mine updates the base version
+for another check; it does not skip conflict detection or guarantee a later write.
+Use-household discards the affected item's pending edits, or the obsolete plan's
+edits when the plan was replaced. Missing items are not recreated.
+
+ConflictReview is reusable; /#/preview/conflicts is a clearly labelled, non-writing
+example for phone review. Live mode remains read-only. This work does not add atomic
+backend preconditions or multitab serialization; those remain required before live
+queue replay. Nine unit tests and five browser tests pass locally.

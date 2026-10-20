@@ -4,6 +4,8 @@ import {
   enqueue,
   flushQueue,
   QueueConflict,
+  resolveShoppingConflict,
+  type ShoppingConflict,
   readSnapshot,
   persist,
   scopeKey,
@@ -199,4 +201,116 @@ test("expired cached views do not silently delete unacknowledged work", () => {
   persist(local, { ...value, savedAt: 0 });
   assert.equal(readSnapshot(local, scope), null);
   assert.ok(local.getItem(scopeKey(scope))?.includes(value.pending[0]!.id));
+});
+
+test("household choice discards this item's queued edits while preserving other shopping changes", () => {
+  const value = sample();
+  value.weeks[0]!.groceries.push({ ...item, id: "item-b", name: "beans" });
+  let queued = enqueue(value, "2026-10-19", item.id, { checked: true });
+  queued = enqueue(queued, "2026-10-19", "item-b", { checked: true });
+  queued = enqueue(queued, "2026-10-19", item.id, { checked: false });
+  const review: ShoppingConflict = {
+    reason: "item_changed",
+    operation: queued.pending[0]!,
+    latestWeek: {
+      ...value.weeks[0]!,
+      groceries: value.weeks[0]!.groceries.map((i) =>
+        i.id === item.id ? { ...i, checked: true, updated_at: "v2" } : i,
+      ),
+    },
+  };
+  const result = resolveShoppingConflict(queued, review, "use_household");
+  assert.equal(result.pending.length, 1);
+  assert.equal(result.pending[0]?.request.itemId, "item-b");
+  assert.equal(
+    result.weeks[0]?.groceries.find((i) => i.id === item.id)?.checked,
+    true,
+  );
+  assert.equal(
+    result.weeks[0]?.groceries.find((i) => i.id === "item-b")?.checked,
+    true,
+  );
+});
+
+test("keeping my change rebases it for another check and asks again if the household changes again", async () => {
+  const queued = enqueue(sample(), "2026-10-19", item.id, { checked: true });
+  const fresh = {
+    ...sample().weeks[0]!,
+    groceries: [{ ...item, updated_at: "v2" }],
+  };
+  let review: ShoppingConflict | undefined;
+  await assert.rejects(
+    flushQueue(
+      queued,
+      {
+        verify: async () => scope,
+        read: async () => fresh,
+        write: async () => item,
+      },
+      () => {},
+    ),
+    (error) => {
+      if (!(error instanceof QueueConflict)) return false;
+      review = error.review;
+      return !!review;
+    },
+  );
+  assert.ok(review);
+  const resolved = resolveShoppingConflict(queued, review, "keep_mine");
+  assert.equal(resolved.pending[0]?.baseUpdatedAt, "v2");
+  assert.equal(resolved.weeks[0]?.groceries[0]?.checked, true);
+  let writes = 0;
+  await assert.rejects(
+    flushQueue(
+      resolved,
+      {
+        verify: async () => scope,
+        read: async () => ({
+          ...fresh,
+          groceries: [{ ...item, updated_at: "v3" }],
+        }),
+        write: async () => {
+          writes++;
+          return item;
+        },
+      },
+      () => {},
+    ),
+    QueueConflict,
+  );
+  assert.equal(writes, 0);
+  const done = await flushQueue(
+    resolved,
+    {
+      verify: async () => scope,
+      read: async () => fresh,
+      write: async () => {
+        writes++;
+        return { ...item, checked: true, updated_at: "v3" };
+      },
+    },
+    () => {},
+  );
+  assert.equal(done.pending.length, 0);
+  assert.equal(writes, 1);
+});
+
+test("replaced weeks cannot receive old edits and stale review decisions cannot replay", () => {
+  const queued = enqueue(sample(), "2026-10-19", item.id, { checked: true });
+  const review: ShoppingConflict = {
+    reason: "plan_replaced",
+    operation: queued.pending[0]!,
+    latestWeek: { ...sample().weeks[0]!, id: "new-plan", groceries: [] },
+  };
+  assert.throws(
+    () => resolveShoppingConflict(queued, review, "keep_mine"),
+    /no longer available/,
+  );
+  const result = resolveShoppingConflict(queued, review, "use_household");
+  assert.equal(result.pending.length, 0);
+  assert.equal(result.weeks[0]?.id, "new-plan");
+  assert.throws(
+    () => resolveShoppingConflict(result, review, "use_household"),
+    /no longer current/,
+  );
 });

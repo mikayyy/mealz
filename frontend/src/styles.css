@@ -656,3 +656,48 @@ input:disabled {
   color: #873a26;
   font-size: 0.8rem;
 }
+
+.conflict-review {
+  margin-top: 16px;
+}
+.conflict-review h1 {
+  font-size: clamp(1.7rem, 5vw, 2.4rem);
+}
+.conflict-review > .muted {
+  margin-top: 16px;
+}
+.conflict-versions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 24px 0;
+}
+.conflict-versions article {
+  padding: 18px;
+  background: var(--soft);
+  border-radius: 12px;
+}
+.conflict-versions h2 {
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  margin-bottom: 12px;
+}
+.conflict-versions p {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+.conflict-versions strong {
+  font-size: 0.85rem;
+}
+.conflict-review button {
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+@media (max-width: 500px) {
+  .conflict-versions {
+    grid-template-columns: 1fr;
+  }
+  .conflict-review .card-actions {
+    flex-direction: column;
+  }
+}
