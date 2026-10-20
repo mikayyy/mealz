@@ -1,13 +1,13 @@
 import { useOutletContext } from "react-router";
 import type { GroceryItem } from "../../../types";
 import type { SavedWeek } from "../data/demo";
-import { useDemo } from "../data/DemoProvider";
+import { useMealz } from "../data/MealzProvider";
 import { shopping } from "../domain/legacy";
 import { ingredientLabel } from "../domain/format";
 
 export function GroceriesPage() {
   const week = useOutletContext<SavedWeek>();
-  const { setGrocery } = useDemo();
+  const { setGrocery, readOnly } = useMealz();
   const sundries = week.groceries.filter((item) =>
     shopping.isSundry(item.name),
   );
@@ -31,6 +31,7 @@ export function GroceriesPage() {
       <label>
         <input
           type="checkbox"
+          disabled={readOnly}
           checked={item.checked}
           onChange={(event) =>
             setGrocery(week.weekStart, item.id, {
@@ -54,7 +55,9 @@ export function GroceriesPage() {
         </p>
       </div>
       <p className="demo-note">
-        Try checking things off. Changes stay in this preview until you reload.
+        {readOnly
+          ? "Shopping changes are available in the current Mealz app. This preview is read-only."
+          : "Changes save on this device, including when you’re offline. Sample data never syncs to your household."}
       </p>
       {sundries.length ? (
         <details className="card sundries">
@@ -70,6 +73,7 @@ export function GroceriesPage() {
                 <div>
                   <button
                     className={`intent-button ${item.needed_this_week ? "needed" : ""}`}
+                    disabled={readOnly}
                     aria-pressed={item.needed_this_week}
                     aria-label={`Buy ${item.name}`}
                     onClick={() =>
@@ -87,6 +91,7 @@ export function GroceriesPage() {
                   <label className="sundry-check">
                     <input
                       type="checkbox"
+                      disabled={readOnly}
                       checked={item.checked}
                       aria-label={`Purchased ${item.name}`}
                       onChange={(event) =>

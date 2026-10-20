@@ -1,63 +1,69 @@
 # Mealz React frontend
 
-First rebuild increment: a phone-first, fixture-backed React + TypeScript app.
-The existing root application and backend remain independently runnable.
+A separate phone-first React + TypeScript rebuild. The existing root app and
+backend remain independently runnable. The default mode uses invented sample
+household data; the connected mode uses an existing Mealz account and is read-only.
 
 ## Run and verify
 
-Use Node 22.12+ and pnpm 9 (matching repository CI):
+Use Node 22.12+ and pnpm 9 (matching CI):
 
 ```sh
 pnpm --dir frontend install --frozen-lockfile
 pnpm --dir frontend dev
 pnpm --dir frontend build
+pnpm --dir frontend test:unit
 pnpm --dir frontend exec playwright install --with-deps chromium
 pnpm --dir frontend test:browser
 ```
 
-The browser suite serves the production build, so build before running it.
-`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` optionally selects an existing Chromium
-binary for environments where browser downloads are unavailable. CI uses the
-standard Playwright-managed browser.
+Build before the browser suite: it serves compiled output and the generated service
+worker. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` can select an existing Chromium when
+the environment cannot download Playwright's browser. CI uses standard installation.
+Local development serves the fixture app; connected mode requires the existing
+same-origin `/api` functions, such as the hosted preview. No API credentials belong
+in browser source or a VITE_ variable.
 
-## What works in this increment
+## Current behavior
 
-- This/next week → meals → recipe → groceries.
-- Existing domain behavior for Monday–Sunday weeks, grocery consolidation,
-  shopping categories, and sundry classification.
-- Grocery check-offs and sundry purchase intent, isolated per sample week.
-- State survives screen navigation within the open app; reload resets it.
-- Mobile layout, labelled controls, navigation focus, reduced-motion handling,
-  invalid-week recovery, and direct hash-route reloads.
+- Saved week → meals → recipe → grocery list, using existing week/shopping helpers.
+- Sample check-offs and sundry selections persist on this device, including offline
+  reloads. They never sync to a real household.
+- Existing-account email/password sign-in reads saved weeks through authenticated
+  Mealz APIs. Live shopping controls are disabled. Quick login, signup/recovery,
+  household onboarding, and plan generation remain later parity work.
+- Successful connected downloads last up to seven days and are scoped to origin,
+  user, household, and week. Offline access is to previously downloaded local data,
+  not a new server-authenticated session. Sign out before sharing the browser.
+- The app shell is cached separately. The worker never intercepts `/api` or external
+  auth requests. The auth SDK is a separate chunk, loaded only for connected mode.
+- Queued shopping has a tested transport-independent core, but live replay is not
+  wired into the provider. It still needs an isolated hosted write test, a conflict
+  policy decision, atomic server preconditions, and multi-tab serialization.
 
-## Boundaries
+## Hosted preview
 
-The preview uses invented household data and makes no Mealz API requests.
-It does not sign in, generate plans, save to Supabase, support offline reloads,
-or queue cloud writes yet. No credentials are required. Never describe the sample
-check-offs as cloud saves. Keep the sample-data banner until a real authenticated
-data mode is implemented.
+Branch: `preview/react-rebuild` (preview-only; do not merge its configuration).
+URL: https://mealz-git-preview-react-rebuild-fumpster-dire.vercel.app/
 
-There is no deployment configuration change in this increment. Root Vercel
-settings still serve the legacy app; an existing automatic PR deployment should
-not be advertised as the React preview. A separate preview build/routing proof is
-the next infrastructure step.
+The preview branch has its own `vercel.json` with the React build/output settings.
+The implementation PR and main retain the legacy Vercel configuration. Preview
+configuration must be reapplied when updating the preview branch from the latest
+implementation commit. Do not promote this deployment or point production at it.
 
-## How the React pieces fit
+Vercel reported the first preview deployment successful. It requires Vercel sign-in;
+current connector access to the owning team/project is insufficient for hosted
+inspection. The existing isolated Supabase preview project is paused; no new
+project was created and it has not been resumed for this rebuild.
 
-- `src/main.tsx` mounts the app; `App.tsx` defines routes and the shared shell.
-- `DemoProvider` owns the current sample weeks using React state. Components read
-  that state through context instead of browser globals.
-- `WeekLayout` finds the selected week and passes it to its route's page.
-- Pages display their data and send explicit desired changes back to the provider.
-- `domain/legacy.ts` imports the existing UMD/CommonJS helpers through Vite aliases.
-  The declarations describe that boundary; they are not runtime JSON validators.
-- `contracts.ts` records existing API shapes for the next authenticated adapter.
+## React/data structure
 
-Hash routing keeps this fixture preview portable without a catch-all hosting
-rewrite. It is a provisional preview detail, not a permanent production URL choice.
-Do not introduce a service worker until its scope, cache ownership, and account
-switch behavior have been tested separately from the legacy app.
+- `App.tsx`: routes and shell; `AccountPanel`: sign-in/downloaded-account UI.
+- `MealzProvider`: mode, account boundaries, sample state, authenticated downloads.
+- `validation.ts` and `api.ts`: validate unknown JSON and use explicit week IDs.
+- `offline.ts`: scoped snapshots and conservative queue/checkpoint logic.
+- `domain/legacy.ts`: actual shared UMD/CommonJS helpers through Vite aliases.
+- `vite.config.ts`: emits a versioned service worker using this build's assets.
 
-See [the living plan](../docs/react-typescript-rebuild-plan.md) for decisions,
-scope, progress, and validation limits.
+Hash routing is a provisional preview choice. The living decision register is in
+[the rebuild plan](../docs/react-typescript-rebuild-plan.md).

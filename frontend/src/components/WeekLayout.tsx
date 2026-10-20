@@ -1,10 +1,10 @@
 import { Link, NavLink, Outlet, useParams } from "react-router";
-import { useDemo } from "../data/DemoProvider";
+import { useMealz } from "../data/MealzProvider";
 import { weekLabel } from "../domain/format";
 
 export function WeekLayout() {
   const { weekStart } = useParams();
-  const { savedWeeks } = useDemo();
+  const { savedWeeks } = useMealz();
   const week = savedWeeks.find(
     (candidate) => candidate.weekStart === weekStart,
   );

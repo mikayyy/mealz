@@ -1,4 +1,4 @@
-import type { GroceryItem, Meal, WeeklyPlan } from '../../../types';
+import type { GroceryItem, Meal, WeeklyPlan } from "../../../types";
 
 // Existing wire contracts; parse untrusted JSON at the real API adapter boundary.
 // These declarations alone do not validate a server response.
@@ -16,7 +16,7 @@ export interface WeekSummary {
   useUp: string;
   notes: string;
   mealCount: number;
-  meals: Array<Pick<Meal, 'id' | 'day' | 'title' | 'emoji' | 'total_minutes'>>;
+  meals: Array<Pick<Meal, "id" | "day" | "title" | "emoji" | "total_minutes">>;
   createdAt: string;
   updatedAt: string;
 }
@@ -28,8 +28,8 @@ export interface WeeksResponse {
 }
 
 export type GroceryStateRequest =
-  | { planId: string; itemId: string; action: 'toggle'; checked: boolean }
-  | { planId: string; itemId: string; action: 'set_needed'; needed: boolean };
+  | { planId: string; itemId: string; action: "toggle"; checked: boolean }
+  | { planId: string; itemId: string; action: "set_needed"; needed: boolean };
 
 export interface GroceryStateResponse {
   item: GroceryItem;
