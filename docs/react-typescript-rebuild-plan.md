@@ -3,6 +3,7 @@
 Last updated: 2026-10-19 (America/New_York)
 Status: D1–D3 accepted; fixture-backed React foundation implemented on feat/react-frontend-foundation; live integration and offline persistence remain upcoming.
 Owner: Mike Munoz, with Codex as implementation collaborator.
+Implementation: [draft PR #23](https://github.com/mikayyy/mealz/pull/23), branch feat/react-frontend-foundation.
 
 ## Working agreement
 
@@ -204,5 +205,5 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - Preserved the legacy app and backend. Added frontend/README.md for running the preview and learning the component/data flow.
 - Recorded initial wire contracts and offline constraints in docs/react-frontend-integration-notes.md.
 - Visual treatment is a proposed refinement for review, not a finalized redesign. Hash routing is a provisional preview detail.
-- Validation and its environment limits are listed above. The implementation is intended for a draft PR, not production cutover.
+- Validation and its environment limits are listed above. The implementation is saved in draft PR #23, not approved for production cutover.
 - Next: review the sample phone flow, prove a separate preview deployment and authenticated read-only test-household access, then implement persisted offline reads and the approved shopping queue.
