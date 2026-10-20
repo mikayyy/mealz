@@ -271,3 +271,8 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - Mike supplied a screenshot showing the Mealz dashboard under FumpsterDire at vercel.com/fumpster-dire/mealz. His browser account can access the intended project; the screenshot also shows production Ready and the React preview branch listed.
 - The connector's earlier 403/no-teams result therefore differs from his browser access. This narrows the issue to the connection's identity/authorization or connector behavior; the precise cause remains unproven.
 - Next: inspect the Integrations entry visible in the dashboard sidebar to establish whether the connection has a manageable installation. Avoid repeating reconnect instructions without new evidence. Screenshot is not hosted React acceptance.
+
+### 2026-10-20 — Connection identity confirmed; no installed integrations
+- Mike reports the Vercel Integrations page has no installed integrations. The earlier integration-permissions path was conditional and does not provide a fix for this connection; do not ask him to install an unrelated integration.
+- A new authenticated-user diagnostic succeeds: username mikayyy, defaultTeamId team_5eaTwY5ccwceeD1SCyLvpHaO, matching the intended project team. Earlier team listing was empty and scoped project inspection returned 403. Wrong account is less likely; limited authorization or connector behavior remains unresolved.
+- No verified automatic repair or authorization-management tool is available. Next inspect the ChatGPT Vercel connection details/authorization screen before prescribing further changes. Alternative: user-approved browser fallback for preview acceptance while connector access is investigated. Do not repeatedly reconnect without new evidence.
