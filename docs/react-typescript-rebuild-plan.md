@@ -276,3 +276,7 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - Mike reports the Vercel Integrations page has no installed integrations. The earlier integration-permissions path was conditional and does not provide a fix for this connection; do not ask him to install an unrelated integration.
 - A new authenticated-user diagnostic succeeds: username mikayyy, defaultTeamId team_5eaTwY5ccwceeD1SCyLvpHaO, matching the intended project team. Earlier team listing was empty and scoped project inspection returned 403. Wrong account is less likely; limited authorization or connector behavior remains unresolved.
 - No verified automatic repair or authorization-management tool is available. Next inspect the ChatGPT Vercel connection details/authorization screen before prescribing further changes. Alternative: user-approved browser fallback for preview acceptance while connector access is investigated. Do not repeatedly reconnect without new evidence.
+
+### 2026-10-20 — ChatGPT plugin screen inspected
+- Mike supplied the ChatGPT Vercel plugin overview screenshot. It shows Manage, Try in chat, and an Apps section with Vercel, but no account authorization details or team selection.
+- Next visible navigation: open Manage and inspect its available connection options. No new API probes, permission changes, or reconnects were made.
