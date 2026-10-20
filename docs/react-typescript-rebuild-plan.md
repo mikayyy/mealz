@@ -255,3 +255,9 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - Validation: strict frontend build/typecheck, nine queue/cache unit tests, and five served-build browser tests pass locally, including both phone review choices and the existing offline/auth flows. Phone layout inspected. No backend, schema, auth configuration, or production deployment changes in this increment.
 - Preview refresh uses the existing preview-only branch and original deployment protection. Existing Vercel connector access is still the hosted acceptance dependency; no unchanged access probes or protection changes were made.
 - Next: implement atomic server-side write preconditions and multi-tab queue coordination, connect review actions to persistent live replay in an isolated test household, and complete hosted acceptance once Vercel access is restored.
+
+### 2026-10-20 — Vercel unblock guidance
+- Mike asked what is needed to unblock Vercel. Fresh project inspection still returns 403 forbidden for team fumpster-dire / project mealz; the connected identity returns no visible teams.
+- This confirms missing access in the current connection, without establishing whether its cause is the signed-in account, the integration's team/project selection, or revoked membership. No account or deployment settings were changed.
+- Next user action: verify the Mealz-owning Vercel account can open the team/project in the dashboard, then manage/re-authorize the Vercel connection for that team and project. Reconnecting without correcting scope is not a verified fix. Keep deployment protection enabled; no API token needs to be pasted into chat.
+- Once updated, verify project inspection and protected-preview access before resuming hosted acceptance. Documentation-only update; no application tests needed.
