@@ -179,7 +179,12 @@ test("authenticated reads, offline reload, read-only controls, and sign-out cach
   await expect(
     page.getByRole("checkbox", { name: "1 whole cucumber", exact: true }),
   ).toBeDisabled();
+  const reopened = await context.newPage();
+  await reopened.goto(`/#/weeks/${current}/groceries`);
+  await reopened.getByRole("button", { name: "Open remembered or downloaded household" }).click();
+  await expect(reopened.getByText("Downloaded household · read-only preview")).toBeVisible();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
+  await expect(reopened.getByRole("heading", { name: "Open your household" })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Open your household" }),
   ).toBeVisible();

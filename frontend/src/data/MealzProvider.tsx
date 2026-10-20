@@ -1,5 +1,6 @@
 import {
   createContext,
+  useEffect,
   useContext,
   useRef,
   useState,
@@ -90,6 +91,19 @@ export function MealzProvider({ children }: { children: ReactNode }) {
     current.current = value;
     setSnapshot(value);
   }
+  useEffect(() => {
+    function storageChanged(event: StorageEvent) {
+      const scope = current.current?.scope;
+      if (!scope || scope.userId === "sample") return;
+      if (event.key !== AUTH_KEY && event.key !== LAST_SCOPE && event.newValue !== null) return;
+      if (event.key === AUTH_KEY || event.key === LAST_SCOPE || event.key?.startsWith("mealz:react:v1:")) {
+        epoch.current++; activeUser.current = null; publish(null);
+        setHouseholdName(""); setEmail(""); setMode("signin");
+      }
+    }
+    window.addEventListener("storage", storageChanged);
+    return () => window.removeEventListener("storage", storageChanged);
+  }, []);
   function clearPrivate() {
     const userId = activeUser.current ?? current.current?.scope.userId;
     if (userId && userId !== "sample") {
