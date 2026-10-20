@@ -1,0 +1,611 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700;800&display=swap");
+
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color: #252923;
+  background: #f7f6f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
+  font-weight: 400;
+  --muted: #62685e;
+  --line: #e1e3da;
+  --green: #3e5138;
+  --soft: #eaf0e3;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+a {
+  color: inherit;
+}
+button,
+input {
+  font: inherit;
+}
+button,
+a,
+input,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+summary {
+  cursor: pointer;
+}
+button {
+  color: inherit;
+}
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+input:focus-visible {
+  outline: 3px solid #678653;
+  outline-offset: 4px;
+}
+main:focus {
+  outline: none;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+h1,
+h2 {
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+}
+h1 {
+  font-size: clamp(2.25rem, 6vw, 3.4rem);
+  font-weight: 650;
+}
+h2 {
+  font-size: 1.65rem;
+  font-weight: 650;
+}
+h3 {
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+h4 {
+  font-size: 0.85rem;
+}
+ul {
+  padding: 0;
+  list-style: none;
+}
+input[type="checkbox"] {
+  width: 23px;
+  height: 23px;
+  flex-shrink: 0;
+  accent-color: var(--green);
+  cursor: pointer;
+}
+.app-shell {
+  max-width: 1032px;
+  padding: 0 40px;
+  margin: auto;
+}
+.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 27px 0 24px;
+  border-bottom: 1px solid var(--line);
+}
+.brand {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.105em;
+  text-decoration: none;
+  line-height: 1;
+}
+.brand span {
+  display: inline-block;
+  transform: skew(-9deg);
+  color: var(--green);
+}
+.tagline {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.preview-banner {
+  margin: 22px 0 0;
+  padding: 12px 16px;
+  background: #efeee7;
+  border: 1px solid #e4e3d9;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.preview-banner span {
+  color: var(--muted);
+}
+main {
+  padding: 42px 0 64px;
+  min-height: 65vh;
+}
+.intro {
+  margin-bottom: 32px;
+}
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 12px;
+}
+.intro .muted {
+  margin-top: 16px;
+  font-size: 0.95rem;
+}
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.card {
+  border: 1px solid var(--line);
+  background: #fffefa;
+  border-radius: 18px;
+  padding: 26px;
+}
+.week-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.week-card .muted {
+  margin-top: 10px;
+}
+.week-preview {
+  margin: 24px 0 28px;
+  min-height: 123px;
+}
+.week-preview li {
+  display: flex;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid #eeeee8;
+  font-size: 0.83rem;
+}
+.week-preview li span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  width: 28px;
+  flex-shrink: 0;
+  padding-top: 3px;
+  letter-spacing: 0.06em;
+}
+.card-actions {
+  display: flex;
+  gap: 10px;
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  border-radius: 10px;
+  padding: 12px 17px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.82rem;
+  min-height: 46px;
+}
+.primary {
+  background: var(--green);
+  color: #fff;
+}
+.primary:hover {
+  background: #2d3d28;
+}
+.secondary {
+  border: 1px solid var(--line);
+  background: #fffefa;
+}
+.secondary:hover {
+  background: var(--soft);
+}
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+.back-link:hover {
+  text-decoration: underline;
+}
+.week-heading {
+  margin: 20px 0 28px;
+}
+.week-heading .eyebrow {
+  margin-bottom: 8px;
+}
+.week-heading .muted {
+  margin-top: 12px;
+}
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  gap: 30px;
+  margin-bottom: 28px;
+}
+.tabs a {
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 12px 2px;
+  border-bottom: 3px solid transparent;
+}
+.tabs a.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+}
+.meal-list {
+  display: grid;
+  gap: 16px;
+}
+.meal-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+.meal-top .eyebrow {
+  margin: 0;
+}
+.time {
+  font-size: 0.75rem;
+  background: var(--soft);
+  color: var(--green);
+  border-radius: 8px;
+  padding: 4px 9px;
+}
+.meal-card h2 a {
+  text-decoration: none;
+}
+.meal-card h2 a:hover {
+  text-decoration: underline;
+}
+.meal-card .muted {
+  margin-top: 12px;
+  max-width: 630px;
+}
+.meal-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tags span {
+  font-size: 0.65rem;
+  padding: 5px 8px;
+  background: #f0f1e9;
+  border-radius: 5px;
+  color: #59634f;
+}
+.recipe-link {
+  font-size: 0.83rem;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 10px 0;
+  display: inline-flex;
+  gap: 24px;
+  min-height: 44px;
+  align-items: center;
+}
+.recipe-link:hover {
+  text-decoration: underline;
+}
+.recipe .eyebrow {
+  margin-top: 20px;
+}
+.recipe-title {
+  font-size: clamp(1.9rem, 4vw, 2.65rem);
+  max-width: 700px;
+}
+.recipe > .muted {
+  margin-top: 16px;
+  max-width: 650px;
+}
+.recipe-meta {
+  color: var(--green);
+  font-size: 0.8rem;
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+.recipe-columns {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 36px;
+  align-items: start;
+  margin-top: 32px;
+}
+.ingredients {
+  margin: 14px 0 0;
+}
+.ingredients label,
+.grocery-row label {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 0;
+  min-height: 50px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.ingredients input:checked + span {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.steps h3 {
+  margin-bottom: 20px;
+}
+.steps ol {
+  padding-left: 24px;
+  margin: 0;
+}
+.steps li {
+  padding: 0 0 20px 12px;
+  font-size: 0.9rem;
+}
+.steps li::marker {
+  font-weight: 700;
+  color: var(--green);
+}
+.kid-note {
+  background: var(--soft);
+  padding: 18px;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+.kid-note p {
+  font-size: 0.8rem;
+  margin-top: 6px;
+  color: #4d5946;
+}
+.shopping-heading {
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.shopping-heading .muted {
+  margin-top: 8px;
+}
+.progress {
+  font-size: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+.demo-note {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 16px;
+}
+.sundries {
+  margin-top: 24px;
+  background: #eef1e8;
+  padding: 20px 24px;
+}
+.sundries summary {
+  font-weight: 600;
+  min-height: 44px;
+  align-content: center;
+}
+.sundries summary > span {
+  float: right;
+  font-weight: 400;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 2;
+}
+.sundries > .muted {
+  font-size: 0.76rem;
+  margin: 10px 0;
+}
+.sundries ul {
+  margin: 0;
+}
+.sundry-row {
+  border-top: 1px solid #dce1d3;
+  padding: 6px 0;
+}
+.intent-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 10px 0;
+  min-height: 48px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  font-size: 0.83rem;
+}
+.intent-button > span {
+  font-size: 0.65rem;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #dfe5d5;
+  white-space: nowrap;
+}
+.intent-button.needed > span {
+  background: var(--green);
+  color: white;
+}
+.sundry-check {
+  font-size: 0.75rem;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 4px 0 12px;
+  min-height: 44px;
+}
+.grocery-sections {
+  margin-top: 18px;
+  display: grid;
+  gap: 16px;
+}
+.grocery-category h3 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.grocery-category h3 span {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.grocery-category ul {
+  margin: 0;
+}
+.grocery-row {
+  border-top: 1px solid #eeeee8;
+}
+.grocery-row.purchased span {
+  text-decoration: line-through;
+  color: #777d71;
+}
+.grocery-row.purchased {
+  opacity: 0.72;
+}
+footer {
+  border-top: 1px solid var(--line);
+  padding: 22px 0 30px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 20px;
+  background: white;
+  padding: 12px;
+  z-index: 10;
+}
+.skip-link:focus {
+  top: 10px;
+}
+@media (min-width: 700px) and (prefers-reduced-motion: no-preference) {
+  .card {
+    animation: arrive 0.25s ease both;
+  }
+  .week-card:nth-child(2) {
+    animation-delay: 0.05s;
+  }
+  @keyframes arrive {
+    from {
+      opacity: 0.7;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+@media (max-width: 699px) {
+  .app-shell {
+    padding: 0 20px;
+  }
+  .topbar {
+    padding: 24px 0 20px;
+  }
+  .preview-banner {
+    font-size: 0.7rem;
+    padding: 12px;
+    gap: 3px;
+    margin-top: 16px;
+    flex-direction: column;
+  }
+  main {
+    padding-top: 32px;
+  }
+  .intro {
+    margin-bottom: 26px;
+  }
+  .intro h1 {
+    font-size: 2.55rem;
+  }
+  .week-grid {
+    grid-template-columns: 1fr;
+  }
+  .card {
+    padding: 22px;
+    border-radius: 15px;
+  }
+  .week-preview {
+    min-height: 0;
+    margin-top: 20px;
+  }
+  .week-heading {
+    margin-top: 16px;
+  }
+  .week-heading h1 {
+    font-size: 2.15rem;
+  }
+  .meal-card h2 {
+    font-size: 1.45rem;
+  }
+  .recipe-columns {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .recipe-title {
+    font-size: 2rem;
+  }
+  .sundries {
+    padding: 16px;
+  }
+  .sundries summary > span {
+    font-size: 0.65rem;
+  }
+  .shopping-heading {
+    gap: 12px;
+  }
+  .shopping-heading h2 {
+    font-size: 1.5rem;
+  }
+  .progress {
+    font-size: 0.7rem;
+  }
+  .grocery-category {
+    padding: 18px;
+  }
+  .card-actions .button {
+    flex: 1;
+    padding: 12px;
+  }
+  .tagline {
+    font-size: 0.72rem;
+  }
+}

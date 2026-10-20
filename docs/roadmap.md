@@ -42,7 +42,10 @@ app until a working replacement and transition plan are accepted.
 See the [living rebuild plan](react-typescript-rebuild-plan.md) for confirmed
 requirements, source findings, feature parity, decision options with pros/cons,
 validation, and the session log. Update that plan after each substantive rebuild
-turn. Initial implementation choices remain pending; no release date is promised.
+turn. Vite + React + TypeScript, a frontend directory in this repo, and offline reads
+plus queued shopping state are accepted. A fixture-backed first flow is implemented
+on the rebuild branch; live integration and offline persistence remain upcoming.
+No release date is promised.
 
 ## Later opportunities
 

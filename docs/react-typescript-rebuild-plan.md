@@ -1,7 +1,7 @@
 # Mealz React + TypeScript rebuild — living plan
 
 Last updated: 2026-10-19 (America/New_York)
-Status: discovery started; initial source review complete; architecture choices pending.
+Status: D1–D3 accepted; fixture-backed React foundation implemented on feat/react-frontend-foundation; live integration and offline persistence remain upcoming.
 Owner: Mike Munoz, with Codex as implementation collaborator.
 
 ## Working agreement
@@ -68,7 +68,7 @@ Unchecked means not verified in the rebuild; it does not mean missing from the c
 ## Decision register
 
 ### D1 — React application setup
-Status: awaiting Mike's choice. Recommendation: A, subject to a small deployment proof.
+Status: accepted by Mike on 2026-10-19 — A (Vite + React + TypeScript). Deployment proof remains upcoming.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
@@ -82,17 +82,17 @@ References:
 - https://vite.dev/guide/
 
 ### D2 — Where the separate version lives
-Status: awaiting Mike's choice. Recommendation: A.
+Status: accepted by Mike on 2026-10-19 — A (new frontend directory in the existing repository).
 
 | Option | Pros | Cons |
 | --- | --- | --- |
 | A. New frontend directory in the existing repository, with a separate preview deployment | Keeps API/domain logic/tests and planning together; easier compatibility tracking | Requires deliberate Vercel build/output/routing setup so legacy production still works |
 | B. Separate repository and preview deployment | Clear project separation; simpler standalone frontend layout | API contracts and shared logic can drift or require a shared package; cross-origin API/auth routing needs planning |
 
-A separate version does not require a separate repository. Proposed directory name: frontend/ (not created yet). Use a feature branch for implementation; verify preview routes and API reachability before changing any production build settings. Offline service workers must have scopes/caches that cannot intercept the legacy app accidentally.
+A separate version does not require a separate repository. Directory: frontend/ (created in the implementation branch). Use a feature branch for implementation; verify preview routes and API reachability before changing any production build settings. Offline service workers must have scopes/caches that cannot intercept the legacy app accidentally.
 
 ### D3 — Offline release scope
-Status: awaiting Mike's choice. Recommendation: B for the rebuild's usable shopping milestone, implemented in steps.
+Status: accepted by Mike on 2026-10-19 — B (offline reads plus queued grocery check-offs and sundry intent), to be implemented in steps. The current fixture preview has in-memory state only; accepted scope is not yet delivered.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ Recommendation: A initially, with small navigation improvements discussed throug
 ### Stage 1 — Baseline and architecture
 Completed: source review above; working agreement; decision options; initial parity checklist.
 Remaining:
-- Resolve D1–D3 and provisionally settle D4.
+- D1–D3 are resolved. D4 uses fixtures for the first increment; staging/test-household setup remains upcoming.
 - Map API request/response contracts and reusable types/logic in detail.
 - Record current mobile flows and measure cold/warm startup, repeat navigation, and AI calls separately.
 - Define an honest performance comparison: same device/network/account/data, with actual request timings and visible-loading milestones.
@@ -172,7 +172,17 @@ Exit: Mike accepts the working preview and transition plan; production cutover f
 
 ## Validation and boundaries
 
-This turn changed planning documentation only. No runtime code, dependencies, database schema, auth settings, or deployment configuration have been changed. No app tests or live performance measurements were run; documentation-only verification is read-back and link/content inspection.
+Current increment adds frontend/ and an independent frontend CI workflow on the implementation branch. Root application, backend, schema, auth settings, and Vercel configuration are unchanged. No production data was read or written by the React preview.
+
+Validation completed locally:
+- Strict frontend TypeScript check and Vite production build pass.
+- Two served-build browser tests pass at 390 × 844: saved-week/meal/recipe/grocery navigation, unchanged recipe ingredient wording versus consolidated shopping names, purchase intent/check-offs, week isolation, reload reset, invalid-week recovery, no horizontal overflow, no uncaught page errors, and no /api requests.
+- Vite development mode renders without page errors; phone screenshot inspected.
+- Existing root typecheck, Vercel runtime smoke, release consistency checks, and all 110 unit/database tests pass.
+- Local runtime is Node 24.19.0; CI is configured for Node 22. Browser download for Playwright 1.64.1 failed in this environment, so local browser verification used Chromium 134 through the explicit executable-path override. Standard CI browser installation and the full legacy browser suite have not been verified locally.
+- Build output is approximately 279 kB JavaScript / 89 kB gzip. This is a fixture build, not a measured production performance improvement.
+
+The first adapter attempt relied on browser globals and failed in the served build. It was replaced with Vite aliases and prebundling of the existing CommonJS exports; development and production-build browser checks then passed. The router is pinned to 8.4.0 rather than the newly published 8.5.0 after the package manager's minimum-release-age check rejected 8.5.0. No policy exception is retained.
 
 Existing backend transaction debt and strictness gaps should be tracked separately. Do not expand the rebuild into an unbounded backend rewrite. Any required API change needs its own scoped compatibility and migration plan.
 
@@ -185,3 +195,14 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - Created this living plan and linked it from the roadmap.
 - Presented D1–D3 for Mike's choice; D4 and D5 have stated recommendations and remain provisional.
 - Next: incorporate Mike's decisions, finish contract/performance baseline, and prepare the isolated first-flow implementation.
+
+### 2026-10-19 — Recommended combination accepted; first React increment
+- Mike selected D1=A, D2=A, D3=B. No further approval is needed for these choices.
+- Implemented a strict TypeScript React/Vite frontend with week, meals, recipe, and grocery routes, using invented sample data and existing week/shopping helpers.
+- Added per-week grocery check-offs and sundry selections in React state; explicitly labelled reload-reset behavior. Cloud saves and offline persistence are not implemented yet.
+- Added an independent served-build browser suite and frontend CI workflow, with no changes to legacy CI or production deployment configuration.
+- Preserved the legacy app and backend. Added frontend/README.md for running the preview and learning the component/data flow.
+- Recorded initial wire contracts and offline constraints in docs/react-frontend-integration-notes.md.
+- Visual treatment is a proposed refinement for review, not a finalized redesign. Hash routing is a provisional preview detail.
+- Validation and its environment limits are listed above. The implementation is intended for a draft PR, not production cutover.
+- Next: review the sample phone flow, prove a separate preview deployment and authenticated read-only test-household access, then implement persisted offline reads and the approved shopping queue.
