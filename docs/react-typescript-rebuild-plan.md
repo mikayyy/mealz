@@ -126,7 +126,7 @@ Status: deferred until architecture choices and baseline are recorded.
 Recommendation: A initially, with small navigation improvements discussed through phone-sized examples.
 
 ### D6 — Conflicting offline shopping changes
-Status: pending Mike's choice before live replay. Recommendation: A. The current queue core pauses rather than overwriting; connected writes remain disabled.
+Status: accepted by Mike on 2026-10-19 — A (show both versions and ask which to keep). The review model, resolution logic, and phone example are implemented; connected writes remain disabled until atomic server checks and isolated hosted acceptance pass.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
@@ -246,3 +246,12 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 
 - Follow-up verification: the second React deployment also reported success. The final privacy fix adds storage-event redaction when another tab signs out; the four browser tests passed again, including reopening a downloaded household in a new offline tab. The final preview refresh is tracked on preview/react-rebuild.
 - GitHub Actions did not report a run for the latest API-created implementation commits at the time checked. Local checks passed; do not describe the newest commits as CI-green until that is verified. Earlier foundation workflows remain confirmed green.
+
+### 2026-10-19 — Conflict review policy accepted
+- Mike selected D6=A: ask which version to keep when an offline shopping change conflicts with household data. This choice is settled; do not ask for it again.
+- Added a reusable conflict review component showing the saved choice and household version. The sample route /#/preview/conflicts demonstrates both choices without changing household data.
+- Keeping my change preserves the queued intent against the reviewed row version and requires another check before replay. A later household change pauses it again. Using the household version removes that item's queued changes while preserving other pending items.
+- Removed items cannot be recreated automatically. Replaced plans cannot receive old item edits; the user can open the current household list instead. Stale review decisions are rejected.
+- Validation: strict frontend build/typecheck, nine queue/cache unit tests, and five served-build browser tests pass locally, including both phone review choices and the existing offline/auth flows. Phone layout inspected. No backend, schema, auth configuration, or production deployment changes in this increment.
+- Preview refresh uses the existing preview-only branch and original deployment protection. Existing Vercel connector access is still the hosted acceptance dependency; no unchanged access probes or protection changes were made.
+- Next: implement atomic server-side write preconditions and multi-tab queue coordination, connect review actions to persistent live replay in an isolated test household, and complete hosted acceptance once Vercel access is restored.
