@@ -280,3 +280,7 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 ### 2026-10-20 — ChatGPT plugin screen inspected
 - Mike supplied the ChatGPT Vercel plugin overview screenshot. It shows Manage, Try in chat, and an Apps section with Vercel, but no account authorization details or team selection.
 - Next visible navigation: open Manage and inspect its available connection options. No new API probes, permission changes, or reconnects were made.
+
+### 2026-10-20 — Connected account settings inspected
+- Screenshots show the expected connected email, OAuth authorization, and ChatGPT permission set to Allow low-risk. They do not show Vercel team grants. The permission control governs ChatGPT action approvals and is not evidence of Vercel API team access.
+- The visible account row has an ellipsis menu; inspect its available account-management actions before prescribing another reconnect. No permission or skill-toggle changes are needed based on these screenshots.
