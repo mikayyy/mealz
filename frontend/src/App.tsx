@@ -6,6 +6,7 @@ import { WeeksPage } from "./pages/WeeksPage";
 import { MealsPage } from "./pages/MealsPage";
 import { RecipePage } from "./pages/RecipePage";
 import { GroceriesPage } from "./pages/GroceriesPage";
+import { ConflictExamplePage } from "./pages/ConflictExamplePage";
 import { AccountPanel } from "./components/AccountPanel";
 import { useMealz } from "./data/MealzProvider";
 
@@ -43,6 +44,10 @@ function Shell() {
         {mode !== "signin" && mode !== "loading" ? (
           <Routes>
             <Route path="/" element={<WeeksPage />} />
+            <Route
+              path="/preview/conflicts"
+              element={<ConflictExamplePage />}
+            />
             <Route path="/weeks/:weekStart" element={<WeekLayout />}>
               <Route path="meals" element={<MealsPage />} />
               <Route path="groceries" element={<GroceriesPage />} />

@@ -148,7 +148,85 @@ export function enqueue(
     pending: [...snapshot.pending, operation],
   };
 }
-export class QueueConflict extends Error {}
+export interface ShoppingConflict {
+  reason: "item_changed" | "item_removed" | "plan_replaced";
+  operation: Pending;
+  latestWeek: SavedWeek | null;
+}
+export class QueueConflict extends Error {
+  constructor(
+    message: string,
+    public review?: ShoppingConflict,
+  ) {
+    super(message);
+  }
+}
+export function resolveShoppingConflict(
+  snapshot: Snapshot,
+  review: ShoppingConflict,
+  choice: "keep_mine" | "use_household",
+): Snapshot {
+  const operation = snapshot.pending.find((p) => p.id === review.operation.id);
+  if (
+    !operation ||
+    operation.request.planId !== review.operation.request.planId ||
+    operation.request.itemId !== review.operation.request.itemId ||
+    operation.weekStart !== review.operation.weekStart
+  )
+    throw new Error(
+      "This review is no longer current. Refresh before choosing.",
+    );
+  const fresh = review.latestWeek;
+  if (fresh && fresh.weekStart !== operation.weekStart)
+    throw new Error("The household week does not match this review.");
+  const samePlan = fresh?.id === operation.request.planId;
+  const latestItem = samePlan
+    ? fresh.groceries.find(
+        (item) => item.id === operation.request.itemId && !item.deleted,
+      )
+    : undefined;
+  if (
+    choice === "keep_mine" &&
+    (!samePlan || !latestItem || review.reason !== "item_changed")
+  )
+    throw new Error(
+      "This item is no longer available. Open the current household list instead.",
+    );
+  const affected = (pending: Pending) =>
+    pending.request.planId === operation.request.planId &&
+    (!samePlan || pending.request.itemId === operation.request.itemId);
+  const pending =
+    choice === "use_household"
+      ? snapshot.pending.filter((p) => !affected(p))
+      : snapshot.pending.map((p) =>
+          affected(p) ? { ...p, baseUpdatedAt: latestItem!.updated_at } : p,
+        );
+  // Replace the authoritative week, then overlay every retained desired operation.
+  // This keeps other queued items and any later choices for this item intact.
+  let result: Snapshot = {
+    ...snapshot,
+    pending,
+    weeks: snapshot.weeks.filter((w) => w.weekStart !== operation.weekStart),
+  };
+  if (fresh) result.weeks = [...result.weeks, structuredClone(fresh)];
+  for (const change of pending)
+    result = {
+      ...result,
+      weeks: result.weeks.map((w) =>
+        w.id !== change.request.planId
+          ? w
+          : {
+              ...w,
+              groceries: w.groceries.map((item) =>
+                item.id !== change.request.itemId
+                  ? item
+                  : applyRequest(item, change.request),
+              ),
+            },
+      ),
+    };
+  return result;
+}
 export interface QueueTransport {
   verify: () => Promise<Scope>;
   read: (weekStart: string) => Promise<SavedWeek | null>;
@@ -176,6 +254,14 @@ export async function flushQueue(
     if (!fresh || fresh.id !== operation.request.planId || !item)
       throw new QueueConflict(
         "This week or item was replaced. Review this change before syncing.",
+        {
+          reason:
+            !fresh || fresh.id !== operation.request.planId
+              ? "plan_replaced"
+              : "item_removed",
+          operation,
+          latestWeek: fresh,
+        },
       );
     const targetMatches =
       operation.request.action === "toggle"
@@ -185,6 +271,7 @@ export async function flushQueue(
     if (!targetMatches && item.updated_at !== operation.baseUpdatedAt)
       throw new QueueConflict(
         "Someone changed this item. Review both versions before syncing.",
+        { reason: "item_changed", operation, latestWeek: fresh },
       );
     const result = targetMatches
       ? item

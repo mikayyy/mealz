@@ -38,8 +38,10 @@ in browser source or a VITE_ variable.
 - The app shell is cached separately. The worker never intercepts `/api` or external
   auth requests. The auth SDK is a separate chunk, loaded only for connected mode.
 - Queued shopping has a tested transport-independent core, but live replay is not
-  wired into the provider. It still needs an isolated hosted write test, a conflict
-  policy decision, atomic server preconditions, and multi-tab serialization.
+  wired into the provider. It still needs an isolated hosted write test, atomic server preconditions, and multi-tab serialization.
+
+A sample of the accepted conflict-review behavior is available at
+`/#/preview/conflicts`. It shows both choices without changing a real household.
 
 ## Hosted preview
 
