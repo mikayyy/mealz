@@ -1,14 +1,17 @@
 import { useEffect, useRef } from "react";
 import { HashRouter, Link, Route, Routes, useLocation } from "react-router";
-import { DemoProvider } from "./data/DemoProvider";
+import { MealzProvider } from "./data/MealzProvider";
 import { WeekLayout } from "./components/WeekLayout";
 import { WeeksPage } from "./pages/WeeksPage";
 import { MealsPage } from "./pages/MealsPage";
 import { RecipePage } from "./pages/RecipePage";
 import { GroceriesPage } from "./pages/GroceriesPage";
+import { AccountPanel } from "./components/AccountPanel";
+import { useMealz } from "./data/MealzProvider";
 
 function Shell() {
   const { pathname } = useLocation();
+  const { mode } = useMealz();
   const main = useRef<HTMLElement>(null);
   const previousPath = useRef(pathname);
   useEffect(() => {
@@ -35,31 +38,30 @@ function Shell() {
         </Link>
         <span className="tagline">already sorted.</span>
       </header>
-      <aside className="preview-banner">
-        <strong>A fresh take on mealz</strong>
-        <span>Sample household · no account or real meal data connected</span>
-      </aside>
+      <AccountPanel />
       <main id="main" ref={main} tabIndex={-1}>
-        <Routes>
-          <Route path="/" element={<WeeksPage />} />
-          <Route path="/weeks/:weekStart" element={<WeekLayout />}>
-            <Route path="meals" element={<MealsPage />} />
-            <Route path="groceries" element={<GroceriesPage />} />
+        {mode !== "signin" && mode !== "loading" ? (
+          <Routes>
+            <Route path="/" element={<WeeksPage />} />
+            <Route path="/weeks/:weekStart" element={<WeekLayout />}>
+              <Route path="meals" element={<MealsPage />} />
+              <Route path="groceries" element={<GroceriesPage />} />
+              <Route
+                path="recipes/:mealId"
+                element={<RecipePage key={pathname} />}
+              />
+            </Route>
             <Route
-              path="recipes/:mealId"
-              element={<RecipePage key={pathname} />}
+              path="*"
+              element={
+                <section>
+                  <h1>Let’s get you back to your week</h1>
+                  <Link to="/">Your weeks</Link>
+                </section>
+              }
             />
-          </Route>
-          <Route
-            path="*"
-            element={
-              <section>
-                <h1>Let’s get you back to your week</h1>
-                <Link to="/">Your weeks</Link>
-              </section>
-            }
-          />
-        </Routes>
+          </Routes>
+        ) : null}
       </main>
       <footer>less planning. more good food.</footer>
     </div>
@@ -68,10 +70,10 @@ function Shell() {
 
 export function App() {
   return (
-    <DemoProvider>
+    <MealzProvider>
       <HashRouter>
         <Shell />
       </HashRouter>
-    </DemoProvider>
+    </MealzProvider>
   );
 }

@@ -55,7 +55,7 @@ test("phone flow: week → recipe → shared grocery view with sundries", async 
   await expect(
     page.getByRole("heading", { name: "Ready for the store" }),
   ).toBeVisible();
-  await expect(cucumber).not.toBeChecked();
+  await expect(cucumber).toBeChecked();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

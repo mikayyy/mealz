@@ -19,5 +19,6 @@ jobs:
           version: 9
       - run: pnpm --dir frontend install --frozen-lockfile
       - run: pnpm --dir frontend build
+      - run: pnpm --dir frontend test:unit
       - run: pnpm --dir frontend exec playwright install --with-deps chromium
       - run: pnpm --dir frontend test:browser

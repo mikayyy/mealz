@@ -1,7 +1,7 @@
 # Mealz React + TypeScript rebuild — living plan
 
 Last updated: 2026-10-19 (America/New_York)
-Status: D1–D3 accepted; fixture-backed React foundation implemented on feat/react-frontend-foundation; live integration and offline persistence remain upcoming.
+Status: D1–D3 accepted; fixture-backed React foundation implemented on feat/react-frontend-foundation; password sign-in/read adapters and offline reads are implemented; hosted acceptance and live queue replay remain pending.
 Owner: Mike Munoz, with Codex as implementation collaborator.
 Implementation: [draft PR #23](https://github.com/mikayyy/mealz/pull/23), branch feat/react-frontend-foundation.
 
@@ -69,7 +69,7 @@ Unchecked means not verified in the rebuild; it does not mean missing from the c
 ## Decision register
 
 ### D1 — React application setup
-Status: accepted by Mike on 2026-10-19 — A (Vite + React + TypeScript). Deployment proof remains upcoming.
+Status: accepted by Mike on 2026-10-19 — A (Vite + React + TypeScript). A preview-only branch has a successful deployment; protected hosted inspection remains blocked.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
@@ -93,7 +93,7 @@ Status: accepted by Mike on 2026-10-19 — A (new frontend directory in the exis
 A separate version does not require a separate repository. Directory: frontend/ (created in the implementation branch). Use a feature branch for implementation; verify preview routes and API reachability before changing any production build settings. Offline service workers must have scopes/caches that cannot intercept the legacy app accidentally.
 
 ### D3 — Offline release scope
-Status: accepted by Mike on 2026-10-19 — B (offline reads plus queued grocery check-offs and sundry intent), to be implemented in steps. The current fixture preview has in-memory state only; accepted scope is not yet delivered.
+Status: accepted by Mike on 2026-10-19 — B (offline reads plus queued grocery check-offs and sundry intent), to be implemented in steps. Sample changes now persist offline; connected downloads are read-only. The queue core is implemented/tested but live replay is not delivered.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
@@ -124,6 +124,29 @@ Status: deferred until architecture choices and baseline are recorded.
 | B. Redesign navigation and visual identity alongside the rewrite | More freedom and a stronger visual change | More product decisions; harder to isolate behavioral regressions |
 
 Recommendation: A initially, with small navigation improvements discussed through phone-sized examples.
+
+### D6 — Conflicting offline shopping changes
+Status: pending Mike's choice before live replay. Recommendation: A. The current queue core pauses rather than overwriting; connected writes remain disabled.
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| A. Show the changed item and ask which version to keep | Preserves household intent; prevents silent overwrites | Occasional review step on reconnect; needs atomic server version checks |
+| B. Let the last change received by the server win | Seamless reconnect; simpler product behavior | An old offline action can overwrite another member's more recent choice |
+
+These options concern the same item/field. Replaced plans and deleted items always
+need recovery rather than matching by ingredient name. Live implementation also
+needs multi-tab serialization and durable acknowledgment checkpoints.
+
+### D7 — Download lifetime on this browser
+Status: provisional implementation choice for review; seven days, with sign-out clearing downloaded data.
+
+| Option | Pros | Cons |
+| --- | --- | --- |
+| A. Seven-day offline reads (provisional default) | Covers a weekly shopping cycle; bounds stale local access | Requires an online refresh after expiry |
+| B. Keep downloaded views until sign-out | Longer offline availability | More stale data and longer retention on a shared browser |
+
+Offline access is to existing local downloads, not fresh authentication. No server
+read or queued write is authorized by the offline view itself.
 
 ## Investigation and delivery sequence
 
@@ -207,3 +230,16 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - Visual treatment is a proposed refinement for review, not a finalized redesign. Hash routing is a provisional preview detail.
 - Validation and its environment limits are listed above. The implementation is saved in draft PR #23, not approved for production cutover.
 - Next: review the sample phone flow, prove a separate preview deployment and authenticated read-only test-household access, then implement persisted offline reads and the approved shopping queue.
+
+### 2026-10-19 — Hosted preview and offline/read integration
+- Mike authorized continuing the hosted preview, authenticated test-household access, offline persistence, and shopping queue work.
+- Both workflows for the first increment passed on GitHub, including the legacy Mealz suite.
+- Created preview-only branch preview/react-rebuild with React build/output overrides; main and PR #23 keep the legacy deployment settings. Vercel reported the first React preview deployment successful.
+- Preview URL: https://mealz-git-preview-react-rebuild-fumpster-dire.vercel.app/ . It is protected by Vercel SSO. Connector project inspection and authenticated fetch both returned 403 for team fumpster-dire/project mealz; no authenticated local CLI is available. Hosted content and live API/auth flows are not yet verified.
+- Added existing-account password sign-in, scoped SDK storage, online identity and household checks, runtime response validation, saved-week reads, empty-data and connection errors, and read-only connected shopping controls.
+- Added seven-day origin/user/household-scoped local downloads, app-shell offline reloads, sample shopping persistence, and sign-out/account-switch cache cleanup. SDK parsing is deferred to connected mode. API/auth responses are not stored by the worker.
+- Added and tested a queue core with ordered desired changes, per-ack checkpointing, ambiguous-retry recognition, scope/stale-row checks, and preservation of expired pending work. It is not connected to live mutations. D6 is the next product decision; atomic server conflict checks and multi-tab serialization remain implementation prerequisites.
+- Existing Supabase project mealz-v0230-preview is inactive and belongs to PR #22 acceptance work. It was not resumed, modified, or replaced. No production database changes or new paid resources were created.
+- Local validation: strict typecheck/build, six queue/cache unit tests, and four served-build browser tests cover API/auth mocks, read-only controls, offline reloads and edits, recipe/grocery navigation, and sign-out isolation. These mocks do not establish live Supabase auth or RLS acceptance. Chromium 134 override/Node 24 remain the local environment; CI targets Node 22 and standard Chromium.
+- Current shell is about 294 kB JS / 93 kB gzip; the separately loaded auth SDK is about 214 kB / 55 kB gzip. No production latency improvement is claimed.
+- Next: restore connector access to the owning Vercel team/project, inspect the deployed preview and API target, coordinate isolated hosted household testing, resolve D6, then add conditional server writes and connect the queue in that isolated environment.

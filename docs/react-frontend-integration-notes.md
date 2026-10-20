@@ -69,3 +69,42 @@ The fixture flow is ready for interface feedback. Next implementation work shoul
 prove separate preview build/routing and authenticated read-only test-household
 access, then add persisted offline reads and queued shopping state. The shared
 backend, production account flows, and production data have not been changed.
+
+## Second increment — authentication and offline groundwork
+
+The provider now supports sample mode and existing-account password sign-in. It
+uses the pinned Supabase browser SDK, an isolated auth storage key, verified online
+identity, household resolution, and validated week-specific plan responses. It does
+not introduce privileged client access. Connected grocery controls are disabled.
+
+Snapshots and the last downloaded scope use local storage so an offline page can
+reopen after a tab closes. Seven days is the provisional maximum offline-read age.
+Offline access is to previously downloaded local data; it does not verify server
+membership or a new session offline. Switching accounts/signing out clears the
+previous user's downloaded snapshots. Empty-household onboarding is not implemented.
+
+A generated service worker caches index.html and the build's JS/CSS only, within
+this React preview origin. It ignores /api and cross-origin requests. Immutable
+asset matching ignores Vary headers: Vite preview's Vary:Origin otherwise makes
+cache.addAll assets fail to match module/script requests on an offline reload.
+The auth SDK is dynamically loaded and its built chunk is available offline.
+
+The queue core persists desired operations and per-ack checkpoints, preserves
+ordering, recognizes already-applied retries, and pauses on changed scopes, replaced
+plans, deleted items, or changed row timestamps. Expired view caches do not silently
+delete pending operations. It is tested against in-memory transports, not enabled
+for real cloud writes. A read-then-compare in this core is NOT atomic: before live
+replay, add a backward-compatible server-side expected-version predicate (or another
+atomic conflict mechanism) and multi-tab queue coordination. Do not claim that the
+existing API prevents writes between the read and PATCH.
+
+The preview-only branch overrides Vercel build/output settings and omits the cron
+job. Main and PR #23 retain their original Vercel configuration. The first React
+preview deployment was reported successful, but direct access reaches Vercel SSO
+and the connector's authenticated fetch returns 403 for team fumpster-dire/project
+mealz. Do not disable protection to work around that access issue. There is no local
+Vercel CLI authentication available. Hosted API/auth verification remains blocked.
+
+The inactive Supabase project mealz-v0230-preview is associated with separate PR #22
+acceptance work. It was not resumed or modified. Coordinate its eventual test session
+and schema compatibility rather than silently changing that workstream.

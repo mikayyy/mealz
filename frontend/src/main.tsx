@@ -10,3 +10,16 @@ createRoot(root).render(
     <App />
   </StrictMode>,
 );
+
+// The service worker caches only the app shell. User data is explicitly scoped
+// in the application cache; authenticated API responses are never intercepted.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    const script = new URL("sw.js", document.baseURI);
+    navigator.serviceWorker
+      .register(script, { scope: new URL("./", script).pathname })
+      .catch(() => {
+        /* The app remains online-only if shell storage is unavailable. */
+      });
+  });
+}

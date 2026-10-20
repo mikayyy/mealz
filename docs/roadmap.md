@@ -43,8 +43,9 @@ See the [living rebuild plan](react-typescript-rebuild-plan.md) for confirmed
 requirements, source findings, feature parity, decision options with pros/cons,
 validation, and the session log. Update that plan after each substantive rebuild
 turn. Vite + React + TypeScript, a frontend directory in this repo, and offline reads
-plus queued shopping state are accepted. A fixture-backed first flow is implemented
-on the rebuild branch; live integration and offline persistence remain upcoming.
+plus queued shopping state are accepted. The rebuild branch now includes password sign-in/read adapters, offline downloads,
+sample shopping persistence, and a tested queue core. Hosted acceptance and live
+queue replay remain pending; a preview-only branch hosts the React build.
 No release date is promised.
 
 ## Later opportunities
