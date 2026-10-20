@@ -1,0 +1,24 @@
+name: Mealz React frontend
+on:
+  pull_request:
+    branches: [main]
+    paths: ['frontend/**', 'shared-logic.js', 'shopping-logic.js', 'types.d.ts', '.github/workflows/frontend.yml']
+  push:
+    branches: [main]
+    paths: ['frontend/**', 'shared-logic.js', 'shopping-logic.js', 'types.d.ts', '.github/workflows/frontend.yml']
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm --dir frontend install --frozen-lockfile
+      - run: pnpm --dir frontend build
+      - run: pnpm --dir frontend test:unit
+      - run: pnpm --dir frontend exec playwright install --with-deps chromium
+      - run: pnpm --dir frontend test:browser
