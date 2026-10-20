@@ -284,3 +284,7 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 ### 2026-10-20 — Connected account settings inspected
 - Screenshots show the expected connected email, OAuth authorization, and ChatGPT permission set to Allow low-risk. They do not show Vercel team grants. The permission control governs ChatGPT action approvals and is not evidence of Vercel API team access.
 - The visible account row has an ellipsis menu; inspect its available account-management actions before prescribing another reconnect. No permission or skill-toggle changes are needed based on these screenshots.
+
+### 2026-10-20 — Account reconnect action located
+- Mike reports the connected-account menu offers Rename, Reconnect, and Disconnect. Reconnect is the available account-specific authorization action.
+- Next: use Reconnect, inspect the Vercel authorization flow for a team/project selector, and authorize FumpsterDire / mealz if offered. If no selector appears, record that rather than assuming scope was corrected. Reconnect is a diagnostic attempt, not a verified fix; recheck project access after completion.
