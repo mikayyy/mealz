@@ -266,3 +266,8 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - Mike requested another check. Project inspection still returns 403 forbidden for fumpster-dire / mealz; team listing still returns no teams. Access is not restored, and hosted preview acceptance remains blocked.
 - Prior local CLI inspection found no authenticated fallback. No unchanged retries or deployment protection changes were made.
 - Next diagnostic: establish whether Mike can open the owning team's project dashboard in his browser; this separates Vercel account/team access from the ChatGPT connection's authorization.
+
+### 2026-10-20 — Browser dashboard access confirmed
+- Mike supplied a screenshot showing the Mealz dashboard under FumpsterDire at vercel.com/fumpster-dire/mealz. His browser account can access the intended project; the screenshot also shows production Ready and the React preview branch listed.
+- The connector's earlier 403/no-teams result therefore differs from his browser access. This narrows the issue to the connection's identity/authorization or connector behavior; the precise cause remains unproven.
+- Next: inspect the Integrations entry visible in the dashboard sidebar to establish whether the connection has a manageable installation. Avoid repeating reconnect instructions without new evidence. Screenshot is not hosted React acceptance.
