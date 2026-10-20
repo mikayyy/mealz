@@ -1,6 +1,6 @@
 # Mealz React + TypeScript rebuild — living plan
 
-Last updated: 2026-10-19 (America/New_York)
+Last updated: 2026-10-20 (America/New_York)
 Status: D1–D3 accepted; fixture-backed React foundation implemented on feat/react-frontend-foundation; password sign-in/read adapters and offline reads are implemented; hosted acceptance and live queue replay remain pending.
 Owner: Mike Munoz, with Codex as implementation collaborator.
 Implementation: [draft PR #23](https://github.com/mikayyy/mealz/pull/23), branch feat/react-frontend-foundation.
@@ -261,3 +261,8 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - This confirms missing access in the current connection, without establishing whether its cause is the signed-in account, the integration's team/project selection, or revoked membership. No account or deployment settings were changed.
 - Next user action: verify the Mealz-owning Vercel account can open the team/project in the dashboard, then manage/re-authorize the Vercel connection for that team and project. Reconnecting without correcting scope is not a verified fix. Keep deployment protection enabled; no API token needs to be pasted into chat.
 - Once updated, verify project inspection and protected-preview access before resuming hosted acceptance. Documentation-only update; no application tests needed.
+
+### 2026-10-20 — Access retry after connection changes
+- Mike requested another check. Project inspection still returns 403 forbidden for fumpster-dire / mealz; team listing still returns no teams. Access is not restored, and hosted preview acceptance remains blocked.
+- Prior local CLI inspection found no authenticated fallback. No unchanged retries or deployment protection changes were made.
+- Next diagnostic: establish whether Mike can open the owning team's project dashboard in his browser; this separates Vercel account/team access from the ChatGPT connection's authorization.
