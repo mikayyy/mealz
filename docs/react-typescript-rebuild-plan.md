@@ -288,3 +288,8 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 ### 2026-10-20 — Account reconnect action located
 - Mike reports the connected-account menu offers Rename, Reconnect, and Disconnect. Reconnect is the available account-specific authorization action.
 - Next: use Reconnect, inspect the Vercel authorization flow for a team/project selector, and authorize FumpsterDire / mealz if offered. If no selector appears, record that rather than assuming scope was corrected. Reconnect is a diagnostic attempt, not a verified fix; recheck project access after completion.
+
+### 2026-10-20 — Vercel connection restored
+- After Mike completed the account-specific Reconnect action, project inspection succeeds for fumpster-dire / mealz. The production deployment reports READY.
+- Authenticated fetch of https://mealz-git-preview-react-rebuild-fumpster-dire.vercel.app/ succeeds with HTTP 200 and the expected mealz React preview HTML, including built JS/CSS asset references. Deployment protection remains enabled.
+- The connector-access blocker is resolved. This verifies hosted shell retrieval, not rendered UI, live Supabase authentication, household isolation, or offline replay acceptance. Next resume hosted acceptance and isolated test-household setup before enabling connected shopping writes.
