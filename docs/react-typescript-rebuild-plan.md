@@ -1,7 +1,7 @@
 # Mealz React + TypeScript rebuild — living plan
 
 Last updated: 2026-10-20 (America/New_York)
-Status: D1–D3 accepted; fixture-backed React foundation implemented on feat/react-frontend-foundation; password sign-in/read adapters and offline reads are implemented; hosted acceptance and live queue replay remain pending.
+Status: D1–D3 and D6 accepted; React foundation, password sign-in/read adapters, offline reads, and conflict review implemented. Vercel project access restored; hosted browser/API acceptance needs explicit approval for the connector's temporary preview-access link. Live queue replay remains pending.
 Owner: Mike Munoz, with Codex as implementation collaborator.
 Implementation: [draft PR #23](https://github.com/mikayyy/mealz/pull/23), branch feat/react-frontend-foundation.
 
@@ -69,7 +69,7 @@ Unchecked means not verified in the rebuild; it does not mean missing from the c
 ## Decision register
 
 ### D1 — React application setup
-Status: accepted by Mike on 2026-10-19 — A (Vite + React + TypeScript). A preview-only branch has a successful deployment; protected hosted inspection remains blocked.
+Status: accepted by Mike on 2026-10-19 — A (Vite + React + TypeScript). A preview-only branch has a successful deployment; project access and initial hosted HTML retrieval succeed. Full protected hosted acceptance remains pending.
 
 | Option | Pros | Cons |
 | --- | --- | --- |
@@ -293,3 +293,12 @@ Existing backend transaction debt and strictness gaps should be tracked separate
 - After Mike completed the account-specific Reconnect action, project inspection succeeds for fumpster-dire / mealz. The production deployment reports READY.
 - Authenticated fetch of https://mealz-git-preview-react-rebuild-fumpster-dire.vercel.app/ succeeds with HTTP 200 and the expected mealz React preview HTML, including built JS/CSS asset references. Deployment protection remains enabled.
 - The connector-access blocker is resolved. This verifies hosted shell retrieval, not rendered UI, live Supabase authentication, household isolation, or offline replay acceptance. Next resume hosted acceptance and isolated test-household setup before enabling connected shopping writes.
+
+### 2026-10-20 — Hosted acceptance preparation and access review
+- Mike authorized continuing verification. Inspected deployment dpl_6CvAQsLuwBNa1CqeRGCqG7KgQuqy: READY, preview/react-rebuild at e93c305c7aad6c2aa67e52815c9e4085165b1197, matching the conflict-review increment. Confirmed preview-only React build/output configuration in GitHub and no preview cron entry.
+- Environment metadata confirms SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, and SUPABASE_SECRET_KEY entries targeted to Preview; no branch-specific entries were returned for preview/react-rebuild. Values were not decrypted or shown. This establishes presence, not database identity or correctness.
+- Automatic approval review rejected creation of a preview share link, and then rejected the authenticated-fetch tool because it also creates/reuses an authentication-bypass link. Reason: testing authorization did not explicitly authorize temporary share access to the protected deployment. No alternate bypass, protection change, or repeat attempt followed. Project access itself remains restored.
+- Concrete requested access: a temporary link for this React preview only, used privately for verification; a newly created link expires in 23 hours according to the tool. Existing valid reused links can have a different expiration. Possession of the link grants deployment access, so it must not be published. Await explicit approval before using these tools again.
+- Source review identifies a test candidate: frontend/src/data/api.ts uses credentials:omit for same-origin API fetches. That may omit the deployment-protection cookie even after the document opens; reproduce before changing it.
+- Acceptance sequence after access: render phone week/meals/recipe/groceries and conflict examples; inspect browser errors and asset/service-worker requests; GET public auth config and establish backend project identity; verify application-auth 401 for protected APIs; select an isolated backend/test household before credentials or writes; then verify live sign-in, household/week reads, and offline/sign-out boundaries.
+- Options: approve private temporary preview access (enables automated hosted checks, but anyone holding the link can access the deployment) or use manual signed-in browser checks (avoids creating a share link, but requires Mike to run/relay acceptance observations). Recommend the temporary preview link with explicit approval. No app, schema, environment, or deployment protection settings were changed, and no new application tests ran this turn.
